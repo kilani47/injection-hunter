@@ -5,6 +5,8 @@ services:
     build: .
     ports:
       - "8000:8000"
+    depends_on:
+      - mariadb
     environment:
       MARIADB_HOST: mariadb
       MARIADB_PORT: "3306"
@@ -33,7 +35,7 @@ services:
       MARIADB_PASSWORD: seiyaku_pw
     volumes:
       - mariadb_data:/var/lib/mysql
-      # - ./seed/mariadb:/docker-entrypoint-initdb.d:ro   # wired in Phase 1
+      - ./seed/mariadb:/docker-entrypoint-initdb.d:ro
 
   mongo:
     image: mongo:7
