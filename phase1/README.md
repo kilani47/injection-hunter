@@ -29,7 +29,7 @@ to mean. Every Vow here is worded just loosely enough to be misread.
 | 1 | Gate of Trust | [`gate-of-trust/`](gate-of-trust/) | built |
 | 2 | Netero's Recipe Vault | [`recipe-vault/`](recipe-vault/) | built |
 | 3 | Exam Results Board | [`results-board/`](results-board/) | built |
-| 4 | Trick Tower — Silent Room | *(lands with Task 1.4)* | not yet built |
+| 4 | Trick Tower — Silent Room | [`silent-room/`](silent-room/) | built |
 | 5 | Zevil Island Medical Bay | *(lands with Task 1.5)* | not yet built |
 
 This table grows one row per Phase-1 task; no other edits are expected here

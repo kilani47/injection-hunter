@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Trick Tower — Silent Room — The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p1{% endblock %}
+
+{% block content %}
+<div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+  <div>
+    <p class="font-mono text-xs text-muted mb-2">the written exam &middot; floor 4</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4">Trick Tower — Silent Room</h1>
+    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+      This door doesn't argue. Show it a code and it gives back exactly one
+      of two words, always in the same voice, always the same shape — no
+      hint of what went wrong, no glimpse of what's behind it. Even a
+      badly-formed question gets the same flat answer as a wrong one. The
+      room has decided that "no" and "I don't understand" sound identical,
+      and it never occurred to it that a patient enough visitor doesn't
+      need it to say anything more than that.
+    </p>
+    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+      Objective: recover something the door was never asked to reveal,
+      using nothing but its yes/no answer, one question at a time.
+    </p>
+  </div>
+
+  <div class="license-card glass rounded-[1.75rem] p-6">
+    <div class="exam-terminal rounded-xl p-5">
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> silent room — present a door code
+      </p>
+
+      {% if result is not none %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          <p class="font-mono text-xs text-muted mb-1">the door's only answer:</p>
+          <p class="font-mono text-sm text-bone">{{ "PASS" if result else "FAIL" }}</p>
+        </div>
+      {% endif %}
+
+      <form method="get" action="{{ url_for('phase1.p1_silent') }}" class="flex flex-col gap-3">
+        <input
+          type="text"
+          name="code"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="door code"
+          value="{{ code or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <button type="submit"
+          class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+          Present code
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -178,3 +178,52 @@ def p1_results():
         rows=rows,
         error=error,
     )
+
+
+# ---------------------------------------------------------------------------
+# p1_4 — Trick Tower — Silent Room
+# ---------------------------------------------------------------------------
+
+@bp.route("/p1/silent", methods=["GET"])
+def p1_silent():
+    """The Silent Room's door. Deliberately vulnerable to boolean-blind SQLi.
+
+    Same sink shape as every other floor (raw f-string concatenation), but
+    this floor's lesson is a fourth, independent technique: there is no
+    result set to read back (unlike p1_3's UNION) and no raw error text
+    echoed to the page (unlike p1_2's extractvalue()) — the door only ever
+    answers PASS (a row matched) or FAIL (no row matched, *or* the query
+    errored). That single bit is the entire oracle: a boolean subquery
+    against the hidden `keeper.secret` column, folded into this same
+    WHERE clause, can be walked one character at a time using nothing but
+    this PASS/FAIL response — so long as a malformed/erroring query reads
+    identically to a clean false, never as a distinguishable third state.
+    """
+    code = request.args.get("code")
+    result = None  # None: no code submitted yet. True: PASS. False: FAIL.
+
+    if code is not None:
+        conn = mysql_conn()
+        try:
+            with conn.cursor() as cur:
+                # VULN: string concat — raw query param spliced directly
+                # into the SQL text, no escaping/parameterization. Use a
+                # parameterized query (cur.execute(q, (code,))) instead;
+                # left unescaped here on purpose, this is the challenge's
+                # sink.
+                q = f"SELECT 1 FROM door WHERE code='{code}'"
+                cur.execute(q)
+                result = cur.fetchone() is not None
+        except Exception:
+            # Deliberately silent: unlike p1_2's raw-error echo, a broken
+            # query here is folded into the same FAIL outcome as a clean
+            # false condition. This is what makes the oracle genuinely
+            # boolean-blind — a malformed injection attempt must not be
+            # distinguishable from an ordinary false, or "FAIL" would
+            # secretly carry a third state (error) that leaks information
+            # about the query's shape.
+            result = False
+        finally:
+            conn.close()
+
+    return render_template("p1_silent.html", code=code, result=result)
