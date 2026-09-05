@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}The Seiyaku Arc — Applicant Terminal{% endblock %}
+
+{% block content %}
+<div class="grid gap-10 lg:grid-cols-[1.1fr_1fr] items-center py-6">
+  <div>
+    <p class="font-mono text-xs text-muted mb-3">hunter exam · registration terminal</p>
+    <h1 class="font-display text-5xl sm:text-6xl font-semibold leading-[1.05] text-bone">
+      The Seiyaku Arc
+    </h1>
+    <p class="mt-5 max-w-md text-lg leading-relaxed text-bone/80">
+      Every Nen ability lives inside a vow the caster wrote for themselves —
+      and every vow hides a loophole its author never saw. Six examiners,
+      six vows, eighteen loopholes. Find them, one floor at a time.
+    </p>
+    <div class="mt-8 flex items-center gap-4">
+      <a href="{{ url_for('hub') }}"
+         class="ren-pulse inline-flex items-center rounded-lg bg-accent-20 border border-accent px-5 py-3 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+        Enter the applicant terminal
+      </a>
+      <span class="font-mono text-xs text-muted">flag format: SEIYAKU&#123;lowercase_words&#125;</span>
+    </div>
+  </div>
+
+  <div class="license-card glass rounded-[1.75rem] p-6">
+    <div class="exam-terminal rounded-xl p-5">
+      <p class="text-[13px] leading-relaxed text-bone/90">
+        <span class="text-accent">vow.status</span> :: awaiting first breach<br>
+        <span class="text-accent">applicant.class</span> :: unranked<br>
+        <span class="text-accent">exam.floor</span> :: 1 / 6 — The Written Exam<br>
+        <span class="text-accent">engines</span> :: mariadb · mongo · openldap · lxml<br>
+        <span class="text-muted">&gt; every rule your examiner wrote can be misread on purpose.</span>
+        <span class="flicker">_</span>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

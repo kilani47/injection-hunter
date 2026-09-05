@@ -1,0 +1,59 @@
+The Seiyaku Arc — NOTICE
+
+This is an unofficial fan project. It is not affiliated with, endorsed by,
+sponsored by, or approved by Yoshihiro Togashi, Shueisha, VIZ Media, the
+Hunter × Hunter anime production committee, or any other rights holder in
+the Hunter × Hunter franchise.
+
+For local, authorized, educational use only. Do not deploy this lab on a
+network you do not control or do not have explicit authorization to test.
+
+## What this project owns
+
+The Flask application, the challenge back ends and their intentionally
+vulnerable code paths, the "Nen aura" design system (CSS/Tailwind/markup),
+the challenge narratives, briefing/debrief documents, and all other original
+writing and code in this repository are the work of the author
+(abdullah.kilani4702@gmail.com) and are licensed under the MIT License (see
+`LICENSE`).
+
+## What this project does not own
+
+Hunter × Hunter character names, place names, organization names, and Nen
+terminology used throughout this lab (e.g. phase names, challenge titles,
+narrative flavor text) are the intellectual property of their respective
+rights holders. They are used here unofficially and without permission,
+under a nominative-fair-use / parody rationale, solely to theme a
+non-commercial, educational security-training lab. No claim of ownership
+over that material is made or implied.
+
+## Embedded victory media (residual risk)
+
+The lab's shipped default victory screen is an **original CSS animation**
+authored for this project — it requires no third-party asset and ships with
+zero Hunter × Hunter image or video files. See `templates/victory.html`.
+
+Separately, the lab supports an **opt-in** asset slot: if the repository's
+operator manually drops a file at `static/img/victory/<node-id>.gif`, the
+victory screen will layer it in. Any such file is third-party copyrighted
+media (a frame or clip from the Hunter × Hunter anime/manga) that the
+operator has chosen to add locally. It is:
+
+- not authored by this project,
+- not covered by the MIT license above,
+- not distributed by this repository (the build/CI pipeline never fetches,
+  bundles, or commits these files — see `assets/README.md` and
+  `assets/fetch-assets.sh`, both of which leave the actual source URLs for
+  the operator to supply),
+- and, in plain terms: **a residual legal risk the operator accepts
+  personally** by adding it. No license text — from this project or anyone
+  else — can retroactively grant rights to someone else's copyrighted
+  artwork. The only real protections available are (a) not distributing
+  those frames, and (b) this disclaimer. Keeping the default (original
+  animation, no gif) avoids the risk entirely.
+
+## Trademarks
+
+Any product names, logos, or brands referenced (Hunter × Hunter or
+otherwise) are property of their respective owners. Use of these names does
+not imply any affiliation with or endorsement by them.

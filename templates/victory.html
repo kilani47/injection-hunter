@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Vow Broken — {{ node.name }}{% endblock %}
+{% block body_class %}{{ phase_meta.css_class }}{% endblock %}
+
+{% block content %}
+<div class="relative -mt-6 flex min-h-[75vh] flex-col items-center justify-center overflow-hidden text-center">
+  {% if gif_exists %}
+  <img src="{{ url_for('static', filename='img/victory/' ~ node.id ~ '.gif') }}"
+       alt=""
+       class="pointer-events-none absolute inset-0 m-auto max-h-[70vh] max-w-full object-contain opacity-90">
+  {% endif %}
+
+  <div class="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
+    <div class="burst-ring"></div>
+    <div class="burst-ring" style="animation-delay: .5s;"></div>
+    <div class="burst-ring" style="animation-delay: 1s;"></div>
+  </div>
+
+  <div class="relative z-10 glass license-card rounded-[1.75rem] px-8 py-10 max-w-lg mx-auto">
+    <p class="font-mono text-xs text-accent mb-2 tracking-wide">vow broken</p>
+    <h1 class="font-display text-4xl font-semibold text-bone mb-1">{{ node.name }}</h1>
+    <p class="font-mono text-[11px] text-muted mb-6">{{ phase_meta.label }} &middot; {{ phase_meta.nen }}</p>
+
+    <div class="exam-terminal rounded-xl p-4 mb-6 text-left">
+      <p class="font-mono text-sm text-bone/90 break-all">
+        <span class="text-muted">flag&gt;</span> {{ node.flag }}
+      </p>
+    </div>
+
+    {% if next_node %}
+    <p class="text-bone/80 mb-4">Next floor unlocked: <span class="text-accent">{{ next_node.name }}</span></p>
+    <a href="{{ url_for('hub') }}"
+       class="ren-pulse inline-flex items-center rounded-lg bg-accent-20 border border-accent px-5 py-3 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+      Continue the exam
+    </a>
+    {% else %}
+    <p class="text-bone/80 mb-4">Every floor cleared. The exam is over.</p>
+    <a href="{{ url_for('hub') }}"
+       class="inline-flex items-center rounded-lg bg-accent-20 border border-accent px-5 py-3 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+      Back to the terminal
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,181 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------
+   The Seiyaku Arc — Nen aura design system
+   Bespoke layer on top of Tailwind: aura backdrop, glassmorphic cards,
+   the mono "exam terminal" panel, per-phase Nen accent classes.
+   ------------------------------------------------------------------- */
+
+@layer base {
+  :root {
+    --nen-accent: #c9a875; /* neutral "license brass" default (no active phase) */
+    --nen-glow: rgba(201, 168, 117, 0.35);
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--ink, #0a0b10);
+    color: #e8e4da;
+    font-family: "Rajdhani", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  ::selection {
+    background: var(--nen-accent);
+    color: #0a0b10;
+  }
+
+  /* Respect reduced-motion preferences: kill the ambient aura + pulses. */
+  @media (prefers-reduced-motion: reduce) {
+    .aura-layer,
+    .aura-ring,
+    .ren-pulse,
+    .burst-ring,
+    .flicker {
+      animation: none !important;
+    }
+  }
+}
+
+@layer components {
+  /* Full-viewport ambient aura backdrop, tinted by --nen-accent. Sits
+     behind everything via fixed positioning + negative z-index. */
+  .aura-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+    background:
+      radial-gradient(60vw 60vw at 15% -10%, color-mix(in srgb, var(--nen-accent) 20%, transparent), transparent 60%),
+      radial-gradient(50vw 50vw at 110% 10%, color-mix(in srgb, var(--nen-accent) 14%, transparent), transparent 55%),
+      #0a0b10;
+  }
+
+  .aura-layer::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 140vmax;
+    height: 140vmax;
+    margin: -70vmax 0 0 -70vmax;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      color-mix(in srgb, var(--nen-accent) 10%, transparent) 40deg,
+      transparent 90deg,
+      transparent 220deg,
+      color-mix(in srgb, var(--nen-accent) 8%, transparent) 270deg,
+      transparent 320deg
+    );
+    animation: aura-spin 34s linear infinite reverse;
+    opacity: 0.6;
+  }
+
+  /* Glassmorphic surface used for every panel/card. */
+  .glass {
+    background: linear-gradient(180deg, rgba(232, 228, 218, 0.05), rgba(232, 228, 218, 0.02));
+    border: 1px solid rgba(232, 228, 218, 0.1);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  /* The signature hero component: the applicant's Hunter License. */
+  .license-card {
+    position: relative;
+    border-radius: 1.75rem;
+  }
+
+  .license-card::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(from 180deg, var(--nen-accent), transparent 40%, var(--nen-accent) 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: aura-spin 18s linear infinite;
+  }
+
+  /* Mono "exam terminal" panel — used for status readouts, DB-error
+     echoes (later phases), and the flag submission box. */
+  .exam-terminal {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: #07080c;
+    border: 1px solid rgba(232, 228, 218, 0.14);
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.5);
+    position: relative;
+  }
+
+  .exam-terminal::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(232, 228, 218, 0.025) 0px,
+      rgba(232, 228, 218, 0.025) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    pointer-events: none;
+  }
+
+  /* Breathing glow used on the primary CTA + license ring ("Ren"). */
+  .ren-pulse {
+    animation: ren-pulse 2.6s ease-in-out infinite;
+  }
+
+  /* Taxonomy / primer cards: flip on click via a checkbox-free
+     [data-open] toggle (hub.js). */
+  .flip-card {
+    perspective: 1200px;
+  }
+  .flip-card-inner {
+    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.3, 1);
+    transform-style: preserve-3d;
+  }
+  .flip-card[data-open="true"] .flip-card-inner {
+    transform: rotateY(180deg);
+  }
+  .flip-face {
+    backface-visibility: hidden;
+  }
+  .flip-face-back {
+    transform: rotateY(180deg);
+  }
+
+  /* Original CSS Nen-burst — the shipped default victory visual. */
+  .burst-ring {
+    position: absolute;
+    inset: 50%;
+    width: 6px;
+    height: 6px;
+    margin: -3px 0 0 -3px;
+    border-radius: 9999px;
+    border: 2px solid var(--nen-accent);
+    animation: burst 1.8s cubic-bezier(0.2, 0.8, 0.3, 1) infinite;
+  }
+}
+
+@layer utilities {
+  .nen-p1 { --nen-accent: #e5484d; --nen-glow: rgba(229, 72, 77, .35); }
+  .nen-p2 { --nen-accent: #8b5cf6; --nen-glow: rgba(139, 92, 246, .35); }
+  .nen-p3 { --nen-accent: #f5c518; --nen-glow: rgba(245, 197, 24, .35); }
+  .nen-p4 { --nen-accent: #22c55e; --nen-glow: rgba(34, 197, 94, .35); }
+  .nen-p5 { --nen-accent: #6366f1; --nen-glow: rgba(99, 102, 241, .35); }
+  .nen-finals { --nen-accent: #22d3ee; --nen-glow: rgba(34, 211, 238, .35); }
+
+  .text-accent { color: var(--nen-accent); }
+  .border-accent { border-color: var(--nen-accent); }
+  .bg-accent-10 { background-color: color-mix(in srgb, var(--nen-accent) 10%, transparent); }
+  .bg-accent-20 { background-color: color-mix(in srgb, var(--nen-accent) 20%, transparent); }
+  .shadow-accent { box-shadow: 0 0 24px 0 var(--nen-glow); }
+}

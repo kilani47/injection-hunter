@@ -1,0 +1,69 @@
+services:
+  # The portal. This is the only service Task 0 needs actually running —
+  # `docker compose up -d flask` is the smoke-test entrypoint.
+  flask:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      MARIADB_HOST: mariadb
+      MARIADB_PORT: "3306"
+      MARIADB_USER: seiyaku
+      MARIADB_PASSWORD: seiyaku_pw
+      MARIADB_DATABASE: seiyaku
+      MONGO_HOST: mongo
+      MONGO_PORT: "27017"
+      MONGO_DATABASE: seiyaku
+      LDAP_HOST: openldap
+      LDAP_PORT: "389"
+      LDAP_BIND_DN: cn=admin,dc=hunterassoc,dc=org
+      LDAP_BIND_PASSWORD: seiyaku_pw
+
+  # --- Declared for later tasks; not required for the Task 0 smoke test. ---
+  # No route in this scaffold calls core/db.py yet, so flask has no
+  # depends_on here on purpose — later tasks that actually wire a challenge
+  # to one of these add both the depends_on and the seed mount.
+
+  mariadb:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: seiyaku_root_pw
+      MARIADB_DATABASE: seiyaku
+      MARIADB_USER: seiyaku
+      MARIADB_PASSWORD: seiyaku_pw
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      # - ./seed/mariadb:/docker-entrypoint-initdb.d:ro   # wired in Phase 1
+
+  mongo:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_DATABASE: seiyaku
+    volumes:
+      - mongo_data:/data/db
+      # - ./seed/mongo:/docker-entrypoint-initdb.d:ro     # wired in Task 4.0
+
+  # OpenLDAP image choice: bitnami/openldap (actively maintained, simple
+  # env-var-driven bootstrap) over osixia/openldap (unmaintained since
+  # 2022). Pinned to the 2.6 line; seeding (zodiac.ldif) lands in Task 4.0.
+  openldap:
+    image: bitnami/openldap:2.6
+    environment:
+      LDAP_ROOT: dc=hunterassoc,dc=org
+      LDAP_ADMIN_USERNAME: admin
+      LDAP_ADMIN_PASSWORD: seiyaku_pw
+    volumes:
+      - openldap_data:/bitnami/openldap
+      # - ./seed/ldap:/ldifs:ro                           # wired in Task 4.0
+
+  # Placeholder image until Task 3.0 lands collaborator/Dockerfile + app.
+  # Swapping this to `build: ./collaborator` is the only change that task
+  # needs to make here.
+  collaborator:
+    image: python:3.12-slim
+    command: ["python3", "-m", "http.server", "8080"]
+
+volumes:
+  mariadb_data:
+  mongo_data:
+  openldap_data:

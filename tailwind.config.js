@@ -1,0 +1,62 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./templates/**/*.html",
+    "./static/js/**/*.js",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        ink: {
+          DEFAULT: "#0a0b10",
+          soft: "#12141c",
+          line: "#1c1f2a",
+        },
+        bone: "#e8e4da",
+        muted: "#9a9aa6",
+        brass: "#c9a875",
+        nen: {
+          p1: "#e5484d",
+          p2: "#8b5cf6",
+          p3: "#f5c518",
+          p4: "#22c55e",
+          p5: "#6366f1",
+          finals: "#22d3ee",
+        },
+      },
+      fontFamily: {
+        display: ["Rajdhani", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["'IBM Plex Mono'", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+      },
+      keyframes: {
+        "aura-spin": {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
+        },
+        "ren-pulse": {
+          "0%, 100%": { boxShadow: "0 0 0 0 var(--nen-glow, rgba(197,72,77,.35))" },
+          "50%": { boxShadow: "0 0 0 10px rgba(0,0,0,0)" },
+        },
+        "burst": {
+          "0%": { transform: "scale(.2)", opacity: "0" },
+          "12%": { opacity: "1" },
+          "100%": { transform: "scale(2.6)", opacity: "0" },
+        },
+        "flicker": {
+          "0%, 100%": { opacity: "1" },
+          "92%": { opacity: "1" },
+          "93%": { opacity: ".72" },
+          "94%": { opacity: "1" },
+        },
+      },
+      animation: {
+        "aura-spin": "aura-spin 18s linear infinite",
+        "aura-spin-slow": "aura-spin 34s linear infinite reverse",
+        "ren-pulse": "ren-pulse 2.6s ease-in-out infinite",
+        "burst": "burst 1.8s cubic-bezier(.2,.8,.3,1) infinite",
+        "flicker": "flicker 6s ease-in-out infinite",
+      },
+    },
+  },
+  plugins: [],
+};

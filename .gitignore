@@ -4,3 +4,9 @@ __pycache__/
 *.pyc
 static/img/victory/*.gif
 assets/gifs/
+
+# python
+.venv/
+
+# node / tailwind build tooling (static/css/nen.css is the committed output)
+node_modules/

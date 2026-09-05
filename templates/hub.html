@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Applicant Terminal — The Seiyaku Arc{% endblock %}
+
+{% block content %}
+<section class="grid gap-8 lg:grid-cols-[1.05fr_1fr] items-stretch mb-14">
+  <div class="license-card glass rounded-[1.75rem] p-6 flex flex-col justify-between">
+    <div>
+      <p class="font-mono text-xs text-muted mb-2">hunter license · applicant</p>
+      <h1 class="font-display text-3xl font-semibold text-bone">Progress: {{ progress.cleared_count }} / {{ progress.total }} vows broken</h1>
+    </div>
+    <div class="mt-6 h-2 w-full rounded-full bg-white/10 overflow-hidden">
+      <div class="h-full rounded-full bg-accent-20 border-r border-accent"
+           style="width: {{ (progress.cleared_count / progress.total * 100) if progress.total else 0 }}%"></div>
+    </div>
+    <p class="mt-3 font-mono text-[11px] text-muted">
+      {% if progress.next %}next: {{ progress.next }}{% else %}every node cleared — the exam is over.{% endif %}
+    </p>
+  </div>
+
+  <div class="exam-terminal rounded-2xl p-5">
+    <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-3">
+      <span class="text-accent">&gt;</span> submit a vow-break to unlock the next floor
+    </p>
+    <form method="post" action="{{ url_for('flag') }}" class="flex flex-col gap-3">
+      <input
+        type="text"
+        name="flag"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="SEIYAKU{...}"
+        class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      >
+      <button type="submit"
+        class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+        Submit
+      </button>
+    </form>
+    {% if error %}
+    <p class="mt-3 font-mono text-[12px] text-nen-p1">&gt; {{ error }}</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="mb-16">
+  <h2 class="font-display text-2xl font-semibold text-bone mb-2">What injection is</h2>
+  <p class="max-w-2xl text-bone/80 leading-relaxed mb-8">
+    Every system in this exam trusts its own rule for telling data apart from
+    code. An applicant's name is supposed to stay a name; a search term is
+    supposed to stay a search term. Injection is what happens when that rule
+    was worded imprecisely — an attacker supplies input that the rule accepts
+    as harmless data, but that the underlying engine reads as an instruction.
+    The examiner never notices, because from where they're standing, the vow
+    was never broken.
+  </p>
+
+  <h3 class="font-display text-xl font-semibold text-bone mb-1">Ten shapes it takes</h3>
+  <p class="max-w-2xl text-bone/70 leading-relaxed mb-6 text-sm">
+    Click a card to see how each one actually behaves. Every shape below has a
+    real floor waiting for it later in the exam.
+  </p>
+
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" id="taxonomy-grid">
+    {% set taxonomy = [
+      ("Error-based SQLi", "The engine's own error message leaks the data you asked for.",
+       "A malformed query throws a database error, and that error string contains the result of a subquery you smuggled in (e.g. extractvalue()). You never see the data on the page — you see it inside the crash."),
+      ("Union-based SQLi", "You append your own SELECT onto the page's query.",
+       "Once you know the column count and types, UNION SELECT lets you splice an entirely different table's rows into the page's normal output — including information_schema itself."),
+      ("Boolean-blind SQLi", "The page only ever says yes or no.",
+       "No error, no extra data — just a single differing token between a true and a false condition. You rebuild the secret one character at a time with conditions like SUBSTRING(secret,1,1)='a'."),
+      ("Time-blind SQLi", "Silence is the only signal — so you measure it.",
+       "Even the yes/no token is gone. A conditional SLEEP() is the only observable difference: if the response takes 5 seconds longer, the condition was true."),
+      ("Out-of-band (OOB)", "The answer never comes back on this connection — it leaves through another door.",
+       "When the response channel is fully blind, the target itself can be made to reach out — a DNS lookup or HTTP request that carries the stolen data to a listener you control."),
+      ("Second-order / stored", "The payload is safe today. It detonates later.",
+       "Input is stored safely on write, then concatenated unsafely the next time something else reads it — a report, an admin dashboard, a log viewer. The gap between the two is where it hides."),
+      ("NoSQL operator injection", "The query isn't a string here — it's an object, and objects can be replaced.",
+       "Where a driver expects {\"username\": \"bob\"}, sending {\"username\": {\"$ne\": null}} changes the comparison operator itself. No quotes to escape — just an unexpected key."),
+      ("LDAP injection", "Directory filters are built the same way SQL is — by hand.",
+       "Metacharacters (& | ! * ( )) in an unescaped filter let you rewrite the boolean logic of a directory search, from *)(uid=* auth bypass to *)(objectClass=* enumeration."),
+      ("ORM injection", "The ORM only protects you when you let it write the query.",
+       "The moment raw string interpolation reaches a .filter(text(...)) or equivalent escape hatch, every guarantee the ORM gave you is gone — it's SQLi again, just with an extra layer on top."),
+      ("XML injection / XXE", "The parser will resolve whatever entity you declare — including files.",
+       "A DOCTYPE with a SYSTEM entity asks the parser to fetch a URI and inline it. If external entities aren't disabled, file:///etc/passwd is just another entity value."),
+    ] %}
+    {% for name, hook, detail in taxonomy %}
+    <button type="button" class="flip-card text-left h-40" data-flip-card>
+      <div class="flip-card-inner relative h-full w-full">
+        <div class="flip-face absolute inset-0 glass rounded-xl p-4 flex flex-col justify-between">
+          <p class="font-display text-lg font-semibold text-bone">{{ name }}</p>
+          <p class="text-sm text-bone/70 leading-snug">{{ hook }}</p>
+          <p class="font-mono text-[10px] text-muted">click to expand</p>
+        </div>
+        <div class="flip-face flip-face-back absolute inset-0 glass rounded-xl p-4 overflow-y-auto">
+          <p class="font-mono text-[11px] leading-relaxed text-bone/85">{{ detail }}</p>
+        </div>
+      </div>
+    </button>
+    {% endfor %}
+  </div>
+</section>
+
+<section>
+  <h2 class="font-display text-2xl font-semibold text-bone mb-6">The exam floors</h2>
+  <div class="flex flex-col gap-4">
+    {% set ns = namespace(current=None) %}
+    {% for node in progress.nodes %}
+      {% if node.phase != ns.current %}
+        {% set ns.current = node.phase %}
+        {% if not loop.first %}</div></div>{% endif %}
+        <div class="{{ node.phase_meta.css_class }} glass rounded-2xl p-5 border-l-4 border-accent">
+        <div class="flex items-baseline justify-between mb-3">
+          <h3 class="font-display text-lg font-semibold text-bone">
+            {{ node.phase_meta.label }}
+          </h3>
+          <span class="font-mono text-[11px] text-accent">{{ node.phase_meta.nen }}</span>
+        </div>
+        <div class="flex flex-col gap-2">
+      {% endif %}
+
+      <div class="flex items-center justify-between gap-3 rounded-lg bg-black/20 px-3 py-2">
+        <div class="flex items-center gap-3">
+          <span class="font-mono text-xs w-4 text-center">
+            {% if node.cleared %}<span class="text-accent">&#10003;</span>
+            {% elif node.unlocked %}<span class="text-bone/70">&#9679;</span>
+            {% else %}<span class="text-muted">&#128274;</span>{% endif %}
+          </span>
+          <span class="text-sm {{ 'text-bone' if node.unlocked else 'text-muted' }}">{{ node.name }}</span>
+        </div>
+        {% if node.cleared %}
+          <span class="font-mono text-[10px] text-accent">cleared</span>
+        {% elif node.unlocked and node.built %}
+          <a href="{{ node.path }}" class="font-mono text-[10px] text-accent hover:underline">open</a>
+        {% elif node.unlocked %}
+          <span class="font-mono text-[10px] text-muted">unlocked · in development</span>
+        {% else %}
+          <span class="font-mono text-[10px] text-muted">locked</span>
+        {% endif %}
+      </div>
+    {% endfor %}
+    </div></div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/hub.js') }}"></script>
+{% endblock %}
