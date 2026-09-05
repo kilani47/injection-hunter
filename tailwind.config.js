@@ -4,6 +4,19 @@ module.exports = {
     "./templates/**/*.html",
     "./static/js/**/*.js",
   ],
+  // The six phase-accent classes are applied via a Jinja variable whose
+  // values live in core/unlock.py (PHASE_META[...]["css_class"]), not in
+  // any file the content glob above scans — so the JIT purge would
+  // otherwise drop every .nen-pN / .nen-finals rule. Safelist them
+  // explicitly so they always survive the build.
+  safelist: [
+    "nen-p1",
+    "nen-p2",
+    "nen-p3",
+    "nen-p4",
+    "nen-p5",
+    "nen-finals",
+  ],
   theme: {
     extend: {
       colors: {
