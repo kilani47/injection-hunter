@@ -27,7 +27,7 @@ to mean. Every Vow here is worded just loosely enough to be misread.
 | # | Node | Directory | Status |
 |---|------|-----------|--------|
 | 1 | Gate of Trust | [`gate-of-trust/`](gate-of-trust/) | built |
-| 2 | Netero's Recipe Vault | *(lands with Task 1.2)* | not yet built |
+| 2 | Netero's Recipe Vault | [`recipe-vault/`](recipe-vault/) | built |
 | 3 | Exam Results Board | *(lands with Task 1.3)* | not yet built |
 | 4 | Trick Tower — Silent Room | *(lands with Task 1.4)* | not yet built |
 | 5 | Zevil Island Medical Bay | *(lands with Task 1.5)* | not yet built |

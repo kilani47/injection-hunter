@@ -75,3 +75,55 @@ def p1_gate():
         error=error,
         submitted_user=submitted_user,
     )
+
+
+# ---------------------------------------------------------------------------
+# p1_2 — Netero's Recipe Vault
+# ---------------------------------------------------------------------------
+
+@bp.route("/p1/recipe", methods=["GET"])
+def p1_recipe():
+    """Recipe-by-id lookup. Deliberately vulnerable to error-based SQLi.
+
+    The query is built with raw f-string concatenation (same sink pattern
+    as p1_gate), but this floor's real lesson is a second, independent bug:
+    the raw DBMS exception text is rendered straight back to the page on a
+    query error. Ordinarily that's "just" noisy — here it's the whole
+    exploit primitive, because MariaDB's extractvalue() raises an XPATH
+    syntax error whose message embeds a fragment of its own argument. Feed
+    it a subquery (e.g. `(SELECT secret FROM vault LIMIT 1)`) and the error
+    text becomes an exfiltration channel: no working `name` result is ever
+    needed, only a crafted failure.
+    """
+    recipe_id = request.args.get("id", "")
+    name = None
+    error = None
+
+    if recipe_id:
+        conn = mysql_conn()
+        try:
+            with conn.cursor() as cur:
+                # VULN: string concat — raw query param spliced directly
+                # into the SQL text, no escaping/parameterization. Use a
+                # parameterized query (cur.execute(q, (recipe_id,))) instead;
+                # left unescaped here on purpose, this is the challenge's
+                # sink.
+                q = f"SELECT name FROM vault WHERE id='{recipe_id}'"
+                cur.execute(q)
+                row = cur.fetchone()
+                name = row["name"] if row else None
+        except Exception as exc:
+            # VULN: raw DBMS error text echoed back to the client. This is
+            # what turns a broken query into error-based extraction — the
+            # exception's own message text carries data the app never
+            # meant to disclose.
+            error = str(exc)
+        finally:
+            conn.close()
+
+    return render_template(
+        "p1_recipe.html",
+        recipe_id=recipe_id,
+        name=name,
+        error=error,
+    )
