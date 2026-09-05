@@ -1,0 +1,6 @@
+# scratch
+.superpowers/
+__pycache__/
+*.pyc
+static/img/victory/*.gif
+assets/gifs/
