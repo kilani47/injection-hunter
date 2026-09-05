@@ -30,7 +30,7 @@ to mean. Every Vow here is worded just loosely enough to be misread.
 | 2 | Netero's Recipe Vault | [`recipe-vault/`](recipe-vault/) | built |
 | 3 | Exam Results Board | [`results-board/`](results-board/) | built |
 | 4 | Trick Tower — Silent Room | [`silent-room/`](silent-room/) | built |
-| 5 | Zevil Island Medical Bay | *(lands with Task 1.5)* | not yet built |
+| 5 | Zevil Island Medical Bay | [`medical-bay/`](medical-bay/) | built |
 
-This table grows one row per Phase-1 task; no other edits are expected here
-once a floor lands beyond flipping its status and linking its directory.
+All five floors are built — Phase 1 is complete. Clearing the last floor
+unlocks Phase 2's first node on the hub.
