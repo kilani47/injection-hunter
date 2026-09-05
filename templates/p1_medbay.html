@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Zevil Island Medical Bay — The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p1{% endblock %}
+
+{% block content %}
+<div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+  <div>
+    <p class="font-mono text-xs text-muted mb-2">the written exam &middot; floor 5</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4">Zevil Island Medical Bay</h1>
+    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+      Zevil Island doesn't run on urgency, and neither does this bay. Submit
+      a patient id and the terminal logs exactly one line — "status
+      checked" — no matter who you asked about, no matter whether they
+      exist, no matter whether the question even made sense. It never shows
+      you a name, a chart, a yes, or a no. The only thing this place ever
+      does differently is take its time about it.
+    </p>
+    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+      Objective: recover something the bay was never asked to reveal,
+      using nothing but how long it makes you wait for an answer.
+    </p>
+  </div>
+
+  <div class="license-card glass rounded-[1.75rem] p-6">
+    <div class="exam-terminal rounded-xl p-5">
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> medical bay — look up patient status
+      </p>
+
+      {% if checked %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          <p class="font-mono text-xs text-muted mb-1">medical bay log:</p>
+          <p class="font-mono text-sm text-bone">status checked.</p>
+        </div>
+      {% endif %}
+
+      <form method="get" action="{{ url_for('phase1.p1_medbay') }}" class="flex flex-col gap-3">
+        <input
+          type="text"
+          name="id"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="patient id"
+          value="{{ patient_id or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <button type="submit"
+          class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+          Check status
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

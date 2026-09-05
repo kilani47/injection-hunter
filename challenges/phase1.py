@@ -227,3 +227,58 @@ def p1_silent():
             conn.close()
 
     return render_template("p1_silent.html", code=code, result=result)
+
+
+# ---------------------------------------------------------------------------
+# p1_5 — Zevil Island Medical Bay
+# ---------------------------------------------------------------------------
+
+@bp.route("/p1/medbay", methods=["GET"])
+def p1_medbay():
+    """The Medical Bay's patient status lookup. Deliberately vulnerable to
+    time-blind SQLi.
+
+    Same sink shape as every other floor (raw f-string concatenation), but
+    this floor's lesson is a fifth, independent technique: unlike p1_4's
+    door (which still answers PASS/FAIL — one visible bit per request),
+    this route renders the exact same page no matter what the query
+    returns, whether it errors, or what condition was folded into it. There
+    is no result to read (unlike p1_3's UNION), no raw error text (unlike
+    p1_2's extractvalue()), and not even a boolean token (unlike p1_4's
+    PASS/FAIL) — the response body is byte-for-byte the same "status
+    checked" acknowledgment every time. The only channel left is *how long*
+    the server took to answer: a conditional SLEEP() folded into the query
+    via `IF(condition, SLEEP(N), 0)` makes a true condition measurably
+    slower than a false one, even though both render identically.
+    """
+    patient_id = request.args.get("id")
+    checked = False
+
+    if patient_id is not None:
+        conn = mysql_conn()
+        try:
+            with conn.cursor() as cur:
+                # VULN: string concat — raw query param spliced directly
+                # into the SQL text, no escaping/parameterization. Use a
+                # parameterized query (cur.execute(q, (patient_id,)))
+                # instead; left unescaped here on purpose, this is the
+                # challenge's sink. Note there is no result-set read-back at
+                # all here (unlike p1_2/p1_3) — the query's return value is
+                # deliberately discarded.
+                q = f"SELECT status FROM patients WHERE id='{patient_id}'"
+                cur.execute(q)
+                cur.fetchone()
+        except Exception:
+            # Deliberately silent, same house style as p1_4: whether the
+            # query matched, matched nothing, or outright errored, the page
+            # is identical either way. There is no PASS/FAIL token to leak
+            # here at all — a broken query and a clean false both render
+            # this exact same acknowledgment, with zero visible difference.
+            # The *only* thing that can differ is how long this whole
+            # try/except block took to run, via an injected SLEEP().
+            pass
+        finally:
+            conn.close()
+        checked = True
+
+    return render_template("p1_medbay.html", patient_id=patient_id, checked=checked)
