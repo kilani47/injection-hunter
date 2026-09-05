@@ -127,3 +127,54 @@ def p1_recipe():
         name=name,
         error=error,
     )
+
+
+# ---------------------------------------------------------------------------
+# p1_3 — Exam Results Board
+# ---------------------------------------------------------------------------
+
+@bp.route("/p1/results", methods=["GET"])
+def p1_results():
+    """Exam results search. Deliberately vulnerable to UNION-based SQLi.
+
+    Same sink shape as p1_gate/p1_recipe (raw f-string concatenation), but
+    this floor's lesson is a third, independent technique: the query's
+    result set is rendered directly into an HTML table, so a UNION SELECT
+    that matches the query's column count (3: id, name, score) surfaces
+    attacker-chosen values as ordinary-looking table rows. No error
+    channel is required here — unlike p1_2's extractvalue() trick, the
+    stolen data rides home inside a normal-looking result set.
+    """
+    q = request.args.get("q", "")
+    rows = None
+    error = None
+
+    if q:
+        conn = mysql_conn()
+        try:
+            with conn.cursor() as cur:
+                # VULN: string concat — raw query param spliced directly
+                # into the SQL text, no escaping/parameterization. Use a
+                # parameterized query (cur.execute(q, (f"%{q}%",))) instead;
+                # left unescaped here on purpose, this is the challenge's
+                # sink. The query's 3-column shape (id, name, score) is
+                # exactly what a working UNION SELECT has to match.
+                query = f"SELECT id,name,score FROM results WHERE name LIKE '%{q}%'"
+                cur.execute(query)
+                rows = cur.fetchall()
+        except Exception as exc:
+            # Same house style as p1_1/p1_2: the raw DBMS error text is
+            # echoed back. That's what makes column-count discovery via
+            # ' ORDER BY N-- - observable — a working ORDER BY renders the
+            # board as usual, an out-of-range one renders this error
+            # instead, confirming exactly how many columns the query has.
+            error = str(exc)
+        finally:
+            conn.close()
+
+    return render_template(
+        "p1_results.html",
+        q=q,
+        rows=rows,
+        error=error,
+    )
