@@ -58,12 +58,17 @@ services:
       - openldap_data:/bitnami/openldap
       # - ./seed/ldap:/ldifs:ro                           # wired in Task 4.0
 
-  # Placeholder image until Task 3.0 lands collaborator/Dockerfile + app.
-  # Swapping this to `build: ./collaborator` is the only change that task
-  # needs to make here.
+  # Out-of-band (OOB) collaborator: logs any HTTP request and any DNS
+  # query it receives, in-memory, and exposes GET /captures (JSON) for the
+  # portal to poll. Only needs to be reachable from other services on the
+  # internal compose network by its service name (`collaborator`) — not
+  # published to the host. See docs/oob-spike.md for the emitter mechanism
+  # that actually calls this service.
   collaborator:
-    image: python:3.12-slim
-    command: ["python3", "-m", "http.server", "8080"]
+    build: ./collaborator
+    expose:
+      - "80"
+      - "53/udp"
 
 volumes:
   mariadb_data:
