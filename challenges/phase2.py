@@ -17,6 +17,8 @@ so the file stays append-only friendly, same convention as phase1.py.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from flask import Blueprint, render_template, request
 
 from core.db import mysql_conn
@@ -176,5 +178,95 @@ def p2_sealed():
         news_id=news_id,
         rows=rows,
         pages=pages,
+        error=error,
+    )
+
+
+# ---------------------------------------------------------------------------
+# p2_3 — The Disguised Examiner
+# ---------------------------------------------------------------------------
+
+@bp.route("/p2/examiner", methods=["GET"])
+def p2_examiner():
+    """An examiner check-in desk. The visible surface — look up an examiner
+    by badge id — is fully parameterized and genuinely safe; it's a
+    deliberate red herring, not merely an unused field. Nothing submitted
+    through the page's own form ever reaches an unsafe query.
+
+    Every visit, regardless of what (if anything) the form submits, is
+    also logged by this request's `User-Agent` header and then immediately
+    queried back to render a "recent check-ins from this device" panel —
+    and *that* second, separate query is where this floor's real injection
+    lives. The only attacker-controlled value that ever reaches it is a
+    raw HTTP header, never anything the visible form's `badge_id` field
+    carries.
+
+    This is deliberate: sqlmap's default detection (`--level 1`) only ever
+    tests GET/POST parameters, never headers — pointed at this route with
+    defaults, it finds nothing, because the one parameter it *can* see
+    (`badge_id`) really is parameterized. Testing the `User-Agent` header
+    requires either raising `--level` to 3+ (the level at which sqlmap
+    starts testing User-Agent/Referer/Host as injectable) or explicitly
+    marking the header with sqlmap's `*` injection marker in a saved
+    `-r request.txt` request file.
+    """
+    badge_id = request.args.get("badge_id", "")
+    examiner = None
+    log_rows = None
+    error = None
+
+    user_agent = request.headers.get("User-Agent", "")
+
+    conn = mysql_conn()
+    try:
+        with conn.cursor() as cur:
+            # --- visible surface: badge lookup, fully parameterized. This
+            # is the field a challenger will naturally try first — and it
+            # is genuinely safe. Nothing here is the sink.
+            if badge_id:
+                cur.execute(
+                    "SELECT id, badge_id, name, role FROM examiners WHERE badge_id = %s",
+                    (badge_id,),
+                )
+                examiner = cur.fetchone()
+
+            # --- the real, hidden channel. Logging the visit is itself
+            # parameterized and safe (this INSERT is not the bug) — the
+            # header value is stored as inert data either way.
+            cur.execute(
+                "INSERT INTO visitor_log (ua, seen_at) VALUES (%s, %s)",
+                (user_agent, datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")),
+            )
+
+            # ...but immediately after, that same header value is used
+            # *again* to look up "recent check-ins from this device" — and
+            # this second query is built with raw string concatenation, no
+            # escaping/parameterization whatsoever.
+            # VULN: string concat — the `User-Agent` HTTP header (fully
+            # attacker-controlled, sent on every request, never touched by
+            # anything the visible form submits) is spliced directly into
+            # the SQL text. Use a parameterized query
+            # (cur.execute(q, (user_agent,))) instead; left unescaped here
+            # on purpose, this is the challenge's sink. A scanner that only
+            # tests form/query parameters (sqlmap's default --level 1)
+            # never reaches this at all — the whole point of this floor.
+            q = (
+                "SELECT id, ua, seen_at FROM visitor_log "
+                f"WHERE ua = '{user_agent}' ORDER BY id DESC LIMIT 5"
+            )
+            cur.execute(q)
+            log_rows = cur.fetchall()
+    except Exception as exc:
+        # VULN: raw DBMS error text echoed back to the client, same house
+        # style as every other floor's error-based channel in this lab.
+        error = str(exc)
+    finally:
+        conn.close()
+
+    return render_template(
+        "p2_examiner.html",
+        badge_id=badge_id,
+        examiner=examiner,
+        log_rows=log_rows,
         error=error,
     )

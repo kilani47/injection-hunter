@@ -30,8 +30,7 @@ faster than a human reasonably could. That assumption is Phase 2's Vow.
 |---|------|-----------|--------|
 | 1 | Automated Floor Skip | [`automated-floor-skip/`](automated-floor-skip/) | built |
 | 2 | A Sealed Floor | [`sealed-floor/`](sealed-floor/) | built |
-| 3 | The Disguised Examiner | _(lands in a later task)_ | not yet built |
+| 3 | The Disguised Examiner | [`disguised-examiner/`](disguised-examiner/) | built |
 
-Floor 1 is built. Floors 2 and 3 will fill in as their tasks land — see
-`.superpowers/sdd/2026-09-05-seiyaku-arc/` for the build plan. Until a
-floor's blueprint lands, its node shows on the hub as **locked**.
+All three floors are built. Clearing floor 3 unlocks Phase 3 — see
+`.superpowers/sdd/2026-09-05-seiyaku-arc/` for the overall build plan.
