@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Examiner Check-In — The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p2{% endblock %}
+
+{% block content %}
+<div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+  <div>
+    <p class="font-mono text-xs text-muted mb-2">trick tower &middot; floor 3</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4">The Disguised Examiner</h1>
+    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+      Every applicant who reaches this floor is asked to check in with an
+      examiner's badge id, so the tower can confirm who they claim to be
+      talking to. It's a reasonable-looking form, and it's exactly what it
+      looks like — a plain, parameterized lookup. Nothing you type into it
+      ever reaches an unsafe query.
+    </p>
+    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+      Objective: the form is not the door. Somewhere else on this floor,
+      something you never typed into any box is the thing actually being
+      trusted. Find where the tower is really listening, and use it to
+      reach whatever the disguised examiner is guarding.
+    </p>
+  </div>
+
+  <div class="license-card glass rounded-[1.75rem] p-6">
+    <div class="exam-terminal rounded-xl p-5">
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> examiner check-in &mdash; look up by badge id
+      </p>
+
+      <form method="get" action="{{ url_for('phase2.p2_examiner') }}" class="flex flex-col gap-3 mb-4">
+        <input
+          type="text"
+          name="badge_id"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="badge id (e.g. HA-014)"
+          value="{{ badge_id or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <button type="submit"
+          class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+          Check in
+        </button>
+      </form>
+
+      {% if badge_id %}
+        {% if examiner %}
+          <div class="rounded-lg border border-white/15 bg-black/20 overflow-hidden mb-4">
+            <table class="w-full font-mono text-[12px] text-bone/90">
+              <thead>
+                <tr class="border-b border-white/15 text-muted text-left">
+                  <th class="px-3 py-2 font-mono font-semibold">badge_id</th>
+                  <th class="px-3 py-2 font-mono font-semibold">name</th>
+                  <th class="px-3 py-2 font-mono font-semibold">role</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="px-3 py-2 break-all">{{ examiner.badge_id }}</td>
+                  <td class="px-3 py-2 break-all">{{ examiner.name }}</td>
+                  <td class="px-3 py-2 break-all">{{ examiner.role }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+            <p class="font-mono text-xs text-muted">no examiner found for that badge id.</p>
+          </div>
+        {% endif %}
+      {% endif %}
+
+      {% if error %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          <p class="font-mono text-xs text-muted mb-1">the check-in desk stumbled over your visit:</p>
+          <p class="font-mono text-[11px] text-accent break-all">{{ error }}</p>
+        </div>
+      {% endif %}
+
+      <p class="font-mono text-[11px] text-muted mb-2 mt-6 border-t border-white/10 pt-4">
+        recent check-ins from this device
+      </p>
+
+      {% if log_rows is not none %}
+        {% if log_rows %}
+          <div class="rounded-lg border border-white/15 bg-black/20 overflow-hidden">
+            <table class="w-full font-mono text-[12px] text-bone/90">
+              <thead>
+                <tr class="border-b border-white/15 text-muted text-left">
+                  <th class="px-3 py-2 font-mono font-semibold">id</th>
+                  <th class="px-3 py-2 font-mono font-semibold">user-agent</th>
+                  <th class="px-3 py-2 font-mono font-semibold">seen_at</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in log_rows %}
+                <tr class="border-b border-white/5 last:border-b-0">
+                  <td class="px-3 py-2 break-all">{{ row.id }}</td>
+                  <td class="px-3 py-2 break-all">{{ row.ua }}</td>
+                  <td class="px-3 py-2 break-all">{{ row.seen_at }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3">
+            <p class="font-mono text-xs text-muted">no check-ins logged for this device yet.</p>
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
