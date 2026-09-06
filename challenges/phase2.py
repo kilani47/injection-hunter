@@ -103,3 +103,78 @@ def p2_floors():
         rows=rows,
         error=error,
     )
+
+
+# ---------------------------------------------------------------------------
+# p2_2 — A Sealed Floor
+# ---------------------------------------------------------------------------
+
+@bp.route("/p2/sealed", methods=["GET"])
+def p2_sealed():
+    """An ancient, unauthenticated news/bulletin module — the class of bug
+    behind CVE-2015-3933 (GeniX CMS): a legacy "page selector plus record
+    id" URL shape (`?page=news&id=1`) nobody has touched in years, still
+    building its query with raw string concatenation.
+
+    Unlike p2_1 (built specifically so *any* scanner's default heuristics
+    trip over it), this floor's teaching point is recognizing a known
+    vulnerability *pattern* from a public CVE advisory in code nobody has
+    looked at recently, then confirming it the same way any injection gets
+    confirmed — point sqlmap at the parameter, let it detect, and dump.
+
+    With `page=news` and an `id`, this looks up one bulletin post by number
+    — again a bare, unquoted numeric slot, no escaping or parameterization.
+    With no `id` (or any other `page` value), it falls back to an ordinary,
+    safe listing query. The hidden `cms_admin` table — the module's old,
+    never-rotated admin login, carried over from whatever install first
+    stood this module up — is never touched by any query this route's own
+    code constructs; it only surfaces by riding the `id` injection into a
+    UNION SELECT / subquery against it.
+    """
+    page = request.args.get("page", "news")
+    news_id = request.args.get("id", "")
+    rows = None
+    pages = None
+    error = None
+
+    conn = mysql_conn()
+    try:
+        with conn.cursor() as cur:
+            if page == "news":
+                if news_id:
+                    # VULN: string concat — raw query param spliced
+                    # directly into the SQL text as a bare, unquoted
+                    # numeric slot, no escaping/parameterization
+                    # whatsoever — the same class of bug as CVE-2015-3933
+                    # (GeniX CMS): an old, unauthenticated content module's
+                    # id-lookup query, never revisited once parameterized
+                    # queries became the obvious default. Use a
+                    # parameterized query (cur.execute(q, (news_id,)))
+                    # instead; left unescaped here on purpose, this is the
+                    # challenge's sink.
+                    q = f"SELECT id, title, body, author FROM cms_news WHERE id={news_id}"
+                    cur.execute(q)
+                    rows = cur.fetchall()
+                else:
+                    cur.execute(
+                        "SELECT id, title, body, author FROM cms_news ORDER BY id"
+                    )
+                    rows = cur.fetchall()
+            else:
+                cur.execute("SELECT id, slug, title, body FROM cms_pages ORDER BY id")
+                pages = cur.fetchall()
+    except Exception as exc:
+        # VULN: raw DBMS error text echoed back to the client, same house
+        # style as every other floor's error-based channel in this lab.
+        error = str(exc)
+    finally:
+        conn.close()
+
+    return render_template(
+        "p2_sealed.html",
+        page=page,
+        news_id=news_id,
+        rows=rows,
+        pages=pages,
+        error=error,
+    )
