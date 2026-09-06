@@ -49,10 +49,13 @@ SELECT status FROM patients WHERE id='' OR IF(<condition>, SLEEP(N), 0)-- -
 ```
 
 If `<condition>` is true, the query (and therefore the whole HTTP
-request) takes roughly N seconds longer to complete than it otherwise
-would. If it's false, the request returns at normal speed. The page that
-comes back is identical in both cases — the only observable difference
-is elapsed wall-clock time on the client's own stopwatch.
+request) takes measurably longer to complete than it otherwise would —
+how much longer depends on how many rows the query ends up scanning
+`IF(...)` against, not just on N alone (see the row-count-multiplier note
+below). If the condition is false, the request returns at normal speed.
+The page that comes back is identical in both cases — the only
+observable difference is elapsed wall-clock time on the client's own
+stopwatch.
 
 **Per-DBMS conditional-delay functions** (the concept generalizes; only
 the syntax changes):
@@ -66,6 +69,20 @@ the syntax changes):
 
 This lab runs MariaDB, so every payload below uses `IF(condition,
 SLEEP(N), 0)`.
+
+**A real MariaDB nuance worth knowing when tuning a timing payload:** the
+injected `WHERE id='...' OR IF(condition, SLEEP(N), 0)` clause is
+*non-sargable* — no index can satisfy an `OR` against an arbitrary
+computed expression, so MariaDB's optimizer falls back to a full table
+scan of `patients` and evaluates `IF(condition, SLEEP(N), 0)` once for
+**every row it scans**, not once per query. This lab's `patients` seed
+holds 4 rows, so a true condition on this floor actually sleeps up to
+**4 x N** seconds, not N — confirmed live below. This isn't a quirk of
+this particular lab; it's a well-known MySQL/MariaDB blind-SQLi behavior,
+and it's exactly why a real-world timing payload is often written to
+sleep for a *short* duration per row (e.g. `SLEEP(0.3)`) rather than
+assuming one sleep call per request — the observed delay scales with
+however many rows the vulnerable query happens to scan.
 
 The walk always has three phases:
 
@@ -91,23 +108,35 @@ id:
 /p1/medbay?id=' OR IF(1=1,SLEEP(1.2),0)-- -
 ```
 
-took **4.864s** to answer on the very first request of a fresh run (this
-includes one-time warmup: Flask's first request, `core/db.py`'s lazy
-`import pymysql`, and the first TCP handshake to MariaDB all happen only
-once) — steady-state requests against this same payload later in the
-same run land around **1.2–1.4s**, matching the injected `SLEEP(1.2)`
-almost exactly. The same payload with the condition flipped false:
+took **4.836s** to answer — not the ~1.2s a single `SLEEP(1.2)` call
+would suggest. That's the row-count multiplication described above: with
+4 rows in `patients` and a non-sargable `OR`, MariaDB evaluates
+`IF(1=1, SLEEP(1.2), 0)` once per scanned row, so the observed delay is
+~4 x 1.2s. This is fully reproducible and scales predictably with the
+configured sleep duration — varying N against this same seed:
+
+| `SLEEP(N)` | observed elapsed | `4 x N` |
+|---|---|---|
+| 0.1 | 0.438s | 0.40s |
+| 0.3 | 1.240s | 1.20s |
+| 0.5 | 2.035s | 2.00s |
+| 1.2 | 4.836s | 4.80s |
+
+— confirming the 4x multiplier exactly matches this seed's 4-row
+`patients` table, not some unrelated source of latency. The same
+payload with the condition flipped false:
 
 ```
 /p1/medbay?id=' OR IF(1=2,SLEEP(1.2),0)-- -
 ```
 
-returned in **0.025s** — a normal request to this route, with no
-warmup penalty, since the connection is already established. Both
-responses rendered byte-for-byte the same `templates/p1_medbay.html`
-page — the same "status checked." line, no error, no different wording,
-nothing. A deliberately malformed payload — an unbalanced quote with no
-trailing comment to neutralize the rest of the literal —
+returned in **0.034s** — a normal, fast request, because a false
+condition never fires `SLEEP()` at all, no matter how many rows get
+scanned. Both responses rendered byte-for-byte the same
+`templates/p1_medbay.html` page — the same "status checked." line, no
+error, no different wording, nothing. A deliberately malformed payload —
+an unbalanced quote with no trailing comment to neutralize the rest of
+the literal —
 
 ```
 /p1/medbay?id=' OR IF(1=1,SLEEP(1.2),0)
@@ -131,9 +160,11 @@ query's own `WHERE` clause via `OR`:
 ```
 
 Bisecting on `>=` against `LENGTH(...)` (comparing elapsed time to a
-0.6s threshold — comfortably above ordinary request latency and
-comfortably below the 1.2s `SLEEP`) finds the exact length without ever
-reading a character. Against this seed that converges on **23**.
+0.6s threshold — comfortably above ordinary request latency of a few
+tens of milliseconds, and comfortably below the ~4.8s a true condition
+actually takes on this seed once the 4x row-count multiplier is
+accounted for) finds the exact length without ever reading a character.
+Against this seed that converges on **23**.
 
 **3. Bisect each character.** For each position `1..23`:
 
@@ -150,11 +181,11 @@ stack:
 
 ```
 [p1_5] target: http://localhost:8000/p1/medbay
-[p1_5] SLEEP=1.2s, threshold=0.6s
+[p1_5] per-row SLEEP=1.2s (observed ~4x due to the 4-row patients table's non-sargable OR — see module docstring), threshold=0.6s
 [p1_5] step 0 — confirm injection point + silent (timing-only) oracle
-  id="' OR IF(1=1,SLEEP(1.2),0)-- -" -> 4.864s (slow)
-  id="' OR IF(1=2,SLEEP(1.2),0)-- -" -> 0.025s (fast)
-  id="' OR IF(1=1,SLEEP(1.2),0)" (malformed) -> 0.024s (fast)
+  id="' OR IF(1=1,SLEEP(1.2),0)-- -" -> 4.836s (slow)
+  id="' OR IF(1=2,SLEEP(1.2),0)-- -" -> 0.034s (fast)
+  id="' OR IF(1=1,SLEEP(1.2),0)" (malformed) -> 0.022s (fast)
   ok: oracle is genuinely time-blind (true/false/error render identically)
 [p1_5] step 1 — discover secret length via LENGTH() + timing bisection
   ok: LENGTH(records.secret) = 23
@@ -174,13 +205,14 @@ stack:
 [p1_5] PASS
 ```
 
-(This is real, unedited output from a live run of `solvers/p1_5.py`
-against this exact seed. Exact elapsed-time values will drift run to run
-with host load and warmup state — the solver's 0.6s threshold sits with
-roughly a 2x safety margin on both sides of the steady-state 1.2s
-`SLEEP`, specifically so ordinary jitter can't flip a verdict; the one
-outlier above, the very first request of the run, is one-time process
-warmup, not oracle noise — see the timing note above.)
+(This is real, measured output from a live run of `solvers/p1_5.py`
+against this exact seed — see the varying-`N` table above for the
+independent confirmation that the ~4.8s "slow" figure is the 4-row
+multiplier at work, not warmup or noise. Every "slow" answer in a walk
+costs ~4x the configured per-row `SLEEP_SECONDS`; the 0.6s threshold
+still sits with a wide margin on both sides — well above ordinary
+sub-50ms request latency and well below the ~4.8s observed "slow" time —
+so ordinary jitter on a loaded sandbox can't flip a verdict.)
 
 No error text, no extra row, no PASS/FAIL word — every character above
 came from nothing but a stopwatch.

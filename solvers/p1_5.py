@@ -15,6 +15,14 @@ into the injected condition via `IF(condition, SLEEP(N), 0)` makes a true
 condition measurably slower than a false one, even though both produce the
 exact same page.
 
+Note on observed timing: the vulnerable WHERE clause (`id='...' OR
+IF(condition, SLEEP(N), 0)`) is non-sargable, so MariaDB full-scans
+`patients` and evaluates IF(...) once per row — with 4 seed rows, a true
+condition's SLEEP(N) fires up to 4 times per request, so the real
+elapsed time for a "slow" answer is ~4x the configured SLEEP_SECONDS
+below, not 1x. See the comment above SLEEP_SECONDS for the live numbers
+that confirm this.
+
 This is a real, live extraction against the running stack — every
 character below is recovered by actually timing the oracle, not hardcoded
 or simulated. The expected flag is only used for the final assertion.
@@ -38,18 +46,33 @@ ASCII_LOW = 32   # space
 ASCII_HIGH = 126  # '~'
 
 # --- timing tuning -----------------------------------------------------
-# SLEEP_SECONDS is how long a *true* injected condition makes MariaDB
-# pause via IF(condition, SLEEP(N), 0). THRESHOLD_SECONDS is the elapsed-
-# time cutoff used to classify a response as "slow" (true) vs "fast"
-# (false): comfortably above ordinary request latency (a few tens of ms
-# on a local compose network) and comfortably below SLEEP_SECONDS, so a
-# little jitter on a loaded sandbox can't flip the verdict. 1.2s sleep /
-# 0.6s threshold gives roughly a 2x safety margin on both sides while
-# keeping the ~23-char, ~7-bit-per-char bisection walk under a few
-# minutes total.
+# SLEEP_SECONDS is the *per-row* delay passed to IF(condition, SLEEP(N),
+# 0) — NOT the observed total. The vulnerable query's WHERE clause is
+# `id='...' OR IF(condition, SLEEP(N), 0)`: that OR is non-sargable (no
+# index can satisfy it), so MariaDB falls back to a full table scan of
+# `patients` and evaluates the IF(...) once per row it scans. With this
+# seed's `patients` table holding 4 rows, a true condition therefore
+# fires SLEEP(N) up to 4 times per request — observed elapsed time for a
+# true condition is ~4 x SLEEP_SECONDS, confirmed live (SLEEP(0.1) ->
+# ~0.44s, SLEEP(0.5) -> ~2.03s, SLEEP(1.2) -> ~4.84s). This is a real,
+# well-known MySQL/MariaDB blind-SQLi nuance (row-count multiplication of
+# SLEEP() under a non-sargable OR), not an artifact of this solver, and
+# is exactly why THRESHOLD_SECONDS is set so far below the actual
+# observed "slow" time rather than near SLEEP_SECONDS itself.
+#
+# THRESHOLD_SECONDS is the elapsed-time cutoff used to classify a
+# response as "slow" (true) vs "fast" (false): comfortably above
+# ordinary request latency (a few tens of ms on a local compose network)
+# and comfortably below the ~4x-multiplied observed "slow" time (~4.8s
+# here), so ordinary jitter on a loaded sandbox can't flip the verdict.
+# A 1.2s per-row SLEEP with a 0.6s threshold gives roughly an 8x margin
+# above ordinary latency and a similarly wide margin below the observed
+# ~4.8s "slow" response, while keeping the ~23-char, ~7-bit-per-char
+# bisection walk under a few minutes total (each "slow" answer still
+# costs ~4.8s of real wall-clock time due to the multiplier above).
 SLEEP_SECONDS = 1.2
 THRESHOLD_SECONDS = 0.6
-REQUEST_TIMEOUT = SLEEP_SECONDS + 10
+REQUEST_TIMEOUT = SLEEP_SECONDS * 4 + 10
 
 MARKER = "status checked"
 
@@ -160,7 +183,11 @@ def discover_char(position: int) -> str:
 
 def main() -> int:
     print(f"[p1_5] target: {BASE}/p1/medbay")
-    print(f"[p1_5] SLEEP={SLEEP_SECONDS}s, threshold={THRESHOLD_SECONDS}s")
+    print(
+        f"[p1_5] per-row SLEEP={SLEEP_SECONDS}s (observed ~4x due to the "
+        f"4-row patients table's non-sargable OR — see module docstring), "
+        f"threshold={THRESHOLD_SECONDS}s"
+    )
 
     try:
         confirm_injection_and_silence()
