@@ -29,7 +29,7 @@ faster than a human reasonably could. That assumption is Phase 2's Vow.
 | # | Node | Directory | Status |
 |---|------|-----------|--------|
 | 1 | Automated Floor Skip | [`automated-floor-skip/`](automated-floor-skip/) | built |
-| 2 | A Sealed Floor | _(lands in a later task)_ | not yet built |
+| 2 | A Sealed Floor | [`sealed-floor/`](sealed-floor/) | built |
 | 3 | The Disguised Examiner | _(lands in a later task)_ | not yet built |
 
 Floor 1 is built. Floors 2 and 3 will fill in as their tasks land — see

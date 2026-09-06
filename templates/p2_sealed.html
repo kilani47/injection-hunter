@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}TrickCMS News Portal — The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p2{% endblock %}
+
+{% block content %}
+<div style="font-family: 'Times New Roman', Times, serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+    style="border: 3px double #8b5cf6; background: #050208; margin-bottom: 1.5rem;">
+    <tr>
+      <td style="padding: 10px 16px; background: linear-gradient(180deg, rgba(139,92,246,0.35), rgba(139,92,246,0.05)); border-bottom: 2px solid #8b5cf6;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="font-size: 22px; font-weight: bold; color: #e8e4da; letter-spacing: 1px;">
+              &raquo; TrickCMS&trade; News Portal <span style="font-size: 12px; font-weight: normal; color: #9a9aa6;">v1.2</span>
+            </td>
+            <td align="right" style="font-size: 11px; color: #9a9aa6;">
+              est. 2005 &middot; last touched by staff: unknown
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 6px 16px; background: #0a0a12; border-bottom: 1px solid rgba(139,92,246,0.4); font-size: 12px;">
+        <a href="{{ url_for('phase2.p2_sealed') }}" style="color: #c9bfff; text-decoration: none;">[ Home ]</a>
+        &nbsp;|&nbsp;
+        <a href="{{ url_for('phase2.p2_sealed', page='news') }}" style="color: #c9bfff; text-decoration: none;">[ News ]</a>
+        &nbsp;|&nbsp;
+        <a href="{{ url_for('phase2.p2_sealed', page='about') }}" style="color: #c9bfff; text-decoration: none;">[ About ]</a>
+        &nbsp;|&nbsp;
+        <a href="{{ url_for('phase2.p2_sealed', page='contact') }}" style="color: #c9bfff; text-decoration: none;">[ Contact ]</a>
+        &nbsp;|&nbsp;
+        <span style="color: #5a5a66;">[ Admin Login &mdash; module offline ]</span>
+      </td>
+    </tr>
+  </table>
+
+  <marquee behavior="scroll" direction="left" scrollamount="4"
+    style="display:block; background:#0a0a12; border:1px solid rgba(139,92,246,0.4); color:#c9bfff; font-size:12px; padding:4px 0; margin-bottom:1.25rem;">
+    Welcome to the TrickCMS News Portal &mdash; best viewed at 800x600 &mdash; this module has not been updated since it was first installed &mdash; you are visitor #003841 since 2005
+  </marquee>
+
+  <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+    <div style="font-family: Rajdhani, ui-sans-serif, system-ui, sans-serif;">
+      <p class="font-mono text-xs text-muted mb-2">trick tower &middot; sealed floor</p>
+      <h1 class="font-display text-3xl font-semibold text-bone mb-4">A Sealed Floor</h1>
+      <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+        Somewhere below the catalog every applicant is shown, an older
+        module keeps running on its own — a news bulletin board nobody
+        has rebuilt since the day it went up. It still answers requests.
+        It was never meant to still be reachable.
+      </p>
+      <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+        Objective: find whatever old weakness this module was built with,
+        and use it to reach the login it was never supposed to expose.
+      </p>
+    </div>
+
+    <div class="license-card glass rounded-[1.75rem] p-6">
+      <div class="exam-terminal rounded-xl p-5">
+        {% if page == 'news' %}
+          <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+            <span class="text-accent">&gt;</span> bulletin board &mdash; look up post by id
+          </p>
+
+          <form method="get" action="{{ url_for('phase2.p2_sealed') }}" class="flex flex-col gap-3 mb-4">
+            <input type="hidden" name="page" value="news">
+            <input
+              type="text"
+              name="id"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="post id (leave blank to list all)"
+              value="{{ news_id or '' }}"
+              class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+            <button type="submit"
+              class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+              Look up
+            </button>
+          </form>
+
+          {% if rows is not none %}
+            {% if rows %}
+              <div class="rounded-lg border border-white/15 bg-black/20 overflow-hidden mb-4">
+                <table class="w-full font-mono text-[12px] text-bone/90">
+                  <thead>
+                    <tr class="border-b border-white/15 text-muted text-left">
+                      <th class="px-3 py-2 font-mono font-semibold">id</th>
+                      <th class="px-3 py-2 font-mono font-semibold">title</th>
+                      <th class="px-3 py-2 font-mono font-semibold">body</th>
+                      <th class="px-3 py-2 font-mono font-semibold">author</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in rows %}
+                    <tr class="border-b border-white/5 last:border-b-0">
+                      <td class="px-3 py-2 break-all">{{ row.id }}</td>
+                      <td class="px-3 py-2 break-all">{{ row.title }}</td>
+                      <td class="px-3 py-2 break-all">{{ row.body }}</td>
+                      <td class="px-3 py-2 break-all">{{ row.author }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+                <p class="font-mono text-xs text-muted">no bulletin post found.</p>
+              </div>
+            {% endif %}
+          {% endif %}
+
+          {% if error %}
+            <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+              <p class="font-mono text-xs text-muted mb-1">the module stumbled over your lookup:</p>
+              <p class="font-mono text-[11px] text-accent break-all">{{ error }}</p>
+            </div>
+          {% endif %}
+        {% else %}
+          <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+            <span class="text-accent">&gt;</span> static page &mdash; {{ page }}
+          </p>
+          {% if pages %}
+            {% for p in pages %}
+            <div class="rounded-lg border border-white/15 bg-black/20 px-4 py-3 mb-3">
+              <p class="font-mono text-xs text-accent mb-1">{{ p.title }}</p>
+              <p class="font-mono text-[12px] text-bone/80 leading-relaxed">{{ p.body }}</p>
+            </div>
+            {% endfor %}
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+    style="border-top: 1px solid rgba(139,92,246,0.3); margin-top: 2rem;">
+    <tr>
+      <td style="padding: 8px 0; font-size: 11px; color: #5a5a66;">
+        Powered by TrickCMS&trade; 1.2 &mdash; this module has not received a security update since it was deployed.
+      </td>
+    </tr>
+  </table>
+
+</div>
+{% endblock %}
