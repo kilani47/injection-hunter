@@ -1,0 +1,152 @@
+# seed/ldap/zodiac.ldif — Lesson-Group 4 "Zodiac Committee" directory seed.
+#
+# Loaded once, on first boot of an EMPTY openldap data volume, by
+# osixia/openldap's internal-seed mechanism (see docker-compose.yml,
+# openldap service: LDAP_SEED_INTERNAL_LDIF_PATH mounts seed/ldap/ into the
+# container, which copies it into the image's custom-bootstrap-ldif
+# directory and applies every *.ldif file there before slapd's first
+# start). The root suffix dc=hunterassoc,dc=org and its admin entry are
+# created by the image itself from LDAP_DOMAIN/LDAP_ADMIN_PASSWORD — this
+# file only adds the sub-tree under it.
+#
+# Structure:
+#   ou=zodiac,dc=hunterassoc,dc=org        — organizational unit
+#     uid=<animal>,ou=zodiac,...            — twelve committee-member
+#                                              entries, codenamed after the
+#                                              twelve traditional zodiac
+#                                              animals (fake names/titles —
+#                                              no real persons)
+#     uid=chairman,ou=zodiac,...            — one additional entry whose
+#                                              `description` holds a
+#                                              placeholder secret string;
+#                                              a later lesson task swaps
+#                                              this for the real flag value
+#
+# Later NoSQL/LDAP-injection lesson tasks (4.1+) should target this DIT via
+# `ldapsearch -b dc=hunterassoc,dc=org` / an LDAP filter built from this
+# tree — the OU and attribute names here (`ou`, `uid`, `cn`, `title`,
+# `description`) are the stable surface for that lesson's filter-injection
+# payloads.
+
+dn: ou=zodiac,dc=hunterassoc,dc=org
+objectClass: organizationalUnit
+ou: zodiac
+description: Hunter Association Zodiac Committee roster
+
+dn: uid=rat,ou=zodiac,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: rat
+cn: Rat
+sn: Rat
+title: Zodiac Committee Member
+mail: rat@hunterassoc.org
+userPassword: zodiac_rat_pw
+
+dn: uid=ox,ou=zodiac,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: ox
+cn: Ox
+sn: Ox
+title: Zodiac Committee Member
+mail: ox@hunterassoc.org
+userPassword: zodiac_ox_pw
+
+dn: uid=tiger,ou=zodiac,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: tiger
+cn: Tiger
+sn: Tiger
+title: Zodiac Committee Member
+mail: tiger@hunterassoc.org
+userPassword: zodiac_tiger_pw
+
+dn: uid=rabbit,ou=zodiac,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: rabbit
+cn: Rabbit
+sn: Rabbit
+title: Zodiac Committee Member
+mail: rabbit@hunterassoc.org
+userPassword: zodiac_rabbit_pw
+
+dn: uid=dragon,ou=zodiac,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: dragon
+cn: Dragon
+sn: Dragon
+title: Zodiac Committee Member
+mail: dragon@hunterassoc.org
+userPassword: zodiac_dragon_pw
+
+dn: uid=snake,ou=zodiac,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: snake
+cn: Snake
+sn: Snake
+title: Zodiac Committee Member
+mail: snake@hunterassoc.org
+userPassword: zodiac_snake_pw
+
+dn: uid=horse,ou=zodiac,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: horse
+cn: Horse
+sn: Horse
+title: Zodiac Committee Member
+mail: horse@hunterassoc.org
+userPassword: zodiac_horse_pw
+
+dn: uid=goat,ou=zodiac,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: goat
+cn: Goat
+sn: Goat
+title: Zodiac Committee Member
+mail: goat@hunterassoc.org
+userPassword: zodiac_goat_pw
+
+dn: uid=monkey,ou=zodiac,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: monkey
+cn: Monkey
+sn: Monkey
+title: Zodiac Committee Member
+mail: monkey@hunterassoc.org
+userPassword: zodiac_monkey_pw
+
+dn: uid=rooster,ou=zodiac,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: rooster
+cn: Rooster
+sn: Rooster
+title: Zodiac Committee Member
+mail: rooster@hunterassoc.org
+userPassword: zodiac_rooster_pw
+
+dn: uid=dog,ou=zodiac,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: dog
+cn: Dog
+sn: Dog
+title: Zodiac Committee Member
+mail: dog@hunterassoc.org
+userPassword: zodiac_dog_pw
+
+dn: uid=pig,ou=zodiac,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: pig
+cn: Pig
+sn: Pig
+title: Zodiac Committee Member
+mail: pig@hunterassoc.org
+userPassword: zodiac_pig_pw
+
+dn: uid=chairman,ou=zodiac,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: chairman
+cn: Chairman
+sn: Chairman
+title: Chairman, Zodiac Committee
+mail: chairman@hunterassoc.org
+userPassword: chairman_dont_leak_this
+description: SEIYAKU{placeholder_replace_me_in_task_4_2}
