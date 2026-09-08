@@ -40,7 +40,7 @@ it expected.
 | # | Node | Directory | Status |
 |---|------|-----------|--------|
 | 1 | Basic Records Room | [`records-room/`](records-room/) | built |
-| 2 | Bypassing the Archive Guardian | *(coming soon)* | not yet built |
+| 2 | Bypassing the Archive Guardian | [`archive-guardian/`](archive-guardian/) | built |
 | 3 | Zodiac Twelve Directory Breach | *(coming soon)* | not yet built |
 
 "Basic Records Room" is a blind extraction lesson: the archive search

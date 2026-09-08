@@ -152,3 +152,171 @@ def p4_records():
         count=count,
         searched=value is not None,
     )
+
+
+# ---------------------------------------------------------------------------
+# p4_2 — Bypassing the Archive Guardian
+# ---------------------------------------------------------------------------
+
+def _bracket_login_value(form, param: str) -> dict | None:
+    """Reconstruct a nested operator dict out of bracket-notation form keys
+    for a single login field, e.g. `username[$ne]=1` on the wire ->
+    {"$ne": "1"} in Python. Same idea as p4_1's `_bracket_value` above, but
+    parameterized on the field name (`param`) instead of hardcoded to a
+    single `value` key, since a login form has two independent fields
+    (`username`, `password`) that can each separately arrive as an
+    operator dict rather than the single search `value` p4_1 deals with.
+
+    Werkzeug's `request.form` is flat key/value pairs, same as
+    `request.args` — a form field literally named `username[$ne]` never
+    gets auto-nested into a dict. A caller who never sends bracket
+    notation at all still gets a plain string back from
+    `form.get(param)`; a caller who does gets a real dict here, which is
+    exactly what reaches MongoDB unchecked below.
+    """
+    nested: dict = {}
+    prefix = f"{param}["
+    for key in form:
+        if key.startswith(prefix) and key.endswith("]"):
+            op = key[len(prefix):-1]
+            nested[op] = form.get(key)
+    return nested or None
+
+
+def _resolve_login_credentials():
+    """Pull `username`/`password` out of the request, from whichever
+    channel the caller used: a JSON body (nested dicts arrive natively via
+    `json.loads` — `{"username": {"$ne": null}}` is already a real Python
+    dict the moment the body is parsed), or a form-encoded POST body (flat
+    by default, or reconstructed into a nested dict per-field by
+    `_bracket_login_value` above, e.g. `username[$ne]=1&password[$ne]=1`).
+    """
+    if request.is_json:
+        payload = request.get_json(silent=True) or {}
+        return payload.get("username"), payload.get("password")
+
+    username = _bracket_login_value(request.form, "username")
+    if username is None:
+        username = request.form.get("username")
+
+    password = _bracket_login_value(request.form, "password")
+    if password is None:
+        password = request.form.get("password")
+
+    return username, password
+
+
+def _public_agent(agent: dict) -> dict:
+    """Strip an `agents` document down to the fields the guardian console
+    is willing to display: identity + status, and the flag *only* when
+    the matched document is explicitly tagged `role: "guardian"`. Never
+    echoes back the matched document's own `password` field — that would
+    be its own, separate info leak beyond this lesson's actual point."""
+    is_guardian = agent.get("role") == "guardian"
+    return {
+        "agentId": agent.get("agentId"),
+        "username": agent.get("username"),
+        "codename": agent.get("codename"),
+        "status": agent.get("status"),
+        "role": agent.get("role"),
+        "privileged": is_guardian,
+        "flag": agent.get("flag") if is_guardian else None,
+    }
+
+
+@bp.route("/p4/guardian", methods=["GET", "POST"])
+def p4_guardian():
+    """The Archive Guardian login console.
+
+    A login form over the `agents` collection: give it a username and a
+    password, and — on a real match — it logs you in as that agent and
+    shows you their console. Ordinary use looks exactly like any other
+    login form: `username=field.rose&password=th0rn_and_petal` builds
+    `db.agents.find_one({"username": "field.rose", "password":
+    "th0rn_and_petal"})`, an ordinary two-field equality match against the
+    real seeded credential. Get the password wrong and nothing matches —
+    login fails, same as any real login.
+
+    The bug (notes §8): neither `username` nor `password` is validated to
+    actually be a string before reaching that query. MongoDB's query
+    language treats a *dict* value specially, exactly like the p4_1 sink
+    above — `{"password": {"$ne": null}}` isn't "does password equal this
+    dict", it's "does password not-equal null", which is true for every
+    agent that *has* a password field at all. A caller who gets both
+    `username` and `password` to arrive as operator dicts instead of
+    plain strings — via a JSON body (`{"username": {"$ne": null},
+    "password": {"$ne": null}}`, where `json.loads` already produces real
+    nested dicts) or form-encoded bracket notation
+    (`username[$ne]=1&password[$ne]=1`, reconstructed into the same
+    nested dicts by `_bracket_login_value` above) — makes the query match
+    *every* document in `agents`, without supplying a single real
+    credential.
+
+    `find_one` with no explicit sort returns whichever document real
+    MongoDB natural order resolves to first — this route never sorts or
+    special-cases the query result. seed/mongo/init_p4_guardian.js seeds
+    exactly one privileged account (`role: "guardian"`) as the genuinely
+    first document in that collection's insertion order, so a caller who
+    defeats the login this way lands on it, models the real-world impact
+    of this bug class: a caller who bypasses a login with no valid
+    credentials at all doesn't just "get in" — they get logged in *as* a
+    specific, often highly-privileged, account (see `_public_agent`
+    above for exactly what's revealed, and only when that account is the
+    one actually matched).
+    """
+    agent = None
+    error = None
+    attempted = False
+    submitted_username = None
+
+    if request.method == "POST":
+        attempted = True
+        username, password = _resolve_login_credentials()
+        submitted_username = username if isinstance(username, str) else None
+
+        if username is not None and password is not None:
+            db = mongo_db()
+            try:
+                # VULN: `username` and `password` reach MongoDB's query
+                # language completely unvalidated — there is no
+                # isinstance(username, str) / isinstance(password, str)
+                # check anywhere before this line. Two plain strings make
+                # an ordinary two-field equality match; a dict for either
+                # one (see _resolve_login_credentials /
+                # _bracket_login_value above for how a caller gets one
+                # there) is honored by MongoDB as real query operators
+                # instead — {"$ne": null}/{"$ne": 1} matches any document
+                # where that field exists and isn't literally that value,
+                # i.e. every seeded agent. The fix is the same as p4_1's:
+                # reject any username/password that isn't the expected
+                # string type before it ever reaches find_one().
+                query = {"username": username, "password": password}
+                agent = db.agents.find_one(query)
+            except Exception:
+                # Swallowed on purpose, same convention as p4_1: a
+                # malformed operator MongoDB itself rejects just reads as
+                # "login failed", not as a distinguishable error channel.
+                agent = None
+                error = "the guardian console rejected that request"
+
+    wants_json = request.method == "POST" and (
+        request.is_json or request.headers.get("Accept") == "application/json"
+    )
+    public_agent = _public_agent(agent) if agent else None
+
+    if wants_json:
+        return jsonify(
+            success=agent is not None,
+            username=submitted_username,
+            agent=public_agent,
+            error=error,
+        )
+
+    return render_template(
+        "p4_guardian.html",
+        attempted=attempted,
+        success=agent is not None,
+        agent=public_agent,
+        error=error,
+        submitted_username=submitted_username,
+    )

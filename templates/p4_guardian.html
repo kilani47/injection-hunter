@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Bypassing the Archive Guardian — The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p4{% endblock %}
+
+{% block content %}
+<div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+  <div>
+    <p class="font-mono text-xs text-muted mb-2">hunter association hq &middot; archive guardian console</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4">Bypassing the Archive Guardian</h1>
+    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+      A second door, deeper in the archive. This one doesn't just report a
+      match/no-match bit like the front desk — it logs you in as whoever
+      it decides you are. The guardian staffing it checks that a username
+      and a password were both supplied. It was never told to check what
+      kind of thing "supplied" actually means.
+    </p>
+    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+      Objective: get past this login and into the console behind it,
+      without ever knowing a single real agent's password.
+    </p>
+  </div>
+
+  <div class="license-card glass rounded-[1.75rem] p-6">
+    <div class="exam-terminal rounded-xl p-5">
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> archive guardian &mdash; agent sign-in
+      </p>
+
+      {% if attempted %}
+        {% if success and agent %}
+          <div class="rounded-lg border border-accent bg-accent-20 px-4 py-3 mb-4">
+            <p class="font-mono text-xs text-accent mb-2">
+              access granted &mdash;
+              {% if agent.privileged %}guardian console{% else %}agent console{% endif %}
+            </p>
+            <p class="font-mono text-[12px] text-bone/90 break-all">
+              <span class="text-muted">agentId&gt;</span> {{ agent.agentId }}
+            </p>
+            <p class="font-mono text-[12px] text-bone/90 break-all">
+              <span class="text-muted">username&gt;</span> {{ agent.username }}
+            </p>
+            <p class="font-mono text-[12px] text-bone/90 break-all">
+              <span class="text-muted">codename&gt;</span> {{ agent.codename }}
+            </p>
+            <p class="font-mono text-[12px] text-bone/90 break-all">
+              <span class="text-muted">status&gt;</span> {{ agent.status }}
+            </p>
+            {% if agent.role %}
+              <p class="font-mono text-[12px] text-bone/90 break-all">
+                <span class="text-muted">role&gt;</span> {{ agent.role }}
+              </p>
+            {% endif %}
+            {% if agent.flag %}
+              <p class="font-mono text-[12px] text-accent break-all mt-2 border-t border-white/10 pt-2">
+                <span class="text-muted">clearance&gt;</span> {{ agent.flag }}
+              </p>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+            <p class="font-mono text-xs text-muted mb-1">the guardian did not recognize that sign-in:</p>
+            <p class="font-mono text-[11px] text-nen-p1 break-all">
+              {{ error or "no agent matched that username / password." }}
+            </p>
+          </div>
+        {% endif %}
+      {% endif %}
+
+      <form method="post" action="{{ url_for('phase4.p4_guardian') }}" class="flex flex-col gap-3">
+        <input
+          type="text"
+          name="username"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="username"
+          value="{{ submitted_username or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <input
+          type="password"
+          name="password"
+          autocomplete="off"
+          placeholder="password"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <button type="submit"
+          class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+          Sign in
+        </button>
+      </form>
+
+      <p class="font-mono text-[11px] text-muted mb-2 mt-6 border-t border-white/10 pt-4">
+        request shape
+      </p>
+      <p class="font-mono text-[11px] text-bone/60 mb-3">
+        This form only ever sends plain strings. The sign-in endpoint
+        itself, <code class="text-accent">POST /p4/guardian</code>, takes
+        whatever shape <code class="text-accent">username</code> and
+        <code class="text-accent">password</code> arrive in &mdash; a JSON
+        body or a form-encoded body, either one &mdash; and does not
+        require either field to be a plain string. Send
+        <code class="text-accent">Accept: application/json</code> for a
+        compact JSON answer instead of this page.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
