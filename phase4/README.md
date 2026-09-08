@@ -49,10 +49,10 @@ matched — and neither the field name nor the value it searches on is
 type-checked before reaching MongoDB, which is enough on its own to
 walk a hidden value out one character at a time via `$regex`/`$gt`.
 
-"Bypassing the Archive Guardian" (not yet built) will move the same
-type-confusion bug class from a read path to an auth check — the
-classic `{"$ne": null}`-style login bypass, against the same seeded
-`records`/`agents` collections this floor already introduces.
+"Bypassing the Archive Guardian" moves the same type-confusion bug
+class from a read path to an auth check — the classic `{"$ne": null}`
+-style login bypass, against the `agents` collection seeded alongside
+`records` in this floor's Mongo data.
 
 "Zodiac Twelve Directory Breach" (not yet built) moves off MongoDB
 entirely and into the lab's OpenLDAP directory — a different query
