@@ -13,9 +13,8 @@ network you do not control or do not have explicit authorization to test.
 The Flask application, the challenge back ends and their intentionally
 vulnerable code paths, the "Nen aura" design system (CSS/Tailwind/markup),
 the challenge narratives, briefing/debrief documents, and all other original
-writing and code in this repository are the work of the author
-(abdullah.kilani4702@gmail.com) and are licensed under the MIT License (see
-`LICENSE`).
+writing and code in this repository are the work of the author and are
+licensed under the MIT License (see `LICENSE`).
 
 ## What this project does not own
 
