@@ -78,7 +78,7 @@ NODES: list[dict[str, Any]] = [
     {"id": "p3_1", "phase": "3", "name": "The Spell Card",
      "path": "/p3/spellcard", "flag": FLAGS["p3_1"], "built": True},
     {"id": "p3_2", "phase": "3", "name": "The Cursed Card",
-     "path": "/p3/cursedcard", "flag": FLAGS["p3_2"], "built": False},
+     "path": "/p3/cursedcard", "flag": FLAGS["p3_2"], "built": True},
 
     {"id": "p4_1", "phase": "4", "name": "Basic Records Room",
      "path": "/p4/records", "flag": FLAGS["p4_1"], "built": False},

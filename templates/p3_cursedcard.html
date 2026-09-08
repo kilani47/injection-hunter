@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}The Cursed Card — The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p3{% endblock %}
+
+{% block content %}
+<div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+  <div>
+    <p class="font-mono text-xs text-muted mb-2">greed island &middot; the cursed card</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4">The Cursed Card</h1>
+    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+      Not every card on Greed Island does something the moment it's drawn.
+      Some sit quietly in the deck, inscribed, filed, entirely inert —
+      until a later round, played by someone who never touched the round
+      it was written in, wakes them up. The card you inscribe here today
+      does nothing today. That's not a bug in the card.
+    </p>
+    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+      Objective: get something you store now to have an effect later — in
+      a different round, read by a different process, on a query you never
+      typed a single character of yourself. The inscribing table below is
+      genuinely safe to write to. The appraiser's report, on the far side
+      of this page, is a separate matter entirely.
+    </p>
+  </div>
+
+  <div class="license-card glass rounded-[1.75rem] p-6">
+    <div class="exam-terminal rounded-xl p-5">
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> card inscription desk
+      </p>
+
+      <form method="post" action="{{ url_for('phase3.p3_cursedcard_inscribe') }}" class="flex flex-col gap-3 mb-4">
+        <input
+          type="text"
+          name="owner"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="your name (e.g. Gon)"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <input
+          type="text"
+          name="inscription"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="card inscription"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <button type="submit"
+          class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+          Inscribe card
+        </button>
+      </form>
+
+      {% if inscribed %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          <p class="font-mono text-xs text-muted">the card was inscribed and filed into the deck.</p>
+        </div>
+      {% endif %}
+
+      <p class="font-mono text-[11px] text-muted mb-2 mt-6 border-t border-white/10 pt-4">
+        the deck, as currently filed
+      </p>
+      <div class="rounded-lg border border-white/15 bg-black/20 overflow-hidden mb-6">
+        <table class="w-full font-mono text-[12px] text-bone/90">
+          <thead><tr class="border-b border-white/15 text-muted text-left">
+            <th class="px-3 py-2 font-mono font-semibold">id</th>
+            <th class="px-3 py-2 font-mono font-semibold">owner</th>
+            <th class="px-3 py-2 font-mono font-semibold">inscription</th>
+          </tr></thead>
+          <tbody>
+            {% for c in cards %}
+            <tr class="border-b border-white/5 last:border-b-0">
+              <td class="px-3 py-2 break-all">{{ c.id }}</td>
+              <td class="px-3 py-2 break-all">{{ c.owner }}</td>
+              <td class="px-3 py-2 break-all">{{ c.inscription }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="px-3 py-2 text-muted">the deck is empty.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <p class="font-mono text-[11px] text-muted mb-2 border-t border-white/10 pt-4">
+        the appraiser &mdash; re-checks the most recently inscribed card
+      </p>
+      <p class="font-mono text-[11px] text-bone/60 mb-3">
+        <code class="text-accent">GET /p3/cursedcard/report</code> takes no
+        input from you at all. It reads whatever card was inscribed most
+        recently &mdash; already sitting in the deck before this request
+        began &mdash; and re-appraises it on its own initiative.
+      </p>
+      <a href="{{ url_for('phase3.p3_cursedcard_report') }}"
+        class="ren-pulse inline-block self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors mb-4">
+        Run appraiser report
+      </a>
+
+      {% if report is not none %}
+        <div class="rounded-lg border border-white/15 bg-black/20 overflow-hidden mb-2">
+          {% if report_error %}
+            <p class="font-mono text-xs text-muted px-3 py-2">the appraiser choked on this card: {{ report_error }}</p>
+          {% elif report %}
+          <table class="w-full font-mono text-[12px] text-bone/90">
+            <thead><tr class="border-b border-white/15 text-muted text-left">
+              <th class="px-3 py-2 font-mono font-semibold">id</th>
+              <th class="px-3 py-2 font-mono font-semibold">owner</th>
+              <th class="px-3 py-2 font-mono font-semibold">inscription</th>
+            </tr></thead>
+            <tbody>
+              {% for r in report %}
+              <tr class="border-b border-white/5 last:border-b-0">
+                <td class="px-3 py-2 break-all">{{ r.id }}</td>
+                <td class="px-3 py-2 break-all">{{ r.owner }}</td>
+                <td class="px-3 py-2 break-all">{{ r.inscription }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+            <p class="font-mono text-xs text-muted px-3 py-2">the appraiser found nothing matching this card.</p>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <p class="font-mono text-[11px] text-muted mt-4 border-t border-white/10 pt-4">
+        <a href="{{ url_for('phase3.p3_cursedcard_reset') }}" class="hover:text-accent transition-colors">reset the deck</a>
+        &mdash; wipes the table back to its two starting cards, no restart needed.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
