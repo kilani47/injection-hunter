@@ -86,8 +86,9 @@ def ldap_conn(bind_dn: str | None = None, bind_password: str | None = None):
     conn.set_option(ldap.OPT_REFERRALS, 0)
     conn.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
 
+    base_dn = os.environ.get("LDAP_BASE_DN", "dc=hunterassoc,dc=org")
     dn = bind_dn if bind_dn is not None else os.environ.get(
-        "LDAP_BIND_DN", "cn=admin,dc=hunterassoc,dc=org"
+        "LDAP_BIND_DN", f"cn=admin,{base_dn}"
     )
     pw = bind_password if bind_password is not None else os.environ.get(
         "LDAP_BIND_PASSWORD", "seiyaku_pw"

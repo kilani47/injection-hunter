@@ -43,20 +43,34 @@ services:
       MONGO_INITDB_DATABASE: seiyaku
     volumes:
       - mongo_data:/data/db
-      # - ./seed/mongo:/docker-entrypoint-initdb.d:ro     # wired in Task 4.0
+      - ./seed/mongo:/docker-entrypoint-initdb.d:ro
 
-  # OpenLDAP image choice: bitnami/openldap (actively maintained, simple
-  # env-var-driven bootstrap) over osixia/openldap (unmaintained since
-  # 2022). Pinned to the 2.6 line; seeding (zodiac.ldif) lands in Task 4.0.
+  # OpenLDAP image choice: osixia/openldap:1.5.0. bitnami/openldap (the
+  # image originally declared here) no longer resolves on any tag in this
+  # environment (Bitnami has deprecated/moved its free-tier Docker Hub
+  # images) — osixia/openldap:1.5.0 is confirmed pullable and is a
+  # widely-used, well-documented image, so it replaces bitnami here.
+  # Env vars are osixia's convention (LDAP_ORGANISATION/LDAP_DOMAIN/
+  # LDAP_ADMIN_PASSWORD), not bitnami's (LDAP_ROOT/LDAP_ADMIN_USERNAME).
+  # LDAP_DOMAIN=hunterassoc.org makes osixia derive the base DN
+  # dc=hunterassoc,dc=org itself on first boot. Custom sub-tree seeding
+  # (zodiac.ldif) is loaded via osixia's LDAP_SEED_INTERNAL_LDIF_PATH:
+  # that env var names a mounted directory of *.ldif files which the
+  # image's startup script copies into its internal custom-bootstrap-ldif
+  # directory and applies once, on first boot of an empty data volume,
+  # right after it bootstraps the root suffix itself.
   openldap:
-    image: bitnami/openldap:2.6
+    image: osixia/openldap:1.5.0
     environment:
-      LDAP_ROOT: dc=hunterassoc,dc=org
-      LDAP_ADMIN_USERNAME: admin
+      LDAP_ORGANISATION: Hunter Association
+      LDAP_DOMAIN: hunterassoc.org
       LDAP_ADMIN_PASSWORD: seiyaku_pw
+      LDAP_TLS: "false"
+      LDAP_SEED_INTERNAL_LDIF_PATH: /ldifs
     volumes:
-      - openldap_data:/bitnami/openldap
-      # - ./seed/ldap:/ldifs:ro                           # wired in Task 4.0
+      - openldap_data:/var/lib/ldap
+      - openldap_config:/etc/ldap/slapd.d
+      - ./seed/ldap:/ldifs:ro
 
   # Out-of-band (OOB) collaborator: logs any HTTP request and any DNS
   # query it receives, in-memory, and exposes GET /captures (JSON) for the
@@ -74,3 +88,4 @@ volumes:
   mariadb_data:
   mongo_data:
   openldap_data:
+  openldap_config:
