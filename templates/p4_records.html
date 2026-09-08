@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Basic Records Room — The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p4{% endblock %}
+
+{% block content %}
+<div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+  <div>
+    <p class="font-mono text-xs text-muted mb-2">hunter association hq &middot; basic records room</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4">Basic Records Room</h1>
+    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+      The front desk of the Association's records archive. Give it a
+      field and a value, and it searches — but it was never built to
+      hand a caller anything back except whether something matched.
+      No document, no field contents, no listing. One bit: matched, or
+      it didn't.
+    </p>
+    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+      Objective: the desk clerk answers exactly one question, over and
+      over. That's still enough to walk a value out of the archive one
+      character at a time — if you can get the clerk to compare
+      something other than a plain word.
+    </p>
+  </div>
+
+  <div class="license-card glass rounded-[1.75rem] p-6">
+    <div class="exam-terminal rounded-xl p-5">
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> archive search &mdash; field / value
+      </p>
+
+      <form method="get" action="{{ url_for('phase4.p4_records') }}" class="flex flex-col gap-3 mb-4">
+        <input
+          type="text"
+          name="field"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="field (e.g. subject, username, role)"
+          value="{{ field or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <input
+          type="text"
+          name="value"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="value to search for"
+          value="{{ value or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <button type="submit"
+          class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+          Search
+        </button>
+      </form>
+
+      {% if searched %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          {% if matched %}
+            <p class="font-mono text-xs text-accent">match: {{ count }} record(s) matched.</p>
+          {% else %}
+            <p class="font-mono text-xs text-muted">match: 0 records matched.</p>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <p class="font-mono text-[11px] text-muted mb-2 mt-6 border-t border-white/10 pt-4">
+        request shape
+      </p>
+      <p class="font-mono text-[11px] text-bone/60 mb-3">
+        This form only ever sends plain strings. The search endpoint
+        itself, <code class="text-accent">GET /p4/records</code>, takes
+        whatever shape <code class="text-accent">field</code> and
+        <code class="text-accent">value</code> arrive in &mdash; it does
+        not require either one to be a plain string.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
