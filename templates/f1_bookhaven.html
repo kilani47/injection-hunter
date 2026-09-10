@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Trick Tower Final Exam — The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-finals{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <p class="font-mono text-xs text-muted mb-2">the exam finals &middot; bookhaven &middot; the final locked floor</p>
+  <h1 class="font-display text-3xl font-semibold text-bone mb-4">Trick Tower Final Exam</h1>
+  <p class="max-w-2xl text-bone/80 leading-relaxed">
+    BookHaven's last floor doesn't have one lock. It has four, stacked in
+    series, each one a different style of question — and each door's key
+    is sealed inside the *previous* door. There is no way to reach the
+    fourth lock except by genuinely opening the first three, in order,
+    using a different technique at every stage.
+  </p>
+</div>
+
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-10">
+  {% for s, label, path, technique in [
+      (1, 'Stage 1', url_for('finals.f1_stage1'), 'error-based'),
+      (2, 'Stage 2', url_for('finals.f1_stage2'), 'union-based'),
+      (3, 'Stage 3', url_for('finals.f1_stage3'), 'boolean-blind'),
+      (4, 'Stage 4', url_for('finals.f1_stage4'), 'time-blind'),
+  ] %}
+  <a href="{{ path }}" class="glass rounded-xl p-4 border {% if stage == s %}border-accent bg-accent-20{% else %}border-white/10{% endif %} transition-colors">
+    <p class="font-mono text-xs text-muted mb-1">{{ label }}</p>
+    <p class="font-display text-lg text-bone">{{ technique }}</p>
+  </a>
+  {% endfor %}
+</div>
+
+<div class="license-card glass rounded-[1.75rem] p-6 max-w-3xl">
+  <div class="exam-terminal rounded-xl p-5">
+
+    {% if stage == 1 %}
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> stage 1 &mdash; catalogue lookup by id
+      </p>
+      <p class="font-mono text-[11px] text-bone/60 mb-4">
+        No token required — this is the entry point. Recover stage 1's
+        key from the catalogue's own error channel.
+      </p>
+      {% if error %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          <p class="font-mono text-xs text-muted mb-1">catalogue error:</p>
+          <p class="font-mono text-[11px] text-nen-p1 break-all">{{ error }}</p>
+        </div>
+      {% elif title %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          <p class="font-mono text-xs text-muted mb-1">title&gt;</p>
+          <p class="font-mono text-sm text-bone break-all">{{ title }}</p>
+        </div>
+      {% endif %}
+      <form method="get" action="{{ url_for('finals.f1_stage1') }}" class="flex flex-col gap-3">
+        <input type="text" name="id" autocomplete="off" spellcheck="false" placeholder="catalogue id"
+          value="{{ lookup_id or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">Look up</button>
+      </form>
+
+    {% elif stage == 2 %}
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> stage 2 &mdash; catalogue search
+      </p>
+      <p class="font-mono text-[11px] text-bone/60 mb-4">
+        Requires stage 1's key as <code class="text-accent">token</code>.
+        {% if not unlocked %}<span class="text-nen-p1">token missing or incorrect — this door is sealed.</span>{% else %}<span class="text-accent">token accepted — door open.</span>{% endif %}
+      </p>
+      {% if error %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          <p class="font-mono text-xs text-muted mb-1">catalogue error:</p>
+          <p class="font-mono text-[11px] text-nen-p1 break-all">{{ error }}</p>
+        </div>
+      {% elif rows %}
+        <div class="rounded-lg border border-white/15 bg-black/20 overflow-hidden mb-4">
+          <table class="w-full font-mono text-[12px] text-bone/90">
+            <thead><tr class="border-b border-white/15 text-muted text-left">
+              <th class="px-3 py-2">id</th><th class="px-3 py-2">title</th><th class="px-3 py-2">author</th>
+            </tr></thead>
+            <tbody>
+              {% for row in rows %}
+              <tr class="border-b border-white/5 last:border-b-0">
+                <td class="px-3 py-2 break-all">{{ row.id }}</td>
+                <td class="px-3 py-2 break-all">{{ row.title }}</td>
+                <td class="px-3 py-2 break-all">{{ row.author }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+      <form method="get" action="{{ url_for('finals.f1_stage2') }}" class="flex flex-col gap-3">
+        <input type="text" name="token" autocomplete="off" spellcheck="false" placeholder="stage 1 key"
+          value="{{ token or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <input type="text" name="q" autocomplete="off" spellcheck="false" placeholder="title search"
+          value="{{ q or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">Search</button>
+      </form>
+
+    {% elif stage == 3 %}
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> stage 3 &mdash; catalogue id oracle
+      </p>
+      <p class="font-mono text-[11px] text-bone/60 mb-4">
+        Requires stage 2's key as <code class="text-accent">token</code>.
+        {% if not unlocked %}<span class="text-nen-p1">token missing or incorrect — this door is sealed.</span>{% else %}<span class="text-accent">token accepted — door open.</span>{% endif %}
+      </p>
+      {% if result is not none %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          <p class="font-mono text-xs text-muted mb-1">the door's only answer:</p>
+          <p class="font-mono text-sm text-bone">{{ "PASS" if result else "FAIL" }}</p>
+        </div>
+      {% endif %}
+      <form method="get" action="{{ url_for('finals.f1_stage3') }}" class="flex flex-col gap-3">
+        <input type="text" name="token" autocomplete="off" spellcheck="false" placeholder="stage 2 key"
+          value="{{ token or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <input type="text" name="code" autocomplete="off" spellcheck="false" placeholder="catalogue id"
+          value="{{ code or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">Present code</button>
+      </form>
+
+    {% elif stage == 4 %}
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> stage 4 &mdash; the final locked door
+      </p>
+      <p class="font-mono text-[11px] text-bone/60 mb-4">
+        Requires stage 3's key as <code class="text-accent">token</code>.
+        {% if not unlocked %}<span class="text-nen-p1">token missing or incorrect — this door is sealed.</span>{% else %}<span class="text-accent">token accepted — door open.</span>{% endif %}
+      </p>
+      {% if checked %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          <p class="font-mono text-xs text-muted">status checked.</p>
+        </div>
+      {% endif %}
+      <form method="get" action="{{ url_for('finals.f1_stage4') }}" class="flex flex-col gap-3">
+        <input type="text" name="token" autocomplete="off" spellcheck="false" placeholder="stage 3 key"
+          value="{{ token or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <input type="text" name="id" autocomplete="off" spellcheck="false" placeholder="catalogue id"
+          value="{{ lookup_id or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">Check status</button>
+      </form>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
