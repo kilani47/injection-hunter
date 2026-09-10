@@ -35,7 +35,7 @@ raw queries were.
 | # | Node | Directory | Status |
 |---|------|-----------|--------|
 | 1 | Manipulator's Firewall | [`manipulators-firewall/`](manipulators-firewall/) | built |
-| 2 | Palace Blueprint Tampering | — | not yet built |
+| 2 | Palace Blueprint Tampering | [`blueprint-tampering/`](blueprint-tampering/) | built |
 | 3 | The King's Sealed Archives | — | not yet built |
 
 "Manipulator's Firewall" shows that an ORM is not automatically a fix
@@ -45,3 +45,13 @@ its own query-building API, but it also exposes a raw-SQL escape hatch
 into that escape hatch is exactly as injectable as no ORM at all. The
 classic `' OR '1'='1' -- ` payload from Phase 1 works here completely
 unchanged; only the layer that builds the final SQL string is new.
+
+"Palace Blueprint Tampering" moves from a SQL string to an XML document
+built the same unsafe way: a visitor name spliced into an XML template
+with none of XML's five reserved characters (`< > & ' "`) escaped
+first. The parser (`core/xml_parser.py`, shared with the next floor)
+genuinely enforces well-formedness — a stray `<` is rejected outright —
+but a *well-formed* document with extra, attacker-added structure is,
+correctly, accepted, letting a crafted name add a second `<clearance>`
+element that a naive first-match lookup reads instead of the
+template's own.

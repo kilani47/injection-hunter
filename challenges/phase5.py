@@ -26,9 +26,13 @@ from __future__ import annotations
 import os
 
 from flask import Blueprint, jsonify, render_template, request
+from lxml import etree
 from sqlalchemy import Column, Integer, String, create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+from core import xml_parser
+from core.db import mysql_conn
 
 bp = Blueprint("phase5", __name__)
 phase5_bp = bp
@@ -166,4 +170,125 @@ def p5_firewall():
         user=public_user,
         error=error,
         submitted_username=submitted_username,
+    )
+
+
+# ---------------------------------------------------------------------------
+# p5_2 — Palace Blueprint Tampering
+# ---------------------------------------------------------------------------
+#
+# p5_1's bug was in what got interpolated into a SQL string. This floor's
+# bug (notes §11, "XML (Tag) Injection") happens one step earlier and in a
+# completely different grammar: a *visitor name* is spliced into an XML
+# document template with a plain Python .format() call, with none of XML's
+# five reserved metacharacters (< > & ' ") escaped first. A well-formed XML
+# document has exactly one meaning once parsed — but the string handed to
+# the parser here was never guaranteed to stay well-formed in the way the
+# template's author assumed, because nothing stops a visitor name from
+# containing its own `<tag>` markup. If it does, that markup isn't treated
+# as literal text describing a visitor's name — it becomes real sibling
+# structure the parser reads as part of the document, exactly as if the
+# Palace's own printing press had written it there itself.
+#
+# core/xml_parser.parse() is used here (not a bespoke parser) even though
+# this floor's bug doesn't need DTD/entity support at all — see that
+# module's docstring for why one shared, equally-unsafe parser
+# configuration is used across every XML-consuming route in this phase.
+
+_GUEST_BADGE_TEMPLATE = (
+    "<badge><visitor>{name}</visitor><clearance>guest</clearance></badge>"
+)
+
+
+def _lookup_clearance(level: str | None) -> dict | None:
+    """Look up a clearance level against the real, seeded
+    `palace_clearances` table — a plain parameterized query, deliberately
+    the *safe* half of this route. The vulnerability lives entirely
+    upstream, in how `level` was ever produced (see p5_blueprint below);
+    once a level string exists, fetching its record is not itself
+    attacker-influenced construction of a query, just a normal lookup.
+    Only the `royal` row's `flag` column is ever non-empty — same
+    "only the flag row carries a non-empty secret" convention as every
+    earlier phase's seed data."""
+    if not level:
+        return None
+    conn = mysql_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT level, description, flag FROM palace_clearances WHERE level = %s",
+                (level,),
+            )
+            return cur.fetchone()
+    finally:
+        conn.close()
+
+
+@bp.route("/p5/blueprint", methods=["GET", "POST"])
+def p5_blueprint():
+    badge = None
+    error = None
+    submitted_name = None
+    raw_xml = None
+    clearance_row = None
+
+    if request.method == "POST":
+        name = request.form.get("name", "")
+        submitted_name = name
+
+        # VULN: `name` is spliced directly into an XML string template
+        # with a plain .format() call — no escaping of `< > & ' "`
+        # anywhere before the result is handed to the parser. A name
+        # containing its own closing/opening tags doesn't stay text
+        # content; it becomes new markup alongside the fixed
+        # <clearance>guest</clearance> element this template always
+        # appends.
+        raw_xml = _GUEST_BADGE_TEMPLATE.format(name=name)
+
+        try:
+            doc = xml_parser.parse(raw_xml.encode("utf-8"))
+            clearance_el = doc.find(".//clearance")
+            visitor_el = doc.find(".//visitor")
+            badge = {
+                "visitor": visitor_el.text if visitor_el is not None else None,
+                "clearance": clearance_el.text if clearance_el is not None else None,
+            }
+            # "royal" is a clearance level this route's own logic never
+            # writes into any badge on its own — the template only ever
+            # emits <clearance>guest</clearance>. The only way
+            # badge["clearance"] is ever anything else is if the parsed
+            # document ended up with more than one <clearance> element,
+            # and lxml's `.find()` returned an injected one because it
+            # appears earlier in document order than the template's own
+            # fixed element.
+            clearance_row = _lookup_clearance(badge.get("clearance"))
+            if clearance_row:
+                badge["clearance_description"] = clearance_row.get("description")
+        except etree.XMLSyntaxError as exc:
+            error = f"the blueprint press rejected that badge: {exc}"
+
+    flag = (clearance_row.get("flag") if clearance_row else None) or None
+
+    wants_json = request.method == "POST" and (
+        request.is_json or request.headers.get("Accept") == "application/json"
+    )
+
+    if wants_json:
+        return jsonify(
+            success=flag is not None,
+            visitor=submitted_name,
+            badge=badge,
+            raw_xml=raw_xml,
+            flag=flag,
+            error=error,
+        )
+
+    return render_template(
+        "p5_blueprint.html",
+        attempted=request.method == "POST",
+        badge=badge,
+        raw_xml=raw_xml,
+        flag=flag,
+        error=error,
+        submitted_name=submitted_name,
     )

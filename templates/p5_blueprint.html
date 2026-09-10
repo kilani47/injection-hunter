@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Palace Blueprint Tampering — The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p5{% endblock %}
+
+{% block content %}
+<div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+  <div>
+    <p class="font-mono text-xs text-muted mb-2">chimera ant palace &middot; guest badge press</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4">Palace Blueprint Tampering</h1>
+    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+      Every visitor to the Palace gets a badge, printed on the spot from a
+      short structural blueprint: your name goes in one slot, a fixed
+      "guest" clearance goes in the next. The guards at every checkpoint
+      never re-derive your clearance themselves &mdash; they just read
+      whatever the badge's blueprint says, and trust it completely.
+    </p>
+    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+      Objective: the King's own clearance level holds something no guest
+      badge was ever supposed to be able to carry. Get a badge printed
+      with it anyway.
+    </p>
+  </div>
+
+  <div class="license-card glass rounded-[1.75rem] p-6">
+    <div class="exam-terminal rounded-xl p-5">
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> guest badge press &mdash; visitor name
+      </p>
+
+      {% if attempted %}
+        {% if error %}
+          <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+            <p class="font-mono text-xs text-muted mb-1">the press rejected that name:</p>
+            <p class="font-mono text-[11px] text-nen-p1 break-all">{{ error }}</p>
+          </div>
+        {% elif badge %}
+          <div class="rounded-lg border {% if flag %}border-accent bg-accent-20{% else %}border-white/15 bg-black/40{% endif %} px-4 py-3 mb-4">
+            <p class="font-mono text-xs {% if flag %}text-accent{% else %}text-muted{% endif %} mb-2">
+              badge printed
+            </p>
+            <p class="font-mono text-[12px] text-bone/90 break-all">
+              <span class="text-muted">visitor&gt;</span> {{ badge.visitor }}
+            </p>
+            <p class="font-mono text-[12px] text-bone/90 break-all">
+              <span class="text-muted">clearance&gt;</span> {{ badge.clearance }}
+            </p>
+            {% if badge.clearance_description %}
+              <p class="font-mono text-[11px] text-bone/60 break-all mt-1">
+                {{ badge.clearance_description }}
+              </p>
+            {% endif %}
+            {% if flag %}
+              <p class="font-mono text-[12px] text-accent break-all mt-2 border-t border-white/10 pt-2">
+                <span class="text-muted">sealed record&gt;</span> {{ flag }}
+              </p>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if raw_xml %}
+          <p class="font-mono text-[11px] text-muted mb-1">blueprint printed for this badge:</p>
+          <pre class="font-mono text-[11px] text-bone/70 bg-black/40 border border-white/10 rounded-lg p-3 mb-4 overflow-x-auto">{{ raw_xml }}</pre>
+        {% endif %}
+      {% endif %}
+
+      <form method="post" action="{{ url_for('phase5.p5_blueprint') }}" class="flex flex-col gap-3">
+        <input
+          type="text"
+          name="name"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="visitor name"
+          value="{{ submitted_name or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <button type="submit"
+          class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+          Print badge
+        </button>
+      </form>
+
+      <p class="font-mono text-[11px] text-muted mb-2 mt-6 border-t border-white/10 pt-4">
+        request shape
+      </p>
+      <p class="font-mono text-[11px] text-bone/60 mb-3">
+        <code class="text-accent">POST /p5/blueprint</code> accepts a
+        single form field, <code class="text-accent">name</code>. Send
+        <code class="text-accent">Accept: application/json</code> for a
+        compact JSON answer — including the exact XML blueprint the press
+        printed for your name — instead of this page.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
