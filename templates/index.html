@@ -1,38 +1,40 @@
 {% extends "base.html" %}
-{% block title %}The Seiyaku Arc — Applicant Terminal{% endblock %}
+{% block title %}The Seiyaku Arc — Hunter Exam{% endblock %}
 
-{% block content %}
-<div class="grid gap-10 lg:grid-cols-[1.1fr_1fr] items-center py-6">
-  <div>
-    <p class="font-mono text-xs text-muted mb-3">hunter exam · registration terminal</p>
-    <h1 class="font-display text-5xl sm:text-6xl font-semibold leading-[1.05] text-bone">
+{% block main %}
+<main class="cine flex-1 flex items-end">
+  <img
+    class="cine-img"
+    src="{{ url_for('static', filename='img/entrance.png') }}"
+    alt="Applicants standing before the sealed gate of the Hunter Exam"
+    fetchpriority="high"
+    decoding="async"
+  >
+  <div class="cine-scrim"></div>
+
+  <div class="mx-auto w-full max-w-5xl px-6 pb-16 pt-24">
+    <p class="font-mono text-xs text-muted mb-4">hunter exam &middot; applicant registration</p>
+    <h1 class="font-display text-5xl sm:text-7xl font-bold leading-[0.98] text-bone max-w-3xl"
+        style="text-shadow: 0 2px 40px rgba(0,0,0,0.8);">
       The Seiyaku Arc
     </h1>
-    <p class="mt-5 max-w-md text-lg leading-relaxed text-bone/80">
-      Every Nen ability lives inside a vow the caster wrote for themselves —
-      and every vow hides a loophole its author never saw. Six examiners,
-      six vows, eighteen loopholes. Find them, one floor at a time.
+    <p class="mt-6 max-w-xl text-lg leading-relaxed text-bone/85"
+       style="text-shadow: 0 1px 20px rgba(0,0,0,0.9);">
+      Every Nen ability lives inside a vow its caster wrote for themselves &mdash;
+      and every vow hides a loophole the caster never saw. Five examiners, five
+      vows, and two final trials stand between you and a Hunter License. Read each
+      rule. Find where it was worded imprecisely. Walk through the gap.
     </p>
-    <div class="mt-8 flex items-center gap-4">
-      <a href="{{ url_for('hub') }}"
-         class="ren-pulse inline-flex items-center rounded-lg bg-accent-20 border border-accent px-5 py-3 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
-        Enter the applicant terminal
-      </a>
-      <span class="font-mono text-xs text-muted">flag format: SEIYAKU&#123;lowercase_words&#125;</span>
-    </div>
-  </div>
 
-  <div class="license-card glass rounded-[1.75rem] p-6">
-    <div class="exam-terminal rounded-xl p-5">
-      <p class="text-[13px] leading-relaxed text-bone/90">
-        <span class="text-accent">vow.status</span> :: awaiting first breach<br>
-        <span class="text-accent">applicant.class</span> :: unranked<br>
-        <span class="text-accent">exam.floor</span> :: 1 / 6 — The Written Exam<br>
-        <span class="text-accent">engines</span> :: mariadb · mongo · openldap · lxml<br>
-        <span class="text-muted">&gt; every rule your examiner wrote can be misread on purpose.</span>
-        <span class="flicker">_</span>
-      </p>
+    <div class="mt-9 flex flex-wrap items-center gap-5">
+      <a href="{{ url_for('hub') }}"
+         class="ren-pulse inline-flex items-center rounded-lg bg-accent-20 border border-accent px-6 py-3 font-display text-lg font-semibold text-bone hover:bg-accent-10 transition-colors">
+        Enter the Exam Hall
+      </a>
+      <span class="font-mono text-xs text-muted">
+        18 floors &middot; 5 phases + finals &middot; flag format SEIYAKU&#123;lowercase_words&#125;
+      </span>
     </div>
   </div>
-</div>
+</main>
 {% endblock %}

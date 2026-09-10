@@ -60,7 +60,16 @@ def index():
 @app.route("/hub")
 def hub():
     prog = unlock.progress(session)
-    return render_template("hub.html", progress=prog)
+    phases = unlock.phase_progress(session)
+    return render_template("hub.html", progress=prog, phases=phases)
+
+
+@app.route("/phase/<phase_id>")
+def phase(phase_id):
+    view = unlock.phase_view(session, phase_id)
+    if view is None:
+        return redirect(url_for("hub"))
+    return render_template("phase.html", phase=view)
 
 
 @app.route("/flag", methods=["POST"])

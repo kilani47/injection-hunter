@@ -42,13 +42,58 @@ FLAGS: dict[str, str] = {
 }
 
 # Per-phase Nen accent colours (see spec §6 / plan Global Constraints).
-PHASE_META: dict[str, dict[str, str]] = {
-    "1": {"label": "The Written Exam", "nen": "Enhancement", "color": "#e5484d", "css_class": "nen-p1"},
-    "2": {"label": "Trick Tower", "nen": "Transmutation", "color": "#8b5cf6", "css_class": "nen-p2"},
-    "3": {"label": "Greed Island", "nen": "Specialization", "color": "#f5c518", "css_class": "nen-p3"},
-    "4": {"label": "Hunter Association HQ", "nen": "Manipulation", "color": "#22c55e", "css_class": "nen-p4"},
-    "5": {"label": "Chimera Ant Palace", "nen": "Conjuration", "color": "#6366f1", "css_class": "nen-p5"},
-    "finals": {"label": "The Exam Finals", "nen": "Emission", "color": "#22d3ee", "css_class": "nen-finals"},
+# `order` fixes the phase sequence for the hub overview; `engine` and
+# `topic` feed the phase-page hero; `image` is the key-art splash filename
+# under static/img/ (None until art is supplied for that phase).
+PHASE_META: dict[str, dict[str, Any]] = {
+    "1": {"label": "The Written Exam", "nen": "Enhancement", "color": "#e5484d",
+          "css_class": "nen-p1", "order": 1, "engine": "MariaDB",
+          "topic": "SQLi fundamentals + the four core techniques",
+          "image": "phase1.png"},
+    "2": {"label": "Trick Tower", "nen": "Transmutation", "color": "#8b5cf6",
+          "css_class": "nen-p2", "order": 2, "engine": "MariaDB",
+          "topic": "Testing methodology, SQLMap, header & CVE injection",
+          "image": None},
+    "3": {"label": "Greed Island", "nen": "Specialization", "color": "#f5c518",
+          "css_class": "nen-p3", "order": 3, "engine": "MariaDB + collaborator",
+          "topic": "Out-of-band and second-order SQLi",
+          "image": None},
+    "4": {"label": "Hunter Association HQ", "nen": "Manipulation", "color": "#22c55e",
+          "css_class": "nen-p4", "order": 4, "engine": "MongoDB + OpenLDAP",
+          "topic": "NoSQL and LDAP injection",
+          "image": None},
+    "5": {"label": "Chimera Ant Palace", "nen": "Conjuration", "color": "#6366f1",
+          "css_class": "nen-p5", "order": 5, "engine": "SQLAlchemy + lxml",
+          "topic": "ORM injection and XML / XXE",
+          "image": None},
+    "finals": {"label": "The Exam Finals", "nen": "Emission", "color": "#22d3ee",
+               "css_class": "nen-finals", "order": 6,
+               "engine": "every engine at once",
+               "topic": "Two chained, multi-vuln final trials",
+               "image": None},
+}
+
+# Short, spoiler-free hooks per node — one line describing the floor's
+# premise without giving away its technique. Used on the phase pages.
+BLURBS: dict[str, str] = {
+    "p1_1": "The applicant gate takes your name on trust. Trust is a rule, and rules can be misread.",
+    "p1_2": "Netero's recipe vault answers the wrong questions loudly — read what it says when it breaks.",
+    "p1_3": "The results board prints whatever matches. Ask it to match something it was never meant to show.",
+    "p1_4": "A sealed door that only ever whispers pass or fail. One bit at a time is still enough.",
+    "p1_5": "The medical bay never tells you anything — but it can be made to take its time about it.",
+    "p2_1": "A tower of identical floors, cleared on autopilot. Let the machine walk them for you.",
+    "p2_2": "An ancient, forgotten floor with a weakness catalogued long ago. Look it up; walk in.",
+    "p2_3": "The examiner isn't watching the door you'd expect. The threat rides in the header instead.",
+    "p3_1": "A spell card carries word off the island — through a channel the game master never watches.",
+    "p3_2": "A card that lies dormant when inscribed and only wakes when someone else plays it back.",
+    "p4_1": "The archive answers only match or no match — but its questions aren't strings anymore.",
+    "p4_2": "The archive guardian checks that you supplied a name and a key, never what kind of thing they are.",
+    "p4_3": "The Zodiac Twelve's directory is rigid by design. Rewrite the question it's rigid about.",
+    "p5_1": "A firewall built on a real ORM — and one raw seam its own safety was never applied to.",
+    "p5_2": "The badge press prints exactly what its blueprint says. Add a line to the blueprint.",
+    "p5_3": "The archive desk reads your request back to you — including wherever you point it to look.",
+    "f1": "The tower's final locked floor demands every SQLi style at once, in order, to descend.",
+    "f2": "Four factions, four systems, four fragments. Seize the Chairman's seat by breaching them all.",
 }
 
 # ---------------------------------------------------------------------------
@@ -160,6 +205,7 @@ def progress(session: MutableMapping[str, Any]) -> dict[str, Any]:
             **node,
             "unlocked": unlocked,
             "cleared": is_cleared,
+            "blurb": BLURBS.get(node["id"], ""),
             "phase_meta": PHASE_META.get(node["phase"], {}),
         })
     return {
@@ -169,6 +215,53 @@ def progress(session: MutableMapping[str, Any]) -> dict[str, Any]:
         "next": next_node_id,
         "nodes": nodes,
         "phases": PHASE_META,
+    }
+
+
+def phase_progress(session: MutableMapping[str, Any]) -> list[dict[str, Any]]:
+    """Per-phase aggregate for the hub overview, in phase order. Each entry
+    carries the phase's meta, its cleared/total counts, whether the phase is
+    unlocked (its first node is reachable) or fully cleared, and the id of
+    the first not-yet-cleared node in it (for a 'continue here' link)."""
+    snapshot = progress(session)
+    by_phase: dict[str, list[dict[str, Any]]] = {}
+    for node in snapshot["nodes"]:
+        by_phase.setdefault(node["phase"], []).append(node)
+
+    phases = []
+    for phase_id, meta in sorted(PHASE_META.items(), key=lambda kv: kv[1]["order"]):
+        nodes = by_phase.get(phase_id, [])
+        cleared = sum(1 for n in nodes if n["cleared"])
+        unlocked = any(n["unlocked"] for n in nodes)
+        resume = next((n["id"] for n in nodes if n["unlocked"] and not n["cleared"]), None)
+        phases.append({
+            "id": phase_id,
+            **meta,
+            "count": len(nodes),
+            "cleared_count": cleared,
+            "unlocked": unlocked,
+            "fully_cleared": bool(nodes) and cleared == len(nodes),
+            "resume": resume,
+        })
+    return phases
+
+
+def phase_view(session: MutableMapping[str, Any], phase_id: str) -> Optional[dict[str, Any]]:
+    """Everything a single phase page needs: the phase meta plus its nodes
+    with unlock/clear state. Returns None for an unknown phase id."""
+    if phase_id not in PHASE_META:
+        return None
+    snapshot = progress(session)
+    nodes = [n for n in snapshot["nodes"] if n["phase"] == phase_id]
+    cleared = sum(1 for n in nodes if n["cleared"])
+    return {
+        "id": phase_id,
+        **PHASE_META[phase_id],
+        "nodes": nodes,
+        "count": len(nodes),
+        "cleared_count": cleared,
+        "unlocked": any(n["unlocked"] for n in nodes),
+        "fully_cleared": bool(nodes) and cleared == len(nodes),
     }
 
 

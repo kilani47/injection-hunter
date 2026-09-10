@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ phase.label }} — The Seiyaku Arc{% endblock %}
+{% block body_class %}{{ phase.css_class }}{% endblock %}
+
+{% block content %}
+<p class="font-mono text-xs text-muted mb-4">
+  <a href="{{ url_for('hub') }}" class="hover:text-accent transition-colors">exam hall</a>
+  <span class="text-bone/30">/</span>
+  {% if phase.id == 'finals' %}the finals{% else %}phase {{ phase.order }}{% endif %}
+</p>
+
+{% if phase.image %}
+  {# Key-art splash whose own composition already carries the phase title
+     and framing (e.g. phase1.png). Shown in full, never cropped. #}
+  <div class="cine rounded-2xl overflow-hidden border border-white/10 mb-10">
+    <img
+      class="splash-art"
+      src="{{ url_for('static', filename='img/' ~ phase.image) }}"
+      alt="{{ phase.label }} — {{ phase.nen }}"
+      fetchpriority="high"
+      decoding="async"
+    >
+  </div>
+{% else %}
+  {# Themed text hero for phases whose key art isn't in yet. #}
+  <div class="license-card glass rounded-[1.75rem] p-8 mb-10">
+    <p class="font-mono text-xs text-accent mb-2">
+      {% if phase.id == 'finals' %}the finals{% else %}phase {{ phase.order }}{% endif %} &middot; {{ phase.nen }}
+    </p>
+    <h1 class="font-display text-4xl sm:text-5xl font-bold text-bone leading-[1.02]">{{ phase.label }}</h1>
+    <p class="mt-4 max-w-xl text-bone/75 leading-relaxed">{{ phase.topic }}.</p>
+    <p class="mt-4 font-mono text-[11px] text-muted">engine :: {{ phase.engine }}</p>
+  </div>
+{% endif %}
+
+<div class="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between mb-6">
+  <h2 class="font-display text-2xl font-semibold text-bone">
+    {% if phase.id == 'finals' %}The final trials{% else %}The floors{% endif %}
+  </h2>
+  <span class="font-mono text-[11px] text-muted">
+    {{ phase.nen }} &middot; {{ phase.engine }} &middot; {{ phase.cleared_count }} / {{ phase.count }} cleared
+  </span>
+</div>
+
+<div class="flex flex-col gap-4">
+  {% for node in phase.nodes %}
+    {% set openable = node.unlocked and node.built and not node.cleared %}
+    <a href="{% if node.unlocked and node.built %}{{ node.path }}{% else %}#{% endif %}"
+       class="phase-card {{ phase.css_class }} p-5 sm:flex-row sm:items-center sm:gap-5"
+       data-locked="{{ 'false' if node.unlocked else 'true' }}"
+       {% if not (node.unlocked and node.built) %}aria-disabled="true" tabindex="-1"{% endif %}>
+      <div class="flex items-start gap-4 flex-1 min-w-0">
+        <span class="font-mono text-sm w-5 text-center shrink-0 mt-0.5">
+          {% if node.cleared %}<span class="text-accent">&#10003;</span>
+          {% elif node.unlocked %}<span class="text-bone/70">&#9679;</span>
+          {% else %}<span class="text-muted">&#128274;</span>{% endif %}
+        </span>
+        <div class="flex-1 min-w-0">
+          <h3 class="font-display text-lg font-semibold {{ 'text-bone' if node.unlocked else 'text-muted' }}">
+            {{ node.name }}
+          </h3>
+          {% if node.unlocked %}
+            <p class="mt-1 text-sm text-bone/65 leading-snug max-w-2xl break-words">{{ node.blurb }}</p>
+          {% else %}
+            <p class="mt-1 text-sm text-muted leading-snug break-words">Clear the previous floor to unlock this one.</p>
+          {% endif %}
+        </div>
+      </div>
+      <span class="mt-3 sm:mt-0 shrink-0 font-mono text-[11px] self-start sm:self-center
+                   {{ 'text-accent' if (node.unlocked and node.built) else 'text-muted' }}">
+        {% if node.cleared %}cleared &middot; revisit &rarr;
+        {% elif node.unlocked and node.built %}enter &rarr;
+        {% elif node.unlocked %}in development
+        {% else %}locked{% endif %}
+      </span>
+    </a>
+  {% endfor %}
+</div>
+
+<div class="mt-10">
+  <a href="{{ url_for('hub') }}" class="font-mono text-[11px] text-muted hover:text-accent transition-colors">
+    &larr; back to the exam hall
+  </a>
+</div>
+{% endblock %}
