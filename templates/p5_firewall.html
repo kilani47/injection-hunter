@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Manipulator's Firewall — The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p5{% endblock %}
+
+{% block content %}
+<div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+  <div>
+    <p class="font-mono text-xs text-muted mb-2">chimera ant palace &middot; manipulator's firewall</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4">Manipulator's Firewall</h1>
+    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+      The Palace's inner gate isn't guarded by a raw aura node the way the
+      Association's archive was &mdash; it's guarded by a proper ward, built
+      by people who know better than to hand-splice a filter. Every ordinary
+      request passes cleanly through the ward's own interface. But wards
+      have edge cases their interface can't express, and someone left one
+      of those edge cases wired straight to raw aura, unfiltered.
+    </p>
+    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+      Objective: the chairman's own record holds something no ordinary,
+      well-formed sign-in ever surfaces. Get past this gate without their
+      password.
+    </p>
+  </div>
+
+  <div class="license-card glass rounded-[1.75rem] p-6">
+    <div class="exam-terminal rounded-xl p-5">
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> palace firewall &mdash; staff sign-in
+      </p>
+
+      {% if attempted %}
+        {% if success and user %}
+          <div class="rounded-lg border border-accent bg-accent-20 px-4 py-3 mb-4">
+            <p class="font-mono text-xs text-accent mb-2">access granted</p>
+            <p class="font-mono text-[12px] text-bone/90 break-all">
+              <span class="text-muted">username&gt;</span> {{ user.username }}
+            </p>
+            <p class="font-mono text-[12px] text-bone/90 break-all">
+              <span class="text-muted">role&gt;</span> {{ user.role }}
+            </p>
+            {% if user.secret %}
+              <p class="font-mono text-[12px] text-accent break-all mt-2 border-t border-white/10 pt-2">
+                <span class="text-muted">chairman's record&gt;</span> {{ user.secret }}
+              </p>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+            <p class="font-mono text-xs text-muted mb-1">the firewall did not recognize that sign-in:</p>
+            <p class="font-mono text-[11px] text-nen-p1 break-all">
+              {{ error or "no staff record matched that username / password." }}
+            </p>
+          </div>
+        {% endif %}
+      {% endif %}
+
+      <form method="post" action="{{ url_for('phase5.p5_firewall') }}" class="flex flex-col gap-3">
+        <input
+          type="text"
+          name="username"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="username"
+          value="{{ submitted_username or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <input
+          type="password"
+          name="password"
+          autocomplete="off"
+          placeholder="password"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <button type="submit"
+          class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+          Sign in
+        </button>
+      </form>
+
+      <p class="font-mono text-[11px] text-muted mb-2 mt-6 border-t border-white/10 pt-4">
+        request shape
+      </p>
+      <p class="font-mono text-[11px] text-bone/60 mb-3">
+        This gate is built on a real ORM (SQLAlchemy) over a real SQL
+        database &mdash; not a raw hand-written query the way earlier
+        floors were. <code class="text-accent">POST /p5/firewall</code>
+        accepts a form body or a JSON body. Send
+        <code class="text-accent">Accept: application/json</code> for a
+        compact JSON answer instead of this page.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
