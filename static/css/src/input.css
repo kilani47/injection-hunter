@@ -162,7 +162,7 @@
     perspective: 1200px;
   }
   .flip-card-inner {
-    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.3, 1);
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1);
     transform-style: preserve-3d;
   }
   .flip-card[data-open="true"] .flip-card-inner {
@@ -182,7 +182,7 @@
      hook text and the back detail text both readable at once instead of
      one cleanly replacing the other. Belt-and-suspenders: explicitly
      hide whichever face isn't current, on a delay matched to half the
-     card's 0.6s rotation so the switch lands right at the 90-degree
+     card's 0.3s rotation so the switch lands right at the 90-degree
      crossover, independent of whether backface-visibility itself works. */
   .flip-card[data-open="false"] .flip-face-back {
     visibility: hidden;
@@ -190,11 +190,11 @@
   }
   .flip-card[data-open="true"] .flip-face-back {
     visibility: visible;
-    transition: visibility 0s linear 0.3s;
+    transition: visibility 0s linear 0.15s;
   }
   .flip-card[data-open="true"] .flip-face:not(.flip-face-back) {
     visibility: hidden;
-    transition: visibility 0s linear 0.3s;
+    transition: visibility 0s linear 0.15s;
   }
   .flip-card[data-open="false"] .flip-face:not(.flip-face-back) {
     visibility: visible;
