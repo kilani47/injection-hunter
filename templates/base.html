@@ -26,12 +26,14 @@
       </div>
     </header>
 
+    {% block disclaimer %}
     <div class="border-b border-white/10 bg-black/30">
       <p class="mx-auto max-w-5xl px-6 py-2 font-mono text-[11px] leading-relaxed text-muted">
         Fan-made training lab. Authorized, local use only — every target here runs on your own machine.
         Not affiliated with, endorsed by, or sponsored by the rights holders of Hunter × Hunter.
       </p>
     </div>
+    {% endblock %}
 
     {% block main %}
     <main class="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
@@ -39,12 +41,14 @@
     </main>
     {% endblock %}
 
+    {% block footer %}
     <footer class="border-t border-white/10">
       <div class="mx-auto max-w-5xl px-6 py-4 font-mono text-[11px] text-muted flex flex-wrap items-center justify-between gap-2">
         <span>&copy; 2026 the author. Original code &amp; writing under MIT — see LICENSE / NOTICE.</span>
         <span>Hunter × Hunter names used unofficially, for non-commercial fan theming only.</span>
       </div>
     </footer>
+    {% endblock %}
   </div>
 
   {% block scripts %}{% endblock %}
