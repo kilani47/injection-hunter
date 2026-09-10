@@ -41,7 +41,7 @@ it expected.
 |---|------|-----------|--------|
 | 1 | Basic Records Room | [`records-room/`](records-room/) | built |
 | 2 | Bypassing the Archive Guardian | [`archive-guardian/`](archive-guardian/) | built |
-| 3 | Zodiac Twelve Directory Breach | *(coming soon)* | not yet built |
+| 3 | Zodiac Twelve Directory Breach | [`zodiac-breach/`](zodiac-breach/) | built |
 
 "Basic Records Room" is a blind extraction lesson: the archive search
 console reports only whether a query matched anything, never what it
@@ -54,7 +54,19 @@ class from a read path to an auth check — the classic `{"$ne": null}`
 -style login bypass, against the `agents` collection seeded alongside
 `records` in this floor's Mongo data.
 
-"Zodiac Twelve Directory Breach" (not yet built) moves off MongoDB
-entirely and into the lab's OpenLDAP directory — a different query
-language, but the same underlying lesson about trusting structure a
-caller controls.
+"Zodiac Twelve Directory Breach" closes the phase by moving off MongoDB
+entirely and into the lab's real OpenLDAP directory (`ou=zodiac`) — a
+different query language with its own small grammar of special
+characters (`( ) & | ! *`), and a different bug *shape* even though the
+root cause rhymes with the first two floors: a search filter built by
+raw string concatenation, with none of those characters escaped before
+request-supplied text reaches it, lets a caller rewrite the filter's
+own logic instead of just supplying a value for it to compare against —
+enough for both an authentication bypass and a full directory dump that
+surfaces something the Zodiac Twelve's chairman was never meant to hand
+out through an ordinary lookup.
+
+Phase 4 is complete across all three floors: every route in
+`challenges/phase4.py` runs against a real backend (MongoDB for the
+first two floors, OpenLDAP for the third) with no simulated or
+hardcoded responses anywhere in the chain.
