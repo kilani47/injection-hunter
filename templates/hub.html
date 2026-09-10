@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Applicant Terminal — The Seiyaku Arc{% endblock %}
+{% block title %}Exam Hall — The Seiyaku Arc{% endblock %}
 
 {% block content %}
 <section class="grid gap-8 lg:grid-cols-[1.05fr_1fr] items-stretch mb-14">
   <div class="license-card glass rounded-[1.75rem] p-6 flex flex-col justify-between">
     <div>
-      <p class="font-mono text-xs text-muted mb-2">hunter license · applicant</p>
+      <p class="font-mono text-xs text-muted mb-2">hunter license &middot; applicant</p>
       <h1 class="font-display text-3xl font-semibold text-bone">Progress: {{ progress.cleared_count }} / {{ progress.total }} vows broken</h1>
     </div>
     <div class="mt-6 h-2 w-full rounded-full bg-white/10 overflow-hidden">
@@ -13,7 +13,7 @@
            style="width: {{ (progress.cleared_count / progress.total * 100) if progress.total else 0 }}%"></div>
     </div>
     <p class="mt-3 font-mono text-[11px] text-muted">
-      {% if progress.next %}next: {{ progress.next }}{% else %}every node cleared — the exam is over.{% endif %}
+      {% if progress.next %}next: {{ progress.next }}{% else %}every node cleared &mdash; the exam is over.{% endif %}
     </p>
   </div>
 
@@ -42,12 +42,58 @@
 </section>
 
 <section class="mb-16">
+  <div class="flex items-baseline justify-between mb-6">
+    <h2 class="font-display text-2xl font-semibold text-bone">The exam phases</h2>
+    <span class="font-mono text-[11px] text-muted">choose a phase to see its floors</span>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {% for p in phases %}
+      {% set locked = not p.unlocked %}
+      <a href="{% if not locked %}{{ url_for('phase', phase_id=p.id) }}{% else %}#{% endif %}"
+         class="phase-card {{ p.css_class }} p-5"
+         data-locked="{{ 'true' if locked else 'false' }}"
+         {% if locked %}aria-disabled="true" tabindex="-1"{% endif %}>
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <p class="font-mono text-[11px] text-accent">
+              {% if p.id == 'finals' %}Finals{% else %}Phase {{ p.order }}{% endif %}
+            </p>
+            <h3 class="font-display text-lg font-semibold text-bone mt-0.5">{{ p.label }}</h3>
+          </div>
+          <span class="font-mono text-[11px] w-4 text-center shrink-0">
+            {% if p.fully_cleared %}<span class="text-accent">&#10003;</span>
+            {% elif locked %}<span class="text-muted">&#128274;</span>
+            {% else %}<span class="text-bone/70">&#9679;</span>{% endif %}
+          </span>
+        </div>
+
+        <p class="mt-3 text-sm text-bone/60 leading-snug">
+          <span class="text-accent/90">{{ p.nen }}</span> &middot; {{ p.engine }}
+        </p>
+
+        <div class="mt-4 flex items-center justify-between">
+          <span class="font-mono text-[11px] text-muted">
+            {{ p.cleared_count }} / {{ p.count }} cleared
+          </span>
+          <span class="font-mono text-[11px] {{ 'text-muted' if locked else 'text-accent' }}">
+            {% if p.fully_cleared %}complete
+            {% elif locked %}locked
+            {% else %}enter &rarr;{% endif %}
+          </span>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mb-4">
   <h2 class="font-display text-2xl font-semibold text-bone mb-2">What injection is</h2>
   <p class="max-w-2xl text-bone/80 leading-relaxed mb-8">
     Every system in this exam trusts its own rule for telling data apart from
     code. An applicant's name is supposed to stay a name; a search term is
     supposed to stay a search term. Injection is what happens when that rule
-    was worded imprecisely — an attacker supplies input that the rule accepts
+    was worded imprecisely &mdash; an attacker supplies input that the rule accepts
     as harmless data, but that the underlying engine reads as an instruction.
     The examiner never notices, because from where they're standing, the vow
     was never broken.
@@ -56,7 +102,7 @@
   <h3 class="font-display text-xl font-semibold text-bone mb-1">Ten shapes it takes</h3>
   <p class="max-w-2xl text-bone/70 leading-relaxed mb-6 text-sm">
     Click a card to see how each one actually behaves. Every shape below has a
-    real floor waiting for it later in the exam.
+    real floor waiting for it across the phases above.
   </p>
 
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" id="taxonomy-grid">
@@ -96,48 +142,6 @@
       </div>
     </button>
     {% endfor %}
-  </div>
-</section>
-
-<section>
-  <h2 class="font-display text-2xl font-semibold text-bone mb-6">The exam floors</h2>
-  <div class="flex flex-col gap-4">
-    {% set ns = namespace(current=None) %}
-    {% for node in progress.nodes %}
-      {% if node.phase != ns.current %}
-        {% set ns.current = node.phase %}
-        {% if not loop.first %}</div></div>{% endif %}
-        <div class="{{ node.phase_meta.css_class }} glass rounded-2xl p-5 border-l-4 border-accent">
-        <div class="flex items-baseline justify-between mb-3">
-          <h3 class="font-display text-lg font-semibold text-bone">
-            {{ node.phase_meta.label }}
-          </h3>
-          <span class="font-mono text-[11px] text-accent">{{ node.phase_meta.nen }}</span>
-        </div>
-        <div class="flex flex-col gap-2">
-      {% endif %}
-
-      <div class="flex items-center justify-between gap-3 rounded-lg bg-black/20 px-3 py-2">
-        <div class="flex items-center gap-3">
-          <span class="font-mono text-xs w-4 text-center">
-            {% if node.cleared %}<span class="text-accent">&#10003;</span>
-            {% elif node.unlocked %}<span class="text-bone/70">&#9679;</span>
-            {% else %}<span class="text-muted">&#128274;</span>{% endif %}
-          </span>
-          <span class="text-sm {{ 'text-bone' if node.unlocked else 'text-muted' }}">{{ node.name }}</span>
-        </div>
-        {% if node.cleared %}
-          <span class="font-mono text-[10px] text-accent">cleared</span>
-        {% elif node.unlocked and node.built %}
-          <a href="{{ node.path }}" class="font-mono text-[10px] text-accent hover:underline">open</a>
-        {% elif node.unlocked %}
-          <span class="font-mono text-[10px] text-muted">unlocked · in development</span>
-        {% else %}
-          <span class="font-mono text-[10px] text-muted">locked</span>
-        {% endif %}
-      </div>
-    {% endfor %}
-    </div></div>
   </div>
 </section>
 {% endblock %}
