@@ -1,5 +1,5 @@
 """
-core/unlock.py — single source of truth for challenge ordering, flags, and
+core/unlock.py: single source of truth for challenge ordering, flags, and
 progressive unlock state.
 
 The Seiyaku Arc is one linear chain of 18 nodes (5 phases + finals). Clearing
@@ -8,7 +8,7 @@ node N unlocks node N+1. Progress lives in the Flask session under the
 were solved.
 
 This module has zero Flask import dependency beyond the `session`-like
-mapping it is handed — any dict-like object with __getitem__/get/__setitem__
+mapping it is handed: any dict-like object with __getitem__/get/__setitem__
 works, which keeps it trivially unit-testable outside a request context.
 """
 
@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Any, MutableMapping, Optional
 
 # ---------------------------------------------------------------------------
-# Flags — the single canonical source. Every flag string here must match the
+# Flags: the single canonical source. Every flag string here must match the
 # one embedded in its challenge's DEBRIEF.md / solver exactly (SEIYAKU{...}).
 # ---------------------------------------------------------------------------
 FLAGS: dict[str, str] = {
@@ -73,31 +73,31 @@ PHASE_META: dict[str, dict[str, Any]] = {
                "image": None},
 }
 
-# Short, spoiler-free hooks per node — one line describing the floor's
+# Short, spoiler-free hooks per node: one line describing the floor's
 # premise without giving away its technique. Used on the phase pages.
 BLURBS: dict[str, str] = {
     "p1_1": "The applicant gate takes your name on trust. Trust is a rule, and rules can be misread.",
-    "p1_2": "Netero's recipe vault answers the wrong questions loudly — read what it says when it breaks.",
+    "p1_2": "Netero's recipe vault answers the wrong questions loudly. Read what it says when it breaks.",
     "p1_3": "The results board prints whatever matches. Ask it to match something it was never meant to show.",
     "p1_4": "A sealed door that only ever whispers pass or fail. One bit at a time is still enough.",
-    "p1_5": "The medical bay never tells you anything — but it can be made to take its time about it.",
+    "p1_5": "The medical bay never tells you anything, but it can be made to take its time about it.",
     "p2_1": "A tower of identical floors, cleared on autopilot. Let the machine walk them for you.",
     "p2_2": "An ancient, forgotten floor with a weakness catalogued long ago. Look it up; walk in.",
     "p2_3": "The examiner isn't watching the door you'd expect. The threat rides in the header instead.",
-    "p3_1": "A spell card carries word off the island — through a channel the game master never watches.",
+    "p3_1": "A spell card carries word off the island, through a channel the game master never watches.",
     "p3_2": "A card that lies dormant when inscribed and only wakes when someone else plays it back.",
-    "p4_1": "The archive answers only match or no match — but its questions aren't strings anymore.",
+    "p4_1": "The archive answers only match or no match, but its questions aren't strings anymore.",
     "p4_2": "The archive guardian checks that you supplied a name and a key, never what kind of thing they are.",
     "p4_3": "The Zodiac Twelve's directory is rigid by design. Rewrite the question it's rigid about.",
-    "p5_1": "A firewall built on a real ORM — and one raw seam its own safety was never applied to.",
+    "p5_1": "A firewall built on a real ORM, and one raw seam its own safety was never applied to.",
     "p5_2": "The badge press prints exactly what its blueprint says. Add a line to the blueprint.",
-    "p5_3": "The archive desk reads your request back to you — including wherever you point it to look.",
+    "p5_3": "The archive desk reads your request back to you, including wherever you point it to look.",
     "f1": "The tower's final locked floor demands every SQLi style at once, in order, to descend.",
     "f2": "Four factions, four systems, four fragments. Seize the Chairman's seat by breaching them all.",
 }
 
 # ---------------------------------------------------------------------------
-# NODES — ordered list of every challenge in the lab. `built` is False until
+# NODES: ordered list of every challenge in the lab. `built` is False until
 # the challenge's Task lands its real blueprint route; the hub uses it to
 # render an "under construction" state distinct from "locked".
 # ---------------------------------------------------------------------------
@@ -108,7 +108,7 @@ NODES: list[dict[str, Any]] = [
      "path": "/p1/recipe", "flag": FLAGS["p1_2"], "built": True},
     {"id": "p1_3", "phase": "1", "name": "Exam Results Board",
      "path": "/p1/results", "flag": FLAGS["p1_3"], "built": True},
-    {"id": "p1_4", "phase": "1", "name": "Trick Tower — Silent Room",
+    {"id": "p1_4", "phase": "1", "name": "Trick Tower: Silent Room",
      "path": "/p1/silent", "flag": FLAGS["p1_4"], "built": True},
     {"id": "p1_5", "phase": "1", "name": "Zevil Island Medical Bay",
      "path": "/p1/medbay", "flag": FLAGS["p1_5"], "built": True},

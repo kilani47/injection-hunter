@@ -1,15 +1,22 @@
 {% extends "base.html" %}
-{% block title %}Trick Tower — Silent Room — The Seiyaku Arc{% endblock %}
+{% block title %}Trick Tower: Silent Room · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-p1{% endblock %}
 
 {% block content %}
+{% if has_hero('p1_silent') %}
+<div class="rounded-2xl overflow-hidden border border-white/10 mb-8 h-64">
+  <img src="{{ url_for('static', filename='img/p1_silent.png') }}"
+       alt="Applicants facing a silent sealed door lit by two indicator lamps"
+       class="w-full h-full object-cover" loading="lazy" decoding="async">
+</div>
+{% endif %}
 <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
   <div>
     <p class="font-mono text-xs text-muted mb-2">the written exam &middot; floor 4</p>
-    <h1 class="font-display text-3xl font-semibold text-bone mb-4">Trick Tower — Silent Room</h1>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4">Trick Tower: Silent Room</h1>
     <p class="max-w-md text-bone/80 leading-relaxed mb-4">
       This door doesn't argue. Show it a code and it gives back exactly one
-      of two words, always in the same voice, always the same shape — no
+      of two words, always in the same voice, always the same shape: no
       hint of what went wrong, no glimpse of what's behind it. Even a
       badly-formed question gets the same flat answer as a wrong one. The
       room has decided that "no" and "I don't understand" sound identical,
@@ -25,7 +32,7 @@
   <div class="license-card glass rounded-[1.75rem] p-6">
     <div class="exam-terminal rounded-xl p-5">
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> silent room — present a door code
+        <span class="text-accent">&gt;</span> silent room: present a door code
       </p>
 
       {% if result is not none %}

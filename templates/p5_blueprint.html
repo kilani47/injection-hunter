@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Palace Blueprint Tampering — The Seiyaku Arc{% endblock %}
+{% block title %}Palace Blueprint Tampering · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-p5{% endblock %}
 
 {% block content %}
@@ -11,7 +11,7 @@
       Every visitor to the Palace gets a badge, printed on the spot from a
       short structural blueprint: your name goes in one slot, a fixed
       "guest" clearance goes in the next. The guards at every checkpoint
-      never re-derive your clearance themselves &mdash; they just read
+      never re-derive your clearance themselves. They just read
       whatever the badge's blueprint says, and trust it completely.
     </p>
     <p class="max-w-md text-bone/60 leading-relaxed text-sm">
@@ -24,7 +24,7 @@
   <div class="license-card glass rounded-[1.75rem] p-6">
     <div class="exam-terminal rounded-xl p-5">
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> guest badge press &mdash; visitor name
+        <span class="text-accent">&gt;</span> guest badge press: visitor name
       </p>
 
       {% if attempted %}
@@ -86,8 +86,8 @@
         <code class="text-accent">POST /p5/blueprint</code> accepts a
         single form field, <code class="text-accent">name</code>. Send
         <code class="text-accent">Accept: application/json</code> for a
-        compact JSON answer — including the exact XML blueprint the press
-        printed for your name — instead of this page.
+        compact JSON answer (including the exact XML blueprint the press
+        printed for your name) instead of this page.
       </p>
     </div>
   </div>

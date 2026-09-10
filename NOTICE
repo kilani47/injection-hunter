@@ -1,4 +1,4 @@
-The Seiyaku Arc — NOTICE
+The Seiyaku Arc, NOTICE
 
 This is an unofficial fan project. It is not affiliated with, endorsed by,
 sponsored by, or approved by Yoshihiro Togashi, Shueisha, VIZ Media, the
@@ -29,7 +29,7 @@ over that material is made or implied.
 ## Embedded victory media (residual risk)
 
 The lab's shipped default victory screen is an **original CSS animation**
-authored for this project — it requires no third-party asset and ships with
+authored for this project, it requires no third-party asset and ships with
 zero Hunter × Hunter image or video files. See `templates/victory.html`.
 
 Separately, the lab supports an **opt-in** asset slot: if the repository's
@@ -41,12 +41,12 @@ operator has chosen to add locally. It is:
 - not authored by this project,
 - not covered by the MIT license above,
 - not distributed by this repository (the build/CI pipeline never fetches,
-  bundles, or commits these files — see `assets/README.md` and
+  bundles, or commits these files, see `assets/README.md` and
   `assets/fetch-assets.sh`, both of which leave the actual source URLs for
   the operator to supply),
 - and, in plain terms: **a residual legal risk the operator accepts
-  personally** by adding it. No license text — from this project or anyone
-  else — can retroactively grant rights to someone else's copyrighted
+  personally** by adding it. No license text, from this project or anyone
+  else, can retroactively grant rights to someone else's copyrighted
   artwork. The only real protections available are (a) not distributing
   those frames, and (b) this disclaimer. Keeping the default (original
   animation, no gif) avoids the risk entirely.

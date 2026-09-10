@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}TrickCMS News Portal — The Seiyaku Arc{% endblock %}
+{% block title %}TrickCMS News Portal · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-p2{% endblock %}
 
 {% block content %}
@@ -31,14 +31,14 @@
         &nbsp;|&nbsp;
         <a href="{{ url_for('phase2.p2_sealed', page='contact') }}" style="color: #c9bfff; text-decoration: none;">[ Contact ]</a>
         &nbsp;|&nbsp;
-        <span style="color: #5a5a66;">[ Admin Login &mdash; module offline ]</span>
+        <span style="color: #5a5a66;">[ Admin Login | module offline ]</span>
       </td>
     </tr>
   </table>
 
   <marquee behavior="scroll" direction="left" scrollamount="4"
     style="display:block; background:#0a0a12; border:1px solid rgba(139,92,246,0.4); color:#c9bfff; font-size:12px; padding:4px 0; margin-bottom:1.25rem;">
-    Welcome to the TrickCMS News Portal &mdash; best viewed at 800x600 &mdash; this module has not been updated since it was first installed &mdash; you are visitor #003841 since 2005
+    Welcome to the TrickCMS News Portal | best viewed at 800x600 | this module has not been updated since it was first installed | you are visitor #003841 since 2005
   </marquee>
 
   <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
@@ -47,7 +47,7 @@
       <h1 class="font-display text-3xl font-semibold text-bone mb-4">A Sealed Floor</h1>
       <p class="max-w-md text-bone/80 leading-relaxed mb-4">
         Somewhere below the catalog every applicant is shown, an older
-        module keeps running on its own — a news bulletin board nobody
+        module keeps running on its own, a news bulletin board nobody
         has rebuilt since the day it went up. It still answers requests.
         It was never meant to still be reachable.
       </p>
@@ -61,7 +61,7 @@
       <div class="exam-terminal rounded-xl p-5">
         {% if page == 'news' %}
           <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-            <span class="text-accent">&gt;</span> bulletin board &mdash; look up post by id
+            <span class="text-accent">&gt;</span> bulletin board: look up post by id
           </p>
 
           <form method="get" action="{{ url_for('phase2.p2_sealed') }}" class="flex flex-col gap-3 mb-4">
@@ -120,7 +120,7 @@
           {% endif %}
         {% else %}
           <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-            <span class="text-accent">&gt;</span> static page &mdash; {{ page }}
+            <span class="text-accent">&gt;</span> static page: {{ page }}
           </p>
           {% if pages %}
             {% for p in pages %}
@@ -139,7 +139,7 @@
     style="border-top: 1px solid rgba(139,92,246,0.3); margin-top: 2rem;">
     <tr>
       <td style="padding: 8px 0; font-size: 11px; color: #5a5a66;">
-        Powered by TrickCMS&trade; 1.2 &mdash; this module has not received a security update since it was deployed.
+        Powered by TrickCMS&trade; 1.2 | this module has not received a security update since it was deployed.
       </td>
     </tr>
   </table>

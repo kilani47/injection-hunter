@@ -1,10 +1,11 @@
 """
-app.py — The Seiyaku Arc Flask portal.
+app.py: The Seiyaku Arc Flask portal.
 
-Serves the hub, the progressive-unlock flag flow, and the victory takeover.
-Challenge blueprints (challenges/phase1.py ... challenges/finals.py) register
-themselves here defensively: this scaffold task ships before any of them
-exist, so app.py must boot cleanly with zero challenge modules present.
+Serves the entrance, the exam hall (hub), the per-phase drill-down, the
+progressive-unlock flag flow, and the victory takeover. Challenge
+blueprints (challenges/phase1.py ... challenges/finals.py) register
+themselves here defensively via a try/except import loop, so app.py still
+boots cleanly if a given module is ever absent.
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__)
 
 # Lab constant secret key. This is a deliberately-vulnerable, local-only CTF
-# lab (see NOTICE / README ethics banner) — session integrity here only
+# lab (see NOTICE / README ethics banner): session integrity here only
 # needs to survive a container restart, not resist a determined attacker,
 # so a hardcoded key (vs. a per-deploy secret) is an intentional simplicity
 # choice, not an oversight.
@@ -29,6 +30,17 @@ app.secret_key = "seiyaku-arc-hunter-license-nen-000001"
 
 def _gif_path(node_id: str) -> str:
     return os.path.join(APP_ROOT, "static", "img", "victory", f"{node_id}.gif")
+
+
+def _has_hero(name: str) -> bool:
+    """True if static/img/<name>.png exists on disk. Every challenge/phase
+    hero template calls this (exposed as a Jinja global below) instead of a
+    hardcoded per-node flag, so dropping a new operator-supplied image in
+    is enough on its own: no route or config change needed to pick it up."""
+    return os.path.isfile(os.path.join(APP_ROOT, "static", "img", f"{name}.png"))
+
+
+app.jinja_env.globals["has_hero"] = _has_hero
 
 
 def render_victory(node: dict) -> str:
@@ -81,7 +93,7 @@ def flag():
         return render_template(
             "hub.html",
             progress=prog,
-            error="vow not fulfilled — that flag doesn't match the next locked floor.",
+            error="vow not fulfilled: that flag doesn't match the next locked floor.",
         ), 400
     return render_victory(node)
 
@@ -90,6 +102,11 @@ def flag():
 def reset():
     unlock.reset(session)
     return redirect(url_for("hub"))
+
+
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
 
 
 # --- phase blueprints -------------------------------------------------
@@ -112,7 +129,7 @@ for _module_name, _bp_name in (
 
 
 if __name__ == "__main__":
-    # Debug/reloader off by default — the app is deliberately vulnerable on
+    # Debug/reloader off by default. The app is deliberately vulnerable on
     # purpose via its own challenge routes; the Werkzeug interactive
     # debugger is a separate, out-of-scope attack surface we don't want to
     # expose incidentally. Set FLASK_DEBUG=1 for local development only.

@@ -1,15 +1,15 @@
-# THE SEIYAKU ARC — Design Spec
+# THE SEIYAKU ARC, Design Spec
 
 > **Advanced Injection through the Hunter Exam.**
 > A single-site, deliberately-vulnerable CTF lab that teaches every injection
 > class in the master notes, themed around Hunter × Hunter's central idea:
-> **Nen abilities are governed by self-imposed rules (誓約 *Seiyaku* — Vows &
+> **Nen abilities are governed by self-imposed rules (誓約 *Seiyaku*, Vows &
 > Limitations), and every rule hides a loophole the caster never anticipated.**
 > That *is* injection: a system trusts its own input-validation rule; the
 > attacker finds where the rule was worded imprecisely and breaks out of *data*
 > into *code*.
 
-- **Arc name (chosen):** **The Seiyaku Arc** — "The Vow-Breaker's Exam."
+- **Arc name (chosen):** **The Seiyaku Arc**, "The Vow-Breaker's Exam."
 - **Repo:** `seiyaku-arc`
 - **Author:** abdullah.kilani4702@gmail.com
 - **Status:** design / pre-implementation
@@ -20,7 +20,7 @@
 ## 1. Goals & non-goals
 
 **Goals**
-1. One challenge for **every topic in the master notes** — nothing skipped. Full
+1. One challenge for **every topic in the master notes**, nothing skipped. Full
    traceability matrix in §4.
 2. **Realistic**: exploits run against **real engines** (MariaDB, MongoDB,
    OpenLDAP, a real XML parser). Payloads from the notes work verbatim.
@@ -44,19 +44,19 @@
 
 You are an **applicant** in the Hunter Exam. Each **Phase** is a guardian who
 enforces a **Vow** (an input-validation rule). Every guardian's Vow has a
-loophole. Clear a phase and the next one unlocks — everything beyond stays
+loophole. Clear a phase and the next one unlocks, everything beyond stays
 "classified" (locked), exactly like the R6 lab's mission gating.
 
 Phases are colour-keyed to the six Nen categories (thematic + visual identity):
 
 | Phase | Hunter Exam location | Nen category (theme colour) | Topic cluster |
 |------:|----------------------|-----------------------------|---------------|
-| 1 | Written Exam | **Enhancement** (crimson) — raw fundamentals | SQLi fundamentals + the 4 core techniques |
-| 2 | Trick Tower | **Transmutation** (violet) — bending the rule's shape | Testing methodology + SQLMap + header/CVE labs |
-| 3 | Greed Island | **Specialization** (gold) — Greed Island is Specialist territory | OOB + Second-order |
-| 4 | Hunter Association HQ | **Manipulation** (green) — "hacking the spiritual firewall" | NoSQL + LDAP |
-| 5 | Chimera Ant Palace | **Conjuration** (indigo) — hidden conjured structures | ORM + XML/XXE |
-| Finals | The Exam Finals | **Emission** (cyan) — projecting the full skill | Two chained multi-vuln CTFs |
+| 1 | Written Exam | **Enhancement** (crimson), raw fundamentals | SQLi fundamentals + the 4 core techniques |
+| 2 | Trick Tower | **Transmutation** (violet), bending the rule's shape | Testing methodology + SQLMap + header/CVE labs |
+| 3 | Greed Island | **Specialization** (gold), Greed Island is Specialist territory | OOB + Second-order |
+| 4 | Hunter Association HQ | **Manipulation** (green), "hacking the spiritual firewall" | NoSQL + LDAP |
+| 5 | Chimera Ant Palace | **Conjuration** (indigo), hidden conjured structures | ORM + XML/XXE |
+| Finals | The Exam Finals | **Emission** (cyan), projecting the full skill | Two chained multi-vuln CTFs |
 
 ---
 
@@ -65,47 +65,47 @@ Phases are colour-keyed to the six Nen categories (thematic + visual identity):
 Naming mirrors the R6 lab: each challenge has a code, an HxH-flavoured name, the
 real vuln, and the notes section it satisfies.
 
-### Phase 1 — The Written Exam · *SQLi Fundamentals + 4 techniques*
+### Phase 1, The Written Exam · *SQLi Fundamentals + 4 techniques*
 | # | Name | Vuln | Notes §|
 |---|------|------|--------|
 | 1.1 | **Gate of Trust** | SQLi auth-bypass fundamentals (`' OR '1'='1' -- `), string vs integer probing, `'` first-probe, DBMS fingerprinting by error | §2, §3, §4 |
 | 1.2 | **Netero's Recipe Vault** | **Error-based** extraction (`extractvalue`, error leaks data) | §5A |
 | 1.3 | **Exam Results Board** | **Union-based** extraction (`ORDER BY`, column count, `UNION SELECT`, `information_schema`) | §5B |
-| 1.4 | **Trick Tower — Silent Room** | **Boolean-blind** (`AND 1=1` vs `1=2`, `SUBSTRING` walk) | §5C |
+| 1.4 | **Trick Tower, Silent Room** | **Boolean-blind** (`AND 1=1` vs `1=2`, `SUBSTRING` walk) | §5C |
 | 1.5 | **Zevil Island Medical Bay** | **Time-blind** (`IF(...,SLEEP(5),0)`, timing inference) | §5D |
 
-### Phase 2 — Trick Tower · *Testing methodology + SQLMap*
+### Phase 2, Trick Tower · *Testing methodology + SQLMap*
 | # | Name | Vuln | Notes §|
 |---|------|------|--------|
 | 2.1 | **Automated Floor Skip** | SQLMap end-to-end (`-r request.txt`, `--dbs → --dump`, `--technique`, `--level/--risk` tuning) | §6 |
-| 2.2 | **A Sealed Floor — Ancient Vuln** | A GeniX-CMS-style known-CVE SQLi (CVE-2015-3933 flavour) exploited with SQLMap | §6 |
+| 2.2 | **A Sealed Floor, Ancient Vuln** | A GeniX-CMS-style known-CVE SQLi (CVE-2015-3933 flavour) exploited with SQLMap | §6 |
 | 2.3 | **The Disguised Examiner** | **SQLi in the `User-Agent` header** (needs `--level 3` / a marked header) | §4, §6 |
 
-### Phase 3 — Greed Island · *Advanced SQLi*
+### Phase 3, Greed Island · *Advanced SQLi*
 | # | Name | Vuln | Notes §|
 |---|------|------|--------|
-| 3.1 | **The Spell Card (GI→Outside)** | **Out-of-Band** exfil — DB triggers a callback to a bundled collaborator that captures & displays the data | §7 (OOB) |
-| 3.2 | **The Cursed Card** | **Second-order / stored** SQLi — payload stored benign on registration, executes later in an admin/report query | §7 (2nd-order) |
+| 3.1 | **The Spell Card (GI→Outside)** | **Out-of-Band** exfil, DB triggers a callback to a bundled collaborator that captures & displays the data | §7 (OOB) |
+| 3.2 | **The Cursed Card** | **Second-order / stored** SQLi, payload stored benign on registration, executes later in an admin/report query | §7 (2nd-order) |
 
-### Phase 4 — Hunter Association HQ · *NoSQL + LDAP*
+### Phase 4, Hunter Association HQ · *NoSQL + LDAP*
 | # | Name | Vuln | Notes §|
 |---|------|------|--------|
-| 4.1 | **Archive — Basic Records Room** | MongoDB basics + **NoSQL operator injection** for data access (`$gt`,`$regex` blind extraction) | §8 |
+| 4.1 | **Archive, Basic Records Room** | MongoDB basics + **NoSQL operator injection** for data access (`$gt`,`$regex` blind extraction) | §8 |
 | 4.2 | **Bypassing the Archive Guardian** | **NoSQL auth bypass** (`$ne`, `param[$ne]=1`, JSON body operators) | §8 |
-| 4.3 | **Zodiac Twelve Directory Breach** | **LDAP injection** — auth bypass (`*)(uid=*`) + directory dump (`*)(objectClass=*`) against real OpenLDAP | §9 |
+| 4.3 | **Zodiac Twelve Directory Breach** | **LDAP injection**, auth bypass (`*)(uid=*`) + directory dump (`*)(objectClass=*`) against real OpenLDAP | §9 |
 
-### Phase 5 — Chimera Ant Palace · *ORM + XML/XXE*
+### Phase 5, Chimera Ant Palace · *ORM + XML/XXE*
 | # | Name | Vuln | Notes §|
 |---|------|------|--------|
-| 5.1 | **Manipulator's Firewall** | **ORM injection** — raw string into a SQLAlchemy `filter()` → real SQLi through the ORM | §10 |
-| 5.2 | **Palace Blueprint Tampering** | **XML (tag) injection** — inject tags/metachars to change parsed structure/role | §11 |
-| 5.3 | **The King's Sealed Archives** | **XXE** — external-entity file read (`file:///etc/passwd`), SSRF variant, blind/OOB DTD | §11 |
+| 5.1 | **Manipulator's Firewall** | **ORM injection**, raw string into a SQLAlchemy `filter()` → real SQLi through the ORM | §10 |
+| 5.2 | **Palace Blueprint Tampering** | **XML (tag) injection**, inject tags/metachars to change parsed structure/role | §11 |
+| 5.3 | **The King's Sealed Archives** | **XXE**, external-entity file read (`file:///etc/passwd`), SSRF variant, blind/OOB DTD | §11 |
 
-### Finals — The Exam Finals · *chained, multi-vuln*
+### Finals, The Exam Finals · *chained, multi-vuln*
 | # | Name | Vuln | Notes §|
 |---|------|------|--------|
 | F.1 | **Trick Tower Final Exam** (BookHaven) | One target requiring **all four SQLi styles in sequence** (error → union → boolean → time) to descend the final floor | §5 |
-| F.2 | **Chairman Election Infiltration** (OmniGrid) | **Four factions, four engines**: Onboarding=MySQL SQLi · Mobile API=Mongo NoSQL · Directory=LDAP · Document import=XML/XXE — chain all four to seize the Chairman seat | §5,§8,§9,§11 |
+| F.2 | **Chairman Election Infiltration** (OmniGrid) | **Four factions, four engines**: Onboarding=MySQL SQLi · Mobile API=Mongo NoSQL · Directory=LDAP · Document import=XML/XXE, chain all four to seize the Chairman seat | §5,§8,§9,§11 |
 
 **18 challenges total** (16 phase challenges across Phases 1–5, plus the 2
 Finals), covering 100% of the notes. §1 (Injection Overview) and §3 (Types taxonomy) are
@@ -161,17 +161,17 @@ every challenge UI and talks to real backend engines. Everything runs under one
                  └────────┘        └───────────────┘
 ```
 
-- **MariaDB** — Phases 1, 2, 3, 5.1 (ORM), F.1, F.2-onboarding. Genuine MySQL
+- **MariaDB**, Phases 1, 2, 3, 5.1 (ORM), F.1, F.2-onboarding. Genuine MySQL
   dialect so `extractvalue`, `information_schema`, `SLEEP`, `UNION` all work as
   the notes describe. SQLi sinks are raw f-string concatenation on purpose.
-- **MongoDB** — 4.1, 4.2, F.2-mobile. App builds queries from raw request objects
+- **MongoDB**, 4.1, 4.2, F.2-mobile. App builds queries from raw request objects
   so `$ne`/`$regex` operator injection is genuine.
-- **OpenLDAP (slapd)** — 4.3, F.2-directory. Seeded LDIF (Zodiac Twelve DIT).
+- **OpenLDAP (slapd)**, 4.3, F.2-directory. Seeded LDIF (Zodiac Twelve DIT).
   Filters built by string concatenation → real LDAP injection.
-- **lxml** in-process — 5.2, 5.3, F.2-document. Parser configured with
+- **lxml** in-process, 5.2, 5.3, F.2-document. Parser configured with
   `resolve_entities=True`, `no_network=False`, DTD loading on → **genuine XXE**
   (real `file:///etc/passwd` read from inside the container).
-- **collaborator** — small bundled service (DNS + HTTP sink) so **OOB is
+- **collaborator**, small bundled service (DNS + HTTP sink) so **OOB is
   self-contained**: the DB/app callback lands here and the UI shows the captured
   exfil. (No reliance on dnslog.cn / Burp Collaborator.) OOB firing mechanism to
   be pinned by a short spike at Phase 3 (candidate: a MySQL/PostgreSQL path that
@@ -194,18 +194,18 @@ server-side.
 
 ## 6. Design system (frontend)
 
-- **Tailwind** (local build or Play CDN — it's a localhost app, CSP not a
+- **Tailwind** (local build or Play CDN, it's a localhost app, CSP not a
   concern) + a custom **Nen aura** layer: per-phase accent colour, animated aura
   glow (CSS conic/radial gradients + blur), "Ren" pulse on primary actions,
   glassmorphic cards, a monospaced "exam terminal" panel for payloads/responses.
 - Google Fonts: a bold display face for headings + a mono face for the terminal.
 - The **frontend-design** skill is consulted at build time so this doesn't read
-  as a Tailwind default template — bespoke aura palette, custom card treatment,
+  as a Tailwind default template, bespoke aura palette, custom card treatment,
   hand-tuned motion.
-- **Hub**: applicant terminal — phase map (locked/cleared states), the
+- **Hub**: applicant terminal, phase map (locked/cleared states), the
   onboarding primer (§1 overview + §3 taxonomy as interactive cards), flag
   submission, progress.
-- **Victory screen**: full-screen takeover — embedded winning gif (from the
+- **Victory screen**: full-screen takeover, embedded winning gif (from the
   asset slot) layered under original Nen-aura burst animation + flag reveal +
   "next phase unlocked." Original animation is the shipped default so it works
   with zero assets present.
@@ -216,14 +216,14 @@ server-side.
 
 Mirrors the R6 lab's doc model exactly.
 
-- **`README.md`** (root) — badges, hero, the arc premise, phase table, "which doc
+- **`README.md`** (root), badges, hero, the arc premise, phase table, "which doc
   do you want?" router, build/run instructions, **Legal / Disclaimer**.
-- **Per-phase `README.md`** (`phase1/README.md` … `finals/README.md`) — phase
+- **Per-phase `README.md`** (`phase1/README.md` … `finals/README.md`), phase
   index, rules of engagement, links to each challenge's `CHALLENGER.md`.
   **No spoilers.**
-- **Per-challenge `CHALLENGER.md`** — the blackbox briefing: story, target URL,
+- **Per-challenge `CHALLENGER.md`**, the blackbox briefing: story, target URL,
   objective, the flag format, allowed tools. No solution.
-- **Per-challenge `DEBRIEF.md`** — the teaching doc (spoilers): plain-language
+- **Per-challenge `DEBRIEF.md`**, the teaching doc (spoilers): plain-language
   root cause, the vulnerable code walkthrough, **HxH analogy** to simplify,
   full step-by-step solve with real payloads, remediation (the notes' fixes),
   and a self-check. May include an optional `solver.py`/`solver.sh`.
@@ -254,11 +254,11 @@ seiyaku-arc/
 
 ## 9. Legal / IP pack (the part that protects the author)
 
-The honest, defensible posture — same as the R6 lab, strengthened:
+The honest, defensible posture, same as the R6 lab, strengthened:
 
-1. **`LICENSE` — MIT**, © abdullah.kilani4702@gmail.com, covering **only** the
+1. **`LICENSE`, MIT**, © abdullah.kilani4702@gmail.com, covering **only** the
    original source, markup, docs, and written challenge content authored here.
-2. **`LICENSE` scope note + `NOTICE`** — explicitly state that Hunter × Hunter
+2. **`LICENSE` scope note + `NOTICE`**, explicitly state that Hunter × Hunter
    names, characters, imagery, and the **embedded victory gifs** are **not**
    covered, are the property of their respective rights holders (Yoshihiro
    Togashi / Shueisha / the anime production committee), and are used here
@@ -279,7 +279,7 @@ The honest, defensible posture — same as the R6 lab, strengthened:
 6. **Ethics banner**: authorized/local use only (carried on the hub + README).
 
 > Plain statement for the author, in the README: *no licence you write can stop
-> the HxH rights holders, because you don't own their art — the only real
+> the HxH rights holders, because you don't own their art, the only real
 > protections are (a) not distributing their copyrighted frames and (b) the
 > unofficial-fan disclaimer. This lab gives you both the safe default (original
 > animations) and, at your explicit choice, the gif slots.*

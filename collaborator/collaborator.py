@@ -1,10 +1,10 @@
 """
-collaborator/collaborator.py — The Seiyaku Arc's out-of-band (OOB)
+collaborator/collaborator.py: The Seiyaku Arc's out-of-band (OOB)
 collaborator service.
 
 Purpose: a stand-in for the classic "attacker-controlled listener" used to
 teach OOB SQL injection (notes §7). Something inside the docker-compose
-network — a challenge's Flask route, acting on data pulled out of the DB —
+network, a challenge's Flask route acting on data pulled out of the DB,
 makes a real outbound network call (HTTP request or DNS lookup) to this
 service's hostname (`collaborator`, the compose service name). That call
 carries exfiltrated data as a header/path/subdomain, and this service is
@@ -20,7 +20,7 @@ Single process, stdlib only:
     returns the current capture list as JSON.
   - A UDP DNS server on port 53 that parses just enough of RFC 1035 to log
     the queried name + type, then answers every query with a synthesized
-    NOERROR response — an A record pointing at 127.0.0.1 for A queries,
+    NOERROR response: an A record pointing at 127.0.0.1 for A queries,
     an empty-answer NOERROR for anything else (AAAA, TXT, ...). See the
     docstring on `handle_dns_query` for why NOERROR was chosen over
     NXDOMAIN: it's what keeps resolvers from retrying/falling back to
@@ -28,7 +28,7 @@ Single process, stdlib only:
     because this is a lab and the point is to observe the query land
     quickly, not to model authoritative DNS correctly.
 
-No persistence, no auth — this only runs on the internal compose network
+No persistence, no auth: this only runs on the internal compose network
 and is wiped on every container restart. That's fine for a lab.
 """
 
@@ -185,11 +185,11 @@ def _parse_qname(data: bytes, offset: int) -> tuple[str, int]:
 def _build_dns_response(query: bytes, qname: str, qtype: int) -> bytes:
     """Build a synthesized NOERROR response.
 
-    For an A query: answers with a single A record, 127.0.0.1, TTL 60 —
+    For an A query: answers with a single A record, 127.0.0.1, TTL 60,
     a real, resolvable answer so a client-side resolver making a genuine
     `gethostbyname()`-style call doesn't stall or fall back to another
     resolver waiting for a reply that never comes. For anything else (AAAA,
-    TXT, ...): NOERROR with zero answers — still a prompt, well-formed
+    TXT, ...): NOERROR with zero answers, still a prompt, well-formed
     reply, just with nothing to add. Query capture already happened before
     this is ever called; the *reply* only exists to keep the round trip
     fast, not because anything downstream is expected to use the answer.

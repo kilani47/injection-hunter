@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy · The Seiyaku Arc{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+  <p class="font-mono text-xs text-muted mb-2">the seiyaku arc</p>
+  <h1 class="font-display text-3xl font-semibold text-bone mb-6">Privacy Policy</h1>
+
+  <p class="text-bone/80 leading-relaxed mb-6">
+    This is a local security training lab. It has no server of its own on the
+    internet, no account system, and no analytics. Here is exactly what it
+    does with data, in full.
+  </p>
+
+  <h2 class="font-display text-xl font-semibold text-bone mt-8 mb-3">What runs where</h2>
+  <p class="text-bone/75 leading-relaxed mb-4">
+    Every part of this lab, the web portal and every database it talks to,
+    runs inside Docker containers on your own machine. Nothing here is
+    hosted by the author, and nothing you do on this site reaches the
+    author or any third party.
+  </p>
+
+  <h2 class="font-display text-xl font-semibold text-bone mt-8 mb-3">The one cookie this site sets</h2>
+  <p class="text-bone/75 leading-relaxed mb-4">
+    The portal sets a single signed session cookie to remember which floors
+    you have cleared, so the hub can show your progress and unlock the next
+    node. That cookie holds a list of challenge ids you have solved and
+    nothing else: no name, no email, no IP address, no device information.
+    Visit <code class="font-mono text-accent">/reset</code> at any time to
+    clear it, or clear cookies for this site in your browser.
+  </p>
+
+  <h2 class="font-display text-xl font-semibold text-bone mt-8 mb-3">No tracking, no analytics, no external requests</h2>
+  <p class="text-bone/75 leading-relaxed mb-4">
+    This site loads no analytics script, no advertising pixel, and no
+    third-party font or asset. Rajdhani and IBM Plex Mono, the two
+    typefaces used throughout, are bundled with the app under
+    <code class="font-mono text-accent">static/fonts/</code> rather than
+    loaded from a font provider, so opening any page here makes no request
+    to any server outside your own machine.
+  </p>
+  <p class="text-bone/75 leading-relaxed mb-4">
+    The one exception is entirely internal: Phase 3's out-of-band SQL
+    injection lesson has you make the lab's own database call back to a
+    small collaborator service, also running in your own Docker network.
+    That callback never leaves your machine either.
+  </p>
+
+  <h2 class="font-display text-xl font-semibold text-bone mt-8 mb-3">What you enter into the challenges</h2>
+  <p class="text-bone/75 leading-relaxed mb-4">
+    Every challenge in this lab is a target you attack on purpose: forms,
+    headers, and API bodies here store whatever you type into synthetic,
+    disposable databases seeded fresh in your own containers. None of it is
+    read by the author, sent anywhere else, or retained beyond your local
+    Docker volumes. Running <code class="font-mono text-accent">docker compose down -v</code>
+    deletes all of it.
+  </p>
+
+  <h2 class="font-display text-xl font-semibold text-bone mt-8 mb-3">Changes to this policy</h2>
+  <p class="text-bone/75 leading-relaxed mb-4">
+    If this policy ever needs to change, the update will land in this same
+    file in the project's source history, same as any other change to the
+    lab.
+  </p>
+
+  <div class="mt-10">
+    <a href="{{ url_for('hub') }}" class="font-mono text-[11px] text-muted hover:text-accent transition-colors">
+      &larr; back to the exam hall
+    </a>
+  </div>
+</div>
+{% endblock %}

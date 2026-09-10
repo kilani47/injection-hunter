@@ -1,4 +1,4 @@
-# Palace Blueprint Tampering — Debrief
+# Palace Blueprint Tampering, Debrief
 
 **Node:** `p5_2` &middot; **Flag:** `SEIYAKU{inject_a_new_tag}` &middot; **Route:** `POST /p5/blueprint` &middot; **Sink:** `challenges/phase5.py`, real `lxml` parser via `core/xml_parser.parse()`, flag stored in real MariaDB (`palace_clearances`) &middot; **Signal:** the printed badge's `clearance` field, cross-referenced against the real seeded lookup table
 
@@ -13,7 +13,7 @@
   (`&lt; &gt; &amp; &apos; &quot;`) or the parser reads it as the start
   of new markup instead of literal text.
 - A **well-formed** document is one where every tag that opens also
-  closes, tags nest properly, and there's exactly one root — a
+  closes, tags nest properly, and there's exactly one root, a
   well-formedness rule the parser genuinely enforces regardless of this
   bug. A document can be perfectly well-formed and still not be the
   *shape* its author intended.
@@ -26,7 +26,7 @@ directly into the template with none of the five reserved characters
 escaped first:
 
 ```python
-# challenges/phase5.py — p5_2
+# challenges/phase5.py, p5_2
 _GUEST_BADGE_TEMPLATE = (
     "<badge><visitor>{name}</visitor><clearance>guest</clearance></badge>"
 )
@@ -35,8 +35,8 @@ raw_xml = _GUEST_BADGE_TEMPLATE.format(name=name)
 doc = xml_parser.parse(raw_xml.encode("utf-8"))
 ```
 
-For an ordinary name — `Gon`, `Killua`, anything with no `<` or `&` in
-it — this produces exactly the intended two-element badge:
+For an ordinary name, `Gon`, `Killua`, anything with no `<` or `&` in
+it, this produces exactly the intended two-element badge:
 
 ```xml
 <badge><visitor>Gon</visitor><clearance>guest</clearance></badge>
@@ -45,11 +45,11 @@ it — this produces exactly the intended two-element badge:
 But `name` was never validated to be free of XML's own reserved
 characters before it was treated as content safe to insert into an XML
 document. A name containing its own `<`/`>` doesn't become literal text
-describing a visitor's name once parsed — it becomes new markup, read
+describing a visitor's name once parsed, it becomes new markup, read
 by the parser as real document structure, exactly as if it had been
 part of the original template.
 
-## Why a stray `<` gets rejected — and why that's not the fix
+## Why a stray `<` gets rejected, and why that's not the fix
 
 A single unbalanced `<` (`name=<`) breaks well-formedness outright:
 
@@ -57,13 +57,13 @@ A single unbalanced `<` (`name=<`) breaks well-formedness outright:
 <badge><visitor><</visitor><clearance>guest</clearance></badge>
 ```
 
-`lxml` correctly refuses to parse this — `StartTag: invalid element
-name` — because `<` on its own can't start a valid tag. This proves the
+`lxml` correctly refuses to parse this, `StartTag: invalid element
+name`, because `<` on its own can't start a valid tag. This proves the
 parser is genuinely running and genuinely enforcing XML's grammar; it
 is not simply ignoring malformed input. The bug is not "this parser
 accepts anything." It's that a **well-formed** document with **extra
 structure** the template's author never anticipated is, correctly,
-accepted — because from the parser's perspective, that's a perfectly
+accepted, because from the parser's perspective, that's a perfectly
 valid XML document. The mistake is entirely upstream, at the point
 where untrusted text was trusted to become content without ever being
 escaped.
@@ -90,7 +90,7 @@ concatenates to the actual document the press hands to the parser:
 
 This is completely well-formed: every tag opens and closes, nesting is
 clean, one root (`<badge>`). It's just no longer a two-element document
-— it now has **two** `<visitor>` elements and **two** `<clearance>`
+, it now has **two** `<visitor>` elements and **two** `<clearance>`
 elements, sitting as siblings under `<badge>`.
 
 `challenges/phase5.py` reads the parsed document with:
@@ -105,7 +105,7 @@ written" or "the one the template's author meant." Since the injected
 `<clearance>royal</clearance>` appears in the string *before* the
 template's own `<clearance>guest</clearance>`, `.find()` returns the
 injected one. The badge that gets printed carries `clearance: "royal"`
-— a value the template's code never writes on its own, on any input.
+, a value the template's code never writes on its own, on any input.
 
 Live proof against the real running stack:
 
@@ -115,7 +115,7 @@ curl -s -X POST "$BASE/p5/blueprint" -H "Accept: application/json" \
 ```
 
 ```json
-{"badge":{"clearance":"royal","clearance_description":"The King's own clearance — the badge press was never wired to write this level to any badge.","visitor":null},"error":null,"flag":"SEIYAKU{inject_a_new_tag}","raw_xml":"<badge><visitor></visitor><clearance>royal</clearance><visitor>x</visitor><clearance>guest</clearance></badge>","success":true,"visitor":"</visitor><clearance>royal</clearance><visitor>x"}
+{"badge":{"clearance":"royal","clearance_description":"The King's own clearance, the badge press was never wired to write this level to any badge.","visitor":null},"error":null,"flag":"SEIYAKU{inject_a_new_tag}","raw_xml":"<badge><visitor></visitor><clearance>royal</clearance><visitor>x</visitor><clearance>guest</clearance></badge>","success":true,"visitor":"</visitor><clearance>royal</clearance><visitor>x"}
 ```
 
 ## Where the flag actually comes from
@@ -125,14 +125,14 @@ genuinely-safe, parameterized query against the real, seeded
 `palace_clearances` table:
 
 ```python
-# challenges/phase5.py — _lookup_clearance()
+# challenges/phase5.py, _lookup_clearance()
 cur.execute(
     "SELECT level, description, flag FROM palace_clearances WHERE level = %s",
     (level,),
 )
 ```
 
-Only that table's `royal` row has a non-empty `flag` column — `guest`
+Only that table's `royal` row has a non-empty `flag` column, `guest`
 and `staff` both have an empty string. This lookup itself is not the
 vulnerability (it's a properly parameterized query); it's simply how
 the flag, once you've earned the right clearance value, gets attached
@@ -150,15 +150,15 @@ run against this exact seed (`SEIYAKU_BASE` was the default
 
 ```
 [p5_2] target: http://localhost:8000/p5/blueprint
-[p5_2] step 1 — plain visitor name: name=Gon
-  response: {"badge":{"clearance":"guest","clearance_description":"Standard visitor pass — issued by the badge press to anyone.","visitor":"Gon"},"error":null,"flag":null,"raw_xml":"<badge><visitor>Gon</visitor><clearance>guest</clearance></badge>","success":false,"visitor":"Gon"}
+[p5_2] step 1, plain visitor name: name=Gon
+  response: {"badge":{"clearance":"guest","clearance_description":"Standard visitor pass, issued by the badge press to anyone.","visitor":"Gon"},"error":null,"flag":null,"raw_xml":"<badge><visitor>Gon</visitor><clearance>guest</clearance></badge>","success":false,"visitor":"Gon"}
   ok: plain name printed an ordinary guest badge
-[p5_2] step 2 — malformed XML metachar: name=<
+[p5_2] step 2, malformed XML metachar: name=<
   response: {"badge":null,"error":"the blueprint press rejected that badge: StartTag: invalid element name, line 1, column 18 (<string>, line 1)","flag":null,"raw_xml":"<badge><visitor><</visitor><clearance>guest</clearance></badge>","success":false,"visitor":"<"}
   ok: a stray '<' was rejected as malformed XML (parser genuinely runs)
-[p5_2] step 3 — tag injection: name=</visitor><clearance>royal</clearance><visitor>x
-  response: {"badge":{"clearance":"royal","clearance_description":"The King's own clearance — the badge press was never wired to write this level to any badge.","visitor":null},"error":null,"flag":"SEIYAKU{inject_a_new_tag}","raw_xml":"<badge><visitor></visitor><clearance>royal</clearance><visitor>x</visitor><clearance>guest</clearance></badge>","success":true,"visitor":"</visitor><clearance>royal</clearance><visitor>x"}
-  ok: injected <clearance>royal</clearance> won the badge — flag recovered: SEIYAKU{inject_a_new_tag}
+[p5_2] step 3, tag injection: name=</visitor><clearance>royal</clearance><visitor>x
+  response: {"badge":{"clearance":"royal","clearance_description":"The King's own clearance, the badge press was never wired to write this level to any badge.","visitor":null},"error":null,"flag":"SEIYAKU{inject_a_new_tag}","raw_xml":"<badge><visitor></visitor><clearance>royal</clearance><visitor>x</visitor><clearance>guest</clearance></badge>","success":true,"visitor":"</visitor><clearance>royal</clearance><visitor>x"}
+  ok: injected <clearance>royal</clearance> won the badge, flag recovered: SEIYAKU{inject_a_new_tag}
 [p5_2] ok: plain badge clean, malformed XML rejected, tag injection
 [p5_2]     recovered the flag from real seeded palace_clearances
 [p5_2] PASS
@@ -166,27 +166,27 @@ run against this exact seed (`SEIYAKU_BASE` was the default
 
 ## Related XML attack surface, briefly (not exploited on this floor)
 
-- **XPath Injection** — the same "attacker text becomes structure"
+- **XPath Injection**, the same "attacker text becomes structure"
   idea, but against an XPath query string instead of the document
   itself, e.g. `//user[name='{input}']`.
-- **XInclude** — a separate mechanism (`xi:include`) that pulls in
+- **XInclude**, a separate mechanism (`xi:include`) that pulls in
   *other* XML content by reference at parse time; dangerous for reasons
   that rhyme with the next floor's XXE.
-- **Billion Laughs** — a DoS built from deeply nested entity
+- **Billion Laughs**, a DoS built from deeply nested entity
   expansion (`<!ENTITY a "1000 lols">` referencing itself
-  recursively) — a resource-exhaustion attack, not a data-disclosure one.
-- **XXE** (external entities) — the next floor, and the reason
+  recursively), a resource-exhaustion attack, not a data-disclosure one.
+- **XXE** (external entities), the next floor, and the reason
   `core/xml_parser.py` is already configured with `resolve_entities=True`
   even though this floor's bug never needed that setting at all.
 
 ## HxH analogy
 
 Conjuration materializes something real from a set of rules the
-Conjurer defines — the object behaves exactly as specified, faithfully,
+Conjurer defines, the object behaves exactly as specified, faithfully,
 every time. The badge press is exactly that: a rule-following printer
 that turns a blueprint into a real, working badge every checkpoint
 trusts completely. Nothing about the press malfunctioned when it
-printed a royal badge — it read a well-formed blueprint and printed
+printed a royal badge, it read a well-formed blueprint and printed
 precisely what that blueprint said, exactly the way it always does.
 What broke is that the *blueprint itself* was never protected from
 having new lines added to it by whoever supplied the one piece of
@@ -208,7 +208,7 @@ were building.
 
 - **Better: never hand-build XML with string formatting at all.**
   Construct the document with the parser's own element API, which
-  makes injection structurally impossible — there is no string for
+  makes injection structurally impossible, there is no string for
   attacker content to "break out of," because content is only ever set
   as a node's `.text`, never spliced into markup:
 
@@ -229,7 +229,7 @@ were building.
   an unexpected element count or shape outright, rather than silently
   picking one candidate among several.
 - **Validate structure, not just content.** A schema-validating parser
-  would have rejected this floor's injected document immediately — not
+  would have rejected this floor's injected document immediately, not
   because any single character was disallowed, but because `<badge>`
   containing two `<clearance>` children doesn't match the expected
   shape, regardless of how well-formed the XML itself is.

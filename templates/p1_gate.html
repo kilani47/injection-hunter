@@ -1,8 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Gate of Trust — The Seiyaku Arc{% endblock %}
+{% block title %}Gate of Trust · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-p1{% endblock %}
 
 {% block content %}
+{% if has_hero('p1_gate') %}
+<div class="rounded-2xl overflow-hidden border border-white/10 mb-8 h-64">
+  <img src="{{ url_for('static', filename='img/p1_gate.png') }}"
+       alt="Applicants waiting at the Hunter Exam's checkpoint gate"
+       class="w-full h-full object-cover" loading="lazy" decoding="async">
+</div>
+{% endif %}
 <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
   <div>
     <p class="font-mono text-xs text-muted mb-2">the written exam &middot; floor 1</p>
@@ -10,7 +17,7 @@
     <p class="max-w-md text-bone/80 leading-relaxed mb-4">
       The proctor's booth only opens for names already on the roster. A vow
       was sworn over this door: state your username and password, and only
-      a true applicant walks through. The vow trusts its own wording — it
+      a true applicant walks through. The vow trusts its own wording: it
       never checks whether that wording can be misread.
     </p>
     <p class="max-w-md text-bone/60 leading-relaxed text-sm">
@@ -22,12 +29,12 @@
   <div class="license-card glass rounded-[1.75rem] p-6">
     <div class="exam-terminal rounded-xl p-5">
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> applicant roster gate — sign in to proceed
+        <span class="text-accent">&gt;</span> applicant roster gate: sign in to proceed
       </p>
 
       {% if row %}
         <div class="rounded-lg border border-accent bg-accent-20 px-4 py-3 mb-4">
-          <p class="font-mono text-xs text-accent mb-2">access granted — admin panel</p>
+          <p class="font-mono text-xs text-accent mb-2">access granted: admin panel</p>
           <p class="font-mono text-[12px] text-bone/90 break-all">
             <span class="text-muted">username&gt;</span> {{ row.username }}
           </p>

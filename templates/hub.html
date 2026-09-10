@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Exam Hall — The Seiyaku Arc{% endblock %}
+{% block title %}Exam Hall · The Seiyaku Arc{% endblock %}
 
 {% block content %}
 <section class="grid gap-8 lg:grid-cols-[1.05fr_1fr] items-stretch mb-14">
@@ -13,7 +13,7 @@
            style="width: {{ (progress.cleared_count / progress.total * 100) if progress.total else 0 }}%"></div>
     </div>
     <p class="mt-3 font-mono text-[11px] text-muted">
-      {% if progress.next %}next: {{ progress.next }}{% else %}every node cleared &mdash; the exam is over.{% endif %}
+      {% if progress.next %}next: {{ progress.next }}{% else %}every node cleared. the exam is over.{% endif %}
     </p>
   </div>
 
@@ -93,7 +93,7 @@
     Every system in this exam trusts its own rule for telling data apart from
     code. An applicant's name is supposed to stay a name; a search term is
     supposed to stay a search term. Injection is what happens when that rule
-    was worded imprecisely &mdash; an attacker supplies input that the rule accepts
+    was worded imprecisely: an attacker supplies input that the rule accepts
     as harmless data, but that the underlying engine reads as an instruction.
     The examiner never notices, because from where they're standing, the vow
     was never broken.
@@ -108,24 +108,24 @@
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" id="taxonomy-grid">
     {% set taxonomy = [
       ("Error-based SQLi", "The engine's own error message leaks the data you asked for.",
-       "A malformed query throws a database error, and that error string contains the result of a subquery you smuggled in (e.g. extractvalue()). You never see the data on the page — you see it inside the crash."),
+       "A malformed query throws a database error, and that error string contains the result of a subquery you smuggled in (e.g. extractvalue()). You never see the data on the page: you see it inside the crash."),
       ("Union-based SQLi", "You append your own SELECT onto the page's query.",
-       "Once you know the column count and types, UNION SELECT lets you splice an entirely different table's rows into the page's normal output — including information_schema itself."),
+       "Once you know the column count and types, UNION SELECT lets you splice an entirely different table's rows into the page's normal output, including information_schema itself."),
       ("Boolean-blind SQLi", "The page only ever says yes or no.",
-       "No error, no extra data — just a single differing token between a true and a false condition. You rebuild the secret one character at a time with conditions like SUBSTRING(secret,1,1)='a'."),
-      ("Time-blind SQLi", "Silence is the only signal — so you measure it.",
+       "No error, no extra data, just a single differing token between a true and a false condition. You rebuild the secret one character at a time with conditions like SUBSTRING(secret,1,1)='a'."),
+      ("Time-blind SQLi", "Silence is the only signal, so you measure it.",
        "Even the yes/no token is gone. A conditional SLEEP() is the only observable difference: if the response takes 5 seconds longer, the condition was true."),
-      ("Out-of-band (OOB)", "The answer never comes back on this connection — it leaves through another door.",
-       "When the response channel is fully blind, the target itself can be made to reach out — a DNS lookup or HTTP request that carries the stolen data to a listener you control."),
+      ("Out-of-band (OOB)", "The answer never comes back on this connection: it leaves through another door.",
+       "When the response channel is fully blind, the target itself can be made to reach out: a DNS lookup or HTTP request that carries the stolen data to a listener you control."),
       ("Second-order / stored", "The payload is safe today. It detonates later.",
-       "Input is stored safely on write, then concatenated unsafely the next time something else reads it — a report, an admin dashboard, a log viewer. The gap between the two is where it hides."),
-      ("NoSQL operator injection", "The query isn't a string here — it's an object, and objects can be replaced.",
-       "Where a driver expects {\"username\": \"bob\"}, sending {\"username\": {\"$ne\": null}} changes the comparison operator itself. No quotes to escape — just an unexpected key."),
-      ("LDAP injection", "Directory filters are built the same way SQL is — by hand.",
+       "Input is stored safely on write, then concatenated unsafely the next time something else reads it: a report, an admin dashboard, a log viewer. The gap between the two is where it hides."),
+      ("NoSQL operator injection", "The query isn't a string here: it's an object, and objects can be replaced.",
+       "Where a driver expects {\"username\": \"bob\"}, sending {\"username\": {\"$ne\": null}} changes the comparison operator itself. No quotes to escape, just an unexpected key."),
+      ("LDAP injection", "Directory filters are built the same way SQL is: by hand.",
        "Metacharacters (& | ! * ( )) in an unescaped filter let you rewrite the boolean logic of a directory search, from *)(uid=* auth bypass to *)(objectClass=* enumeration."),
       ("ORM injection", "The ORM only protects you when you let it write the query.",
-       "The moment raw string interpolation reaches a .filter(text(...)) or equivalent escape hatch, every guarantee the ORM gave you is gone — it's SQLi again, just with an extra layer on top."),
-      ("XML injection / XXE", "The parser will resolve whatever entity you declare — including files.",
+       "The moment raw string interpolation reaches a .filter(text(...)) or equivalent escape hatch, every guarantee the ORM gave you is gone. It's SQLi again, just with an extra layer on top."),
+      ("XML injection / XXE", "The parser will resolve whatever entity you declare, including files.",
        "A DOCTYPE with a SYSTEM entity asks the parser to fetch a URI and inline it. If external entities aren't disabled, file:///etc/passwd is just another entity value."),
     ] %}
     {% for name, hook, detail in taxonomy %}

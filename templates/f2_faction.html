@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ faction_label }} — OmniGrid — The Seiyaku Arc{% endblock %}
+{% block title %}{{ faction_label }}: OmniGrid · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-finals{% endblock %}
 
 {% block content %}
@@ -14,7 +14,7 @@
 
     {% if faction == "onboarding" %}
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> onboarding &mdash; candidate status lookup
+        <span class="text-accent">&gt;</span> onboarding: candidate status lookup
       </p>
       {% if error %}
         <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
@@ -36,7 +36,7 @@
 
     {% elif faction == "mobile" %}
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> mobile api &mdash; service sign-in
+        <span class="text-accent">&gt;</span> mobile api: service sign-in
       </p>
       {% if attempted %}
         {% if error %}
@@ -46,7 +46,7 @@
           </div>
         {% elif result %}
           <div class="rounded-lg border border-accent bg-accent-20 px-4 py-3 mb-4">
-            <p class="font-mono text-xs text-accent mb-1">access granted &mdash; {{ result_label }}&gt;</p>
+            <p class="font-mono text-xs text-accent mb-1">access granted: {{ result_label }}&gt;</p>
             <p class="font-mono text-sm text-bone break-all">{{ result }}</p>
           </div>
         {% else %}
@@ -65,7 +65,7 @@
 
     {% elif faction == "directory" %}
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> directory &mdash; service lookup by uid
+        <span class="text-accent">&gt;</span> directory: service lookup by uid
       </p>
       {% if error %}
         <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
@@ -101,7 +101,7 @@
 
     {% elif faction == "document" %}
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> document import &mdash; raw request document
+        <span class="text-accent">&gt;</span> document import: raw request document
       </p>
       {% if error %}
         <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">

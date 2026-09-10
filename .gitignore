@@ -4,11 +4,20 @@ __pycache__/
 *.pyc
 static/img/victory/*.gif
 assets/gifs/
-# Operator-supplied Hunter x Hunter key art for the entrance + phase heroes.
-# Third-party imagery, same posture as the victory gifs above: used locally
-# for theming, never committed/distributed by this repo. See assets/README.md.
+# Operator-supplied Hunter x Hunter key art for the entrance, phase, and
+# challenge heroes, plus the site favicon. Third-party imagery, same
+# posture as the victory gifs above: used locally for theming, never
+# committed/distributed by this repo. See assets/README.md.
 static/img/entrance.png
 static/img/phase*.png
+static/img/p1_*.png
+static/img/p2_*.png
+static/img/p3_*.png
+static/img/p4_*.png
+static/img/p5_*.png
+static/img/f1_*.png
+static/img/f2_*.png
+static/img/favicon.png
 
 # python
 .venv/

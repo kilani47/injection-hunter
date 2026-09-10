@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}The Spell Card — The Seiyaku Arc{% endblock %}
+{% block title %}The Spell Card · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-p3{% endblock %}
 
 {% block content %}
@@ -12,13 +12,13 @@
       or lose: the game master reads the card, resolves its effect, and
       tells you nothing back except that it happened. This reader is no
       different. Whatever a card actually does, you will never see it in
-      this page's own response — not the effect, not an error, not even a
+      this page's own response: not the effect, not an error, not even a
       hint that something went wrong.
     </p>
     <p class="max-w-md text-bone/60 leading-relaxed text-sm">
       Objective: the game master isn't the only one watching the field.
       Something else is listening on a channel the visible response never
-      touches — find a way to make the card's true effect travel there
+      touches. Find a way to make the card's true effect travel there
       instead, and read it off that channel.
     </p>
   </div>
@@ -26,7 +26,7 @@
   <div class="license-card glass rounded-[1.75rem] p-6">
     <div class="exam-terminal rounded-xl p-5">
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> spell card reader &mdash; cast by id
+        <span class="text-accent">&gt;</span> spell card reader: cast by id
       </p>
 
       <form method="get" action="{{ url_for('phase3.p3_spellcard') }}" class="flex flex-col gap-3 mb-4">
@@ -52,13 +52,13 @@
       {% endif %}
 
       <p class="font-mono text-[11px] text-muted mb-2 mt-6 border-t border-white/10 pt-4">
-        out-of-band channel &mdash; collaborator captures (newest first)
+        out-of-band channel: collaborator captures (newest first)
       </p>
       <p class="font-mono text-[11px] text-bone/60 mb-3">
         This panel polls <code class="text-accent">/p3/spellcard/captures</code>,
         a same-origin proxy this portal exposes for
         <code class="text-accent">collaborator</code>'s own
-        <code class="text-accent">GET /captures</code> feed &mdash;
+        <code class="text-accent">GET /captures</code> feed.
         <code class="text-accent">collaborator</code> only answers other
         containers on the lab's internal network, not your browser
         directly, so the proxy is what makes this panel possible at all.

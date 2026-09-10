@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}The Seiyaku Arc{% endblock %}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/favicon.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/nen.css') }}">
   {% block head %}{% endblock %}
 </head>
 <body class="min-h-screen relative {% block body_class %}{% endblock %}">
   <div class="aura-layer"></div>
+  <div class="accent-rule"></div>
 
   <div class="relative z-10 flex min-h-screen flex-col">
     <header class="border-b border-white/10">
@@ -29,7 +29,7 @@
     {% block disclaimer %}
     <div class="border-b border-white/10 bg-black/30">
       <p class="mx-auto max-w-5xl px-6 py-2 font-mono text-[11px] leading-relaxed text-muted">
-        Fan-made training lab. Authorized, local use only — every target here runs on your own machine.
+        Fan-made training lab. Authorized, local use only: every target here runs on your own machine.
         Not affiliated with, endorsed by, or sponsored by the rights holders of Hunter × Hunter.
       </p>
     </div>
@@ -44,8 +44,11 @@
     {% block footer %}
     <footer class="border-t border-white/10">
       <div class="mx-auto max-w-5xl px-6 py-4 font-mono text-[11px] text-muted flex flex-wrap items-center justify-between gap-2">
-        <span>&copy; 2026 the author. Original code &amp; writing under MIT — see LICENSE / NOTICE.</span>
-        <span>Hunter × Hunter names used unofficially, for non-commercial fan theming only.</span>
+        <span>&copy; 2026 the author. Original code and writing under MIT, see LICENSE / NOTICE.</span>
+        <span class="flex items-center gap-4">
+          <a href="{{ url_for('privacy') }}" class="hover:text-accent transition-colors">privacy</a>
+          <span>Hunter × Hunter names used unofficially, for non-commercial fan theming only.</span>
+        </span>
       </div>
     </footer>
     {% endblock %}

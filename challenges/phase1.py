@@ -1,9 +1,9 @@
 """
-challenges/phase1.py — Phase 1, "The Written Exam" (Enhancement).
+challenges/phase1.py, Phase 1, "The Written Exam" (Enhancement).
 
 Task 1.1 lands the first floor: p1_1 "Gate of Trust", a classic string-based
 SQL injection auth bypass against real MariaDB (core/db.mysql_conn). Later
-Phase-1 tasks (p1_2..p1_5) append their routes to this same blueprint —
+Phase-1 tasks (p1_2..p1_5) append their routes to this same blueprint;
 keep each challenge's route + helpers scoped to its own block so the file
 stays append-only friendly.
 """
@@ -23,7 +23,7 @@ phase1_bp = bp
 
 
 # ---------------------------------------------------------------------------
-# p1_1 — Gate of Trust
+# p1_1, Gate of Trust
 # ---------------------------------------------------------------------------
 
 @bp.route("/p1/gate", methods=["GET", "POST"])
@@ -54,7 +54,7 @@ def p1_gate():
         conn = mysql_conn()
         try:
             with conn.cursor() as cur:
-                # VULN: string concat — raw user input spliced directly into
+                # VULN: string concat, raw user input spliced directly into
                 # the SQL text. Use parameterized queries
                 # (cur.execute(q, (u, p))) instead; left unescaped here on
                 # purpose, this is the challenge's sink.
@@ -78,7 +78,7 @@ def p1_gate():
 
 
 # ---------------------------------------------------------------------------
-# p1_2 — Netero's Recipe Vault
+# p1_2, Netero's Recipe Vault
 # ---------------------------------------------------------------------------
 
 @bp.route("/p1/recipe", methods=["GET"])
@@ -88,7 +88,7 @@ def p1_recipe():
     The query is built with raw f-string concatenation (same sink pattern
     as p1_gate), but this floor's real lesson is a second, independent bug:
     the raw DBMS exception text is rendered straight back to the page on a
-    query error. Ordinarily that's "just" noisy — here it's the whole
+    query error. Ordinarily that's "just" noisy, here it's the whole
     exploit primitive, because MariaDB's extractvalue() raises an XPATH
     syntax error whose message embeds a fragment of its own argument. Feed
     it a subquery (e.g. `(SELECT secret FROM vault LIMIT 1)`) and the error
@@ -103,7 +103,7 @@ def p1_recipe():
         conn = mysql_conn()
         try:
             with conn.cursor() as cur:
-                # VULN: string concat — raw query param spliced directly
+                # VULN: string concat, raw query param spliced directly
                 # into the SQL text, no escaping/parameterization. Use a
                 # parameterized query (cur.execute(q, (recipe_id,))) instead;
                 # left unescaped here on purpose, this is the challenge's
@@ -114,7 +114,7 @@ def p1_recipe():
                 name = row["name"] if row else None
         except Exception as exc:
             # VULN: raw DBMS error text echoed back to the client. This is
-            # what turns a broken query into error-based extraction — the
+            # what turns a broken query into error-based extraction, the
             # exception's own message text carries data the app never
             # meant to disclose.
             error = str(exc)
@@ -130,7 +130,7 @@ def p1_recipe():
 
 
 # ---------------------------------------------------------------------------
-# p1_3 — Exam Results Board
+# p1_3, Exam Results Board
 # ---------------------------------------------------------------------------
 
 @bp.route("/p1/results", methods=["GET"])
@@ -142,7 +142,7 @@ def p1_results():
     result set is rendered directly into an HTML table, so a UNION SELECT
     that matches the query's column count (3: id, name, score) surfaces
     attacker-chosen values as ordinary-looking table rows. No error
-    channel is required here — unlike p1_2's extractvalue() trick, the
+    channel is required here, unlike p1_2's extractvalue() trick, the
     stolen data rides home inside a normal-looking result set.
     """
     q = request.args.get("q", "")
@@ -153,7 +153,7 @@ def p1_results():
         conn = mysql_conn()
         try:
             with conn.cursor() as cur:
-                # VULN: string concat — raw query param spliced directly
+                # VULN: string concat, raw query param spliced directly
                 # into the SQL text, no escaping/parameterization. Use a
                 # parameterized query (cur.execute(q, (f"%{q}%",))) instead;
                 # left unescaped here on purpose, this is the challenge's
@@ -165,7 +165,7 @@ def p1_results():
         except Exception as exc:
             # Same house style as p1_1/p1_2: the raw DBMS error text is
             # echoed back. That's what makes column-count discovery via
-            # ' ORDER BY N-- - observable — a working ORDER BY renders the
+            # ' ORDER BY N-- - observable, a working ORDER BY renders the
             # board as usual, an out-of-range one renders this error
             # instead, confirming exactly how many columns the query has.
             error = str(exc)
@@ -181,7 +181,7 @@ def p1_results():
 
 
 # ---------------------------------------------------------------------------
-# p1_4 — Trick Tower — Silent Room
+# p1_4: Trick Tower: Silent Room
 # ---------------------------------------------------------------------------
 
 @bp.route("/p1/silent", methods=["GET"])
@@ -191,12 +191,12 @@ def p1_silent():
     Same sink shape as every other floor (raw f-string concatenation), but
     this floor's lesson is a fourth, independent technique: there is no
     result set to read back (unlike p1_3's UNION) and no raw error text
-    echoed to the page (unlike p1_2's extractvalue()) — the door only ever
+    echoed to the page (unlike p1_2's extractvalue()), the door only ever
     answers PASS (a row matched) or FAIL (no row matched, *or* the query
     errored). That single bit is the entire oracle: a boolean subquery
     against the hidden `keeper.secret` column, folded into this same
     WHERE clause, can be walked one character at a time using nothing but
-    this PASS/FAIL response — so long as a malformed/erroring query reads
+    this PASS/FAIL response, so long as a malformed/erroring query reads
     identically to a clean false, never as a distinguishable third state.
     """
     code = request.args.get("code")
@@ -206,7 +206,7 @@ def p1_silent():
         conn = mysql_conn()
         try:
             with conn.cursor() as cur:
-                # VULN: string concat — raw query param spliced directly
+                # VULN: string concat, raw query param spliced directly
                 # into the SQL text, no escaping/parameterization. Use a
                 # parameterized query (cur.execute(q, (code,))) instead;
                 # left unescaped here on purpose, this is the challenge's
@@ -218,7 +218,7 @@ def p1_silent():
             # Deliberately silent: unlike p1_2's raw-error echo, a broken
             # query here is folded into the same FAIL outcome as a clean
             # false condition. This is what makes the oracle genuinely
-            # boolean-blind — a malformed injection attempt must not be
+            # boolean-blind, a malformed injection attempt must not be
             # distinguishable from an ordinary false, or "FAIL" would
             # secretly carry a third state (error) that leaks information
             # about the query's shape.
@@ -230,7 +230,7 @@ def p1_silent():
 
 
 # ---------------------------------------------------------------------------
-# p1_5 — Zevil Island Medical Bay
+# p1_5, Zevil Island Medical Bay
 # ---------------------------------------------------------------------------
 
 @bp.route("/p1/medbay", methods=["GET"])
@@ -240,12 +240,12 @@ def p1_medbay():
 
     Same sink shape as every other floor (raw f-string concatenation), but
     this floor's lesson is a fifth, independent technique: unlike p1_4's
-    door (which still answers PASS/FAIL — one visible bit per request),
+    door (which still answers PASS/FAIL, one visible bit per request),
     this route renders the exact same page no matter what the query
     returns, whether it errors, or what condition was folded into it. There
     is no result to read (unlike p1_3's UNION), no raw error text (unlike
     p1_2's extractvalue()), and not even a boolean token (unlike p1_4's
-    PASS/FAIL) — the response body is byte-for-byte the same "status
+    PASS/FAIL), the response body is byte-for-byte the same "status
     checked" acknowledgment every time. The only channel left is *how long*
     the server took to answer: a conditional SLEEP() folded into the query
     via `IF(condition, SLEEP(N), 0)` makes a true condition measurably
@@ -258,12 +258,12 @@ def p1_medbay():
         conn = mysql_conn()
         try:
             with conn.cursor() as cur:
-                # VULN: string concat — raw query param spliced directly
+                # VULN: string concat, raw query param spliced directly
                 # into the SQL text, no escaping/parameterization. Use a
                 # parameterized query (cur.execute(q, (patient_id,)))
                 # instead; left unescaped here on purpose, this is the
                 # challenge's sink. Note there is no result-set read-back at
-                # all here (unlike p1_2/p1_3) — the query's return value is
+                # all here (unlike p1_2/p1_3), the query's return value is
                 # deliberately discarded.
                 q = f"SELECT status FROM patients WHERE id='{patient_id}'"
                 cur.execute(q)
@@ -272,7 +272,7 @@ def p1_medbay():
             # Deliberately silent, same house style as p1_4: whether the
             # query matched, matched nothing, or outright errored, the page
             # is identical either way. There is no PASS/FAIL token to leak
-            # here at all — a broken query and a clean false both render
+            # here at all, a broken query and a clean false both render
             # this exact same acknowledgment, with zero visible difference.
             # The *only* thing that can differ is how long this whole
             # try/except block took to run, via an injected SLEEP().
