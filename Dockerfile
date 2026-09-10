@@ -31,6 +31,14 @@ RUN mkdir -p /opt/king && \
     printf 'SEIYAKU{external_entity_unsealed}\n' > /opt/king/flag.txt && \
     chmod 444 /opt/king/flag.txt
 
+# Task F.2 "Chairman Election Infiltration": the Document Import faction's
+# fragment of the Chairman seat's key, sealed outside the app's own source
+# tree exactly like /opt/king/flag.txt above — reachable only via a genuine
+# XXE external-entity file read against the Document Import route.
+RUN mkdir -p /opt/omnigrid && \
+    printf 'CHAIR-D0CX7Q-9a3f\n' > /opt/omnigrid/fragment.txt && \
+    chmod 444 /opt/omnigrid/fragment.txt
+
 EXPOSE 8000
 
 CMD ["python", "app.py"]

@@ -1,0 +1,51 @@
+# seed/ldap/omnigrid.ldif — Task F.2 "Chairman Election Infiltration"
+# (OmniGrid) seed data — the Directory faction's OpenLDAP system.
+#
+# Loaded once, on first boot of an EMPTY openldap data volume, alongside
+# seed/ldap/zodiac.ldif (see docker-compose.yml, openldap service:
+# LDAP_SEED_INTERNAL_LDIF_PATH mounts seed/ldap/ into the container, which
+# applies every *.ldif file there before slapd's first start). This file
+# adds a second, independent sub-tree under the same root suffix — it
+# doesn't reference or depend on zodiac.ldif's tree at all, so load order
+# between the two doesn't matter.
+#
+# Structure:
+#   ou=omnigrid,dc=hunterassoc,dc=org        — organizational unit
+#     uid=onboarding-svc,ou=omnigrid,...      — ordinary service entry
+#     uid=mobile-svc,ou=omnigrid,...          — ordinary service entry
+#     uid=directory-svc,ou=omnigrid,...       — the entry whose
+#                                                `description` holds this
+#                                                faction's fragment of the
+#                                                Chairman seat's key
+#
+# The Directory faction's route (challenges/finals.py, f2) targets this
+# tree exactly the way Phase 4's Zodiac Breach (p4_3) targeted
+# ou=zodiac: a well-formed single-uid lookup never surfaces `description`;
+# only a widened/injected filter that matches more than one entry does.
+
+dn: ou=omnigrid,dc=hunterassoc,dc=org
+objectClass: organizationalUnit
+ou: omnigrid
+description: OmniGrid Directory Service — Chairman Election Infrastructure
+
+dn: uid=onboarding-svc,ou=omnigrid,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: onboarding-svc
+cn: Onboarding Service
+sn: Service
+mail: onboarding-svc@omnigrid.org
+
+dn: uid=mobile-svc,ou=omnigrid,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: mobile-svc
+cn: Mobile API Service
+sn: Service
+mail: mobile-svc@omnigrid.org
+
+dn: uid=directory-svc,ou=omnigrid,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: directory-svc
+cn: Directory Service
+sn: Service
+mail: directory-svc@omnigrid.org
+description: CHAIR-D1R3CT0RY-4e6b

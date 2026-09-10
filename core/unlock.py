@@ -97,7 +97,7 @@ NODES: list[dict[str, Any]] = [
     {"id": "f1", "phase": "finals", "name": "Trick Tower Final Exam",
      "path": "/f/bookhaven", "flag": FLAGS["f1"], "built": True},
     {"id": "f2", "phase": "finals", "name": "Chairman Election Infiltration",
-     "path": "/f/omnigrid", "flag": FLAGS["f2"], "built": False},
+     "path": "/f/omnigrid", "flag": FLAGS["f2"], "built": True},
 ]
 
 _ORDER: list[str] = [n["id"] for n in NODES]

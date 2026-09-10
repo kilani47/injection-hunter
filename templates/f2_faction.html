@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}{{ faction_label }} — OmniGrid — The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-finals{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <p class="font-mono text-xs text-muted mb-2">the exam finals &middot; omnigrid &middot; {{ faction_label|lower }} faction</p>
+  <h1 class="font-display text-3xl font-semibold text-bone mb-2">{{ faction_label }}</h1>
+  <a href="{{ url_for('finals.f2_omnigrid') }}" class="font-mono text-[11px] text-muted hover:text-accent hover:underline">&larr; back to election HQ</a>
+</div>
+
+<div class="license-card glass rounded-[1.75rem] p-6 max-w-2xl">
+  <div class="exam-terminal rounded-xl p-5">
+
+    {% if faction == "onboarding" %}
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> onboarding &mdash; candidate status lookup
+      </p>
+      {% if error %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          <p class="font-mono text-xs text-muted mb-1">error:</p>
+          <p class="font-mono text-[11px] text-nen-p1 break-all">{{ error }}</p>
+        </div>
+      {% elif result %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          <p class="font-mono text-xs text-muted mb-1">{{ result_label }}&gt;</p>
+          <p class="font-mono text-sm text-bone break-all">{{ result }}</p>
+        </div>
+      {% endif %}
+      <form method="get" action="{{ url_for('finals.f2_onboarding') }}" class="flex flex-col gap-3">
+        <input type="text" name="id" autocomplete="off" spellcheck="false" placeholder="candidate id"
+          value="{{ lookup_id or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">Look up</button>
+      </form>
+
+    {% elif faction == "mobile" %}
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> mobile api &mdash; service sign-in
+      </p>
+      {% if attempted %}
+        {% if error %}
+          <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+            <p class="font-mono text-xs text-muted mb-1">error:</p>
+            <p class="font-mono text-[11px] text-nen-p1 break-all">{{ error }}</p>
+          </div>
+        {% elif result %}
+          <div class="rounded-lg border border-accent bg-accent-20 px-4 py-3 mb-4">
+            <p class="font-mono text-xs text-accent mb-1">access granted &mdash; {{ result_label }}&gt;</p>
+            <p class="font-mono text-sm text-bone break-all">{{ result }}</p>
+          </div>
+        {% else %}
+          <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+            <p class="font-mono text-xs text-muted">sign-in rejected.</p>
+          </div>
+        {% endif %}
+      {% endif %}
+      <form method="post" action="{{ url_for('finals.f2_mobile') }}" class="flex flex-col gap-3">
+        <input type="text" name="username" autocomplete="off" spellcheck="false" placeholder="username"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <input type="password" name="password" autocomplete="off" placeholder="password"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">Sign in</button>
+      </form>
+
+    {% elif faction == "directory" %}
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> directory &mdash; service lookup by uid
+      </p>
+      {% if error %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          <p class="font-mono text-xs text-muted mb-1">error:</p>
+          <p class="font-mono text-[11px] text-nen-p1 break-all">{{ error }}</p>
+        </div>
+      {% elif members %}
+        <div class="rounded-lg border border-white/15 bg-black/20 overflow-hidden mb-4">
+          <table class="w-full font-mono text-[12px] text-bone/90">
+            <thead><tr class="border-b border-white/15 text-muted text-left">
+              <th class="px-3 py-2">uid</th><th class="px-3 py-2">cn</th><th class="px-3 py-2">mail</th>
+              {% if dump_mode %}<th class="px-3 py-2">description</th>{% endif %}
+            </tr></thead>
+            <tbody>
+              {% for m in members %}
+              <tr class="border-b border-white/5 last:border-b-0">
+                <td class="px-3 py-2 break-all">{{ m.uid }}</td>
+                <td class="px-3 py-2 break-all">{{ m.cn }}</td>
+                <td class="px-3 py-2 break-all">{{ m.mail }}</td>
+                {% if dump_mode %}<td class="px-3 py-2 break-all">{{ m.description or '' }}</td>{% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+      <form method="get" action="{{ url_for('finals.f2_directory') }}" class="flex flex-col gap-3">
+        <input type="text" name="uid" autocomplete="off" spellcheck="false" placeholder="service uid"
+          value="{{ lookup_id or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">Search</button>
+      </form>
+
+    {% elif faction == "document" %}
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> document import &mdash; raw request document
+      </p>
+      {% if error %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          <p class="font-mono text-xs text-muted mb-1">error:</p>
+          <p class="font-mono text-[11px] text-nen-p1 break-all">{{ error }}</p>
+        </div>
+      {% elif result %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          <p class="font-mono text-xs text-muted mb-1">{{ result_label }}&gt;</p>
+          <pre class="font-mono text-[12px] text-bone/90 whitespace-pre-wrap break-all">{{ result }}</pre>
+        </div>
+      {% endif %}
+      <form method="post" action="{{ url_for('finals.f2_import') }}" class="flex flex-col gap-3">
+        <textarea name="xml" rows="6" spellcheck="false"
+          placeholder="&lt;request&gt;&lt;document&gt;import-manifest-3&lt;/document&gt;&lt;/request&gt;"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-xs text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">{{ raw_xml or '' }}</textarea>
+        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">Submit document</button>
+      </form>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
