@@ -22,6 +22,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Task 5.3 "The King's Sealed Archives": a real file, outside the app's own
+# source tree, readable only by an XXE external-entity file-read reaching
+# outside the document the app itself ever intended to parse — never by any
+# in-app route directly. Mirrors the notes' file:///etc/passwd example, but
+# with a path the app controls so the flag content is deterministic.
+RUN mkdir -p /opt/king && \
+    printf 'SEIYAKU{external_entity_unsealed}\n' > /opt/king/flag.txt && \
+    chmod 444 /opt/king/flag.txt
+
 EXPOSE 8000
 
 CMD ["python", "app.py"]
