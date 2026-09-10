@@ -22,9 +22,12 @@ phase1.py / phase2.py / phase3.py.
 
 from __future__ import annotations
 
+import os
+
+import ldap
 from flask import Blueprint, jsonify, render_template, request
 
-from core.db import mongo_db
+from core.db import ldap_conn, mongo_db
 
 # app.py's blueprint-loading loop imports `challenges.phase4` looking for
 # an attribute named `phase4_bp`; `bp` is the conventional short name used
@@ -318,5 +321,259 @@ def p4_guardian():
         success=agent is not None,
         agent=public_agent,
         error=error,
+        submitted_username=submitted_username,
+    )
+
+
+# ---------------------------------------------------------------------------
+# p4_3 — Zodiac Twelve Directory Breach
+# ---------------------------------------------------------------------------
+#
+# Both p4_1 and p4_2 above are the *same* bug class (notes §8): MongoDB's
+# query language has no string context to escape at all, so the vulnerability
+# is a type confusion — a dict reaches find()/count_documents() where a
+# string was expected. This floor moves to a completely different backend
+# (real OpenLDAP, via core/db.py's ldap_conn()) and a completely different
+# bug class in kind (notes §9): LDAP's search-filter language *is* a string
+# grammar (RFC 4515), with its own small set of syntactically significant
+# metacharacters — `(` `)` `&` `|` `!` `*` `\` and NUL. A filter built by
+# straight Python string concatenation, with none of those characters
+# escaped before user input lands inside it, lets a caller who includes one
+# of them add, close, or reopen filter clauses of their own — structurally
+# the same "attacker text becomes attacker-controlled logic" idea as every
+# earlier phase's classic SQL injection, just against a different grammar.
+#
+# `*` deserves its own callout: unescaped, it isn't just "the wildcard
+# character" the way SQL's `%` needs LIKE context to mean anything — in an
+# LDAP equality filter (`attr=value`), a bare `*` as the *entire* value
+# turns `(attr=value)` into a presence/wildcard assertion ("attr exists,
+# with any value at all"), no parenthesis-breakout required. Combined with
+# `(`/`)` to add whole extra clauses, a single unescaped field can rewrite
+# an intended two-clause AND into something that matches every entry in the
+# directory instead of the one the query was meant to check.
+#
+# This floor exposes ONE route with two independent request shapes that
+# both funnel into the same underlying bug (unescaped string concatenation
+# into an LDAP filter, then a real ldap_conn().search_s() call): a POST
+# login (username/password -> auth bypass) and a GET directory lookup
+# (uid -> full-roster enumeration). They're kept on one route/template,
+# same as p4_1 and p4_2 each are, since it's genuinely one bug reachable
+# two ways rather than two unrelated bugs.
+
+_ZODIAC_BASE_DN = "ou=zodiac," + os.environ.get("LDAP_BASE_DN", "dc=hunterassoc,dc=org")
+
+
+def _ldap_attr(attrs: dict, name: str) -> str | None:
+    """Decode the first value of an LDAP attribute out of the
+    {attr: [bytes, ...]} shape python-ldap's search_s() hands back for
+    every matched entry, or None if that attribute wasn't returned at
+    all (python-ldap never invents a key for an attribute an entry
+    doesn't have)."""
+    values = attrs.get(name) or []
+    return values[0].decode("utf-8", "replace") if values else None
+
+
+def _public_member(dn: str, attrs: dict) -> dict:
+    """The curated view of a single directory entry: identity fields only,
+    never `description` and never `userPassword`. This is the ONLY shape
+    the login route (below) and an ordinary, well-formed, single-match
+    directory search ever return — regardless of *which* member matched,
+    uid=chairman included. A caller who simply searches for uid=chairman
+    through the intended search path gets exactly this and nothing more;
+    the chairman's `description` (the flag) is reachable only through the
+    raw-dump path in `p4_zodiac` below, which is itself only reachable
+    when a filter matches more than the single entry a well-formed,
+    non-injected uid lookup could ever legitimately match."""
+    return {
+        "dn": dn,
+        "uid": _ldap_attr(attrs, "uid"),
+        "cn": _ldap_attr(attrs, "cn"),
+        "title": _ldap_attr(attrs, "title"),
+        "mail": _ldap_attr(attrs, "mail"),
+    }
+
+
+def _raw_member(dn: str, attrs: dict) -> dict:
+    """The unfiltered view of a directory entry, used only by the
+    directory-dump path below (see p4_zodiac) once a filter has matched
+    more than one entry — i.e. only once the filter has already been
+    widened past what any legitimate single-uid search could produce.
+    This is the only place `description` is ever surfaced."""
+    return {
+        "dn": dn,
+        "uid": _ldap_attr(attrs, "uid"),
+        "cn": _ldap_attr(attrs, "cn"),
+        "title": _ldap_attr(attrs, "title"),
+        "mail": _ldap_attr(attrs, "mail"),
+        "description": _ldap_attr(attrs, "description"),
+    }
+
+
+def _zodiac_search(ldap_filter: str) -> tuple[list[tuple[str, dict]], str | None]:
+    """Run one real search_s() against the real seeded ou=zodiac subtree,
+    using the service bind core/db.py's ldap_conn() opens (the app's own
+    account — never a caller-supplied bind). Returns (entries, error);
+    entries is a list of (dn, attrs) pairs, with any referral entry (dn is
+    None for those) dropped. A malformed filter — e.g. unbalanced
+    parentheses from an incomplete injection attempt — is real OpenLDAP
+    rejecting the search, surfaced here as an error string, not a crash."""
+    conn = None
+    try:
+        conn = ldap_conn()
+        raw_results = conn.search_s(_ZODIAC_BASE_DN, ldap.SCOPE_SUBTREE, ldap_filter)
+        entries = [(dn, attrs) for dn, attrs in raw_results if dn]
+        return entries, None
+    except ldap.LDAPError:
+        return [], "the directory rejected that filter"
+    finally:
+        if conn is not None:
+            try:
+                conn.unbind_s()
+            except ldap.LDAPError:
+                pass
+
+
+def _zodiac_credentials():
+    """Pull username/password out of the login POST, from either a JSON
+    body or a form-encoded body. Unlike p4_1/p4_2, there's no bracket-
+    notation reconstruction here — this floor's bug isn't about *type*
+    confusion (a dict arriving where a string was expected), it's about
+    *content*: a plain string containing LDAP filter metacharacters is
+    already enough."""
+    if request.is_json:
+        payload = request.get_json(silent=True) or {}
+        return payload.get("username") or "", payload.get("password") or ""
+    return request.form.get("username", ""), request.form.get("password", "")
+
+
+@bp.route("/p4/zodiac", methods=["GET", "POST"])
+def p4_zodiac():
+    """The Zodiac Twelve Directory console.
+
+    Two independent request shapes, both against the real seeded OpenLDAP
+    directory (ou=zodiac,dc=hunterassoc,dc=org: twelve committee-member
+    entries plus uid=chairman):
+
+    1. `GET /p4/zodiac?uid=<uid>` — an ordinary directory lookup. Give it
+       a uid, it searches for that member and shows their public info
+       (uid/cn/title/mail — never description). `uid` is the directory's
+       unique naming attribute, so a well-formed, non-injected search can
+       only ever match zero or one entry.
+    2. `POST /p4/zodiac` (username/password) — a sign-in form. Give it a
+       real member's uid and password, and it logs you in as that member
+       the same way p4_2's guardian console does: on a real match, you
+       get their identity back (still never description or
+       userPassword).
+
+    The bug (notes §9): both request shapes build a real LDAP search
+    filter by straight Python string concatenation, and neither escapes a
+    single RFC 4515 metacharacter (`( ) & | ! * \\`, or NUL) before the
+    filter reaches search_s(). Ordinary input — a plain uid like "rat",
+    an ordinary username/password pair — contains none of those
+    characters, so ordinary use looks exactly like an ordinary directory
+    lookup or an ordinary login. A caller who includes `(`/`)` in either
+    field gets to close a clause early and open a new one of their own;
+    a caller who sends a bare `*` as an entire field's value turns that
+    field's equality assertion into a presence/wildcard assertion instead
+    ("this attribute exists, with any value at all"). Combining both
+    lets a caller rewrite an intended two/three-clause AND into something
+    that matches every entry in the subtree, not just the one the query
+    was meant to check — auth bypass on the login shape, full-roster
+    enumeration on the search shape, same underlying bug either way.
+
+    A directory search that ends up matching more than one entry can only
+    happen once the filter has been widened past what a legitimate,
+    non-injected single-uid lookup could ever produce — see `_raw_member`
+    above for what that unlocks.
+    """
+    # --- directory search (GET, always available via ?uid=) ---------------
+    search_uid = request.args.get("uid", "")
+    search_members: list[dict] = []
+    search_dump_mode = False
+    search_error = None
+
+    if search_uid:
+        # VULN: `search_uid` is dropped straight into this filter via an
+        # f-string, completely unescaped. An ordinary uid like "rat" or
+        # "chairman" produces an ordinary, single-clause-per-field AND
+        # filter that can only ever match the one entry with that uid.
+        # `*)(objectClass=*` closes the uid clause early, adds a
+        # (trivially true) `objectClass=*` presence clause, and leaves
+        # the trailing `(objectClass=inetOrgPerson))` from the template
+        # as one more real, legitimate AND clause — the whole thing stays
+        # a perfectly well-formed filter, it's just no longer the filter
+        # this route intended to run.
+        search_filter = f"(&(uid={search_uid})(objectClass=inetOrgPerson))"
+        entries, search_error = _zodiac_search(search_filter)
+
+        # A well-formed, non-injected uid lookup can only ever match one
+        # entry (uid is the directory's unique naming attribute) — so
+        # more than one match is only possible once the filter has
+        # already been widened beyond that. That's the gate: exactly one
+        # match always gets the curated view (no description, ever —
+        # not even for a direct, well-formed uid=chairman lookup); more
+        # than one match is treated as a raw directory dump instead.
+        search_dump_mode = len(entries) > 1
+        if search_dump_mode:
+            search_members = [_raw_member(dn, attrs) for dn, attrs in entries]
+        else:
+            search_members = [_public_member(dn, attrs) for dn, attrs in entries]
+
+    # --- login (POST only) --------------------------------------------------
+    login_attempted = False
+    login_member = None
+    login_error = None
+    submitted_username = None
+
+    if request.method == "POST":
+        login_attempted = True
+        username, password = _zodiac_credentials()
+        submitted_username = username or None
+
+        # VULN: `username` and `password` are dropped straight into this
+        # filter via an f-string, completely unescaped — no
+        # escape_filter_chars() (python-ldap's own RFC-4515 escaping
+        # helper, imported nowhere in this module) call anywhere before
+        # this line. Two plain strings with no filter metacharacters make
+        # an ordinary two-field AND match, exactly like any real login.
+        login_filter = f"(&(uid={username})(userPassword={password}))"
+        entries, login_error = _zodiac_search(login_filter)
+        if entries:
+            dn, attrs = entries[0]
+            login_member = _public_member(dn, attrs)
+
+    wants_json = request.headers.get("Accept") == "application/json" or (
+        request.method == "POST" and request.is_json
+    )
+
+    if wants_json:
+        return jsonify(
+            search={
+                "uid": search_uid or None,
+                "count": len(search_members) if search_uid else None,
+                "dump_mode": search_dump_mode,
+                "members": search_members,
+                "error": search_error,
+            },
+            login={
+                "attempted": login_attempted,
+                "success": login_member is not None,
+                "member": login_member,
+                "submitted_username": submitted_username,
+                "error": login_error,
+            },
+        )
+
+    return render_template(
+        "p4_zodiac.html",
+        search_uid=search_uid,
+        search_members=search_members,
+        search_dump_mode=search_dump_mode,
+        search_error=search_error,
+        searched=bool(search_uid),
+        login_attempted=login_attempted,
+        login_success=login_member is not None,
+        login_member=login_member,
+        login_error=login_error,
         submitted_username=submitted_username,
     )

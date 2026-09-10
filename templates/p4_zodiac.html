@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Zodiac Twelve Directory Breach — The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p4{% endblock %}
+
+{% block content %}
+<div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+  <div>
+    <p class="font-mono text-xs text-muted mb-2">hunter association hq &middot; zodiac twelve directory</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4">Zodiac Twelve Directory Breach</h1>
+    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+      The Zodiac Twelve keep their own directory, separate from the
+      archive downstairs and from the guardian console before it — a
+      strict, hierarchical roster with exactly one entry per member, and
+      one seat, the chairman's, above the rest. Look up a member by uid
+      and you get their public record. Sign in with a uid and password
+      and, on a real match, you get their console.
+    </p>
+    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+      Objective: this directory doesn't hand out its members' entries any
+      way you like — look one up by name, or sign in as one, and that's
+      all you get. Somewhere past the shape of an ordinary query is a
+      wider one.
+    </p>
+  </div>
+
+  <div class="license-card glass rounded-[1.75rem] p-6">
+    <div class="exam-terminal rounded-xl p-5">
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> zodiac directory &mdash; lookup
+      </p>
+
+      <form method="get" action="{{ url_for('phase4.p4_zodiac') }}" class="flex flex-col gap-3 mb-4">
+        <input
+          type="text"
+          name="uid"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="uid (e.g. rat, tiger, chairman)"
+          value="{{ search_uid or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <button type="submit"
+          class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+          Look up
+        </button>
+      </form>
+
+      {% if searched %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          {% if search_error %}
+            <p class="font-mono text-xs text-nen-p1">{{ search_error }}</p>
+          {% elif search_members %}
+            <p class="font-mono text-xs text-accent mb-2">
+              {% if search_dump_mode %}
+                {{ search_members|length }} entries matched &mdash; more than one uid can ever legitimately share, so the raw record is shown for each:
+              {% else %}
+                1 entry matched:
+              {% endif %}
+            </p>
+            {% for m in search_members %}
+              <div class="font-mono text-[12px] text-bone/90 break-all border-t border-white/10 first:border-t-0 pt-2 mt-2 first:pt-0 first:mt-0">
+                <p><span class="text-muted">dn&gt;</span> {{ m.dn }}</p>
+                <p><span class="text-muted">uid&gt;</span> {{ m.uid }}</p>
+                <p><span class="text-muted">cn&gt;</span> {{ m.cn }}</p>
+                <p><span class="text-muted">title&gt;</span> {{ m.title }}</p>
+                <p><span class="text-muted">mail&gt;</span> {{ m.mail }}</p>
+                {% if search_dump_mode %}
+                  <p><span class="text-muted">description&gt;</span> {{ m.description or "(none)" }}</p>
+                {% endif %}
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="font-mono text-xs text-muted">no entry matched that uid.</p>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4 mt-6 border-t border-white/10 pt-4">
+        <span class="text-accent">&gt;</span> zodiac directory &mdash; sign in
+      </p>
+
+      {% if login_attempted %}
+        {% if login_success and login_member %}
+          <div class="rounded-lg border border-accent bg-accent-20 px-4 py-3 mb-4">
+            <p class="font-mono text-xs text-accent mb-2">access granted &mdash; member console</p>
+            <p class="font-mono text-[12px] text-bone/90 break-all">
+              <span class="text-muted">dn&gt;</span> {{ login_member.dn }}
+            </p>
+            <p class="font-mono text-[12px] text-bone/90 break-all">
+              <span class="text-muted">uid&gt;</span> {{ login_member.uid }}
+            </p>
+            <p class="font-mono text-[12px] text-bone/90 break-all">
+              <span class="text-muted">cn&gt;</span> {{ login_member.cn }}
+            </p>
+            <p class="font-mono text-[12px] text-bone/90 break-all">
+              <span class="text-muted">title&gt;</span> {{ login_member.title }}
+            </p>
+          </div>
+        {% else %}
+          <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+            <p class="font-mono text-xs text-muted mb-1">the directory did not recognize that sign-in:</p>
+            <p class="font-mono text-[11px] text-nen-p1 break-all">
+              {{ login_error or "no member matched that uid / password." }}
+            </p>
+          </div>
+        {% endif %}
+      {% endif %}
+
+      <form method="post" action="{{ url_for('phase4.p4_zodiac') }}" class="flex flex-col gap-3">
+        <input
+          type="text"
+          name="username"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="uid"
+          value="{{ submitted_username or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <input
+          type="password"
+          name="password"
+          autocomplete="off"
+          placeholder="password"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <button type="submit"
+          class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+          Sign in
+        </button>
+      </form>
+
+      <p class="font-mono text-[11px] text-muted mb-2 mt-6 border-t border-white/10 pt-4">
+        request shape
+      </p>
+      <p class="font-mono text-[11px] text-bone/60 mb-3">
+        Both forms above only ever send plain text. The endpoint itself,
+        <code class="text-accent">GET/POST /p4/zodiac</code>, takes
+        whatever text <code class="text-accent">uid</code>,
+        <code class="text-accent">username</code> and
+        <code class="text-accent">password</code> arrive as and folds it
+        directly into a real LDAP search filter against the real
+        directory. Send <code class="text-accent">Accept:
+        application/json</code> for a compact JSON answer instead of
+        this page.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
