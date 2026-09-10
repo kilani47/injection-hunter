@@ -6,7 +6,7 @@ module.exports = {
   ],
   // The six phase-accent classes are applied via a Jinja variable whose
   // values live in core/unlock.py (PHASE_META[...]["css_class"]), not in
-  // any file the content glob above scans — so the JIT purge would
+  // any file the content glob above scans, so the JIT purge would
   // otherwise drop every .nen-pN / .nen-finals rule. Safelist them
   // explicitly so they always survive the build.
   safelist: [
@@ -42,10 +42,6 @@ module.exports = {
         mono: ["'IBM Plex Mono'", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       keyframes: {
-        "aura-spin": {
-          "0%": { transform: "rotate(0deg)" },
-          "100%": { transform: "rotate(360deg)" },
-        },
         "ren-pulse": {
           "0%, 100%": { boxShadow: "0 0 0 0 var(--nen-glow, rgba(197,72,77,.35))" },
           "50%": { boxShadow: "0 0 0 10px rgba(0,0,0,0)" },
@@ -63,8 +59,6 @@ module.exports = {
         },
       },
       animation: {
-        "aura-spin": "aura-spin 18s linear infinite",
-        "aura-spin-slow": "aura-spin 34s linear infinite reverse",
         "ren-pulse": "ren-pulse 2.6s ease-in-out infinite",
         "burst": "burst 1.8s cubic-bezier(.2,.8,.3,1) infinite",
         "flicker": "flicker 6s ease-in-out infinite",

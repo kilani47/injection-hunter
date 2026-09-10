@@ -1,12 +1,12 @@
 """
-core/db.py — connection helpers for the three real backend engines.
+core/db.py: connection helpers for the three real backend engines.
 
 Env var defaults match the service names in docker-compose.yml so the app
 "just works" inside the compose network; override any of them for local/
 out-of-compose runs (e.g. `python app.py` against a manually-started engine
 on localhost).
 
-These are intentionally thin — no pooling, no retry/backoff — since every
+These are intentionally thin, no pooling, no retry/backoff, since every
 challenge opens a short-lived connection per request. Later tasks may add a
 pool if the phase's load pattern needs it; that's a deliberate non-goal here.
 """

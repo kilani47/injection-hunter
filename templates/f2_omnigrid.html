@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Chairman Election Infiltration — The Seiyaku Arc{% endblock %}
+{% block title %}Chairman Election Infiltration · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-finals{% endblock %}
 
 {% block content %}
@@ -10,7 +10,7 @@
     Four factions, four separate systems, each certain their own corner of
     OmniGrid is secure because it was never the one anyone attacked
     before. Each faction guards one quarter of the seal on the Chairman's
-    own seat. No single faction's breach is enough on its own — the seat
+    own seat. No single faction's breach is enough on its own: the seat
     only opens once all four quarters are presented together.
   </p>
 </div>
@@ -41,13 +41,13 @@
 <div class="license-card glass rounded-[1.75rem] p-6 max-w-2xl">
   <div class="exam-terminal rounded-xl p-5">
     <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-      <span class="text-accent">&gt;</span> seize the chairman seat &mdash; present all four fragments
+      <span class="text-accent">&gt;</span> seize the chairman seat: present all four fragments
     </p>
 
     {% if seize_result %}
       <div class="rounded-lg border {% if seize_success %}border-accent bg-accent-20{% else %}border-white/15 bg-black/40{% endif %} px-4 py-3 mb-4">
         <p class="font-mono text-xs {% if seize_success %}text-accent{% else %}text-muted{% endif %} mb-2">
-          {% if seize_success %}all four fragments confirmed &mdash; the seat opens.{% else %}not all fragments matched:{% endif %}
+          {% if seize_success %}all four fragments confirmed. the seat opens.{% else %}not all fragments matched:{% endif %}
         </p>
         {% for faction, ok in seize_result.items() %}
           <p class="font-mono text-[12px] {% if ok %}text-accent{% else %}text-nen-p1{% endif %}">

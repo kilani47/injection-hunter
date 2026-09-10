@@ -1,8 +1,8 @@
-// seed/mongo/init.js — Lesson-Group 4 "Records Room" seed data.
+// seed/mongo/init.js: Lesson-Group 4 "Records Room" seed data.
 //
 // Mounted read-only into /docker-entrypoint-initdb.d/ (see docker-compose.yml,
 // mongo service). The official mongo image runs every *.js file in that
-// directory once, via mongosh, on first boot of an EMPTY /data/db volume —
+// directory once, via mongosh, on first boot of an EMPTY /data/db volume,
 // so this only ever fires on a fresh `docker compose up` (or after
 // `docker compose down -v`), same convention as seed/mariadb's *.sql files.
 //
@@ -10,7 +10,7 @@
 // (Task 4.1+): `records` and `agents`, both shaped with username/password
 // -style fields so an operator-injection auth bypass (e.g. supplying
 // `{"$ne": null}` for a password field instead of a string) has something
-// realistic to defeat. Document shape here is intentionally simple —
+// realistic to defeat. Document shape here is intentionally simple,
 // later tasks own the actual challenge/route logic built on top of this.
 
 db = db.getSiblingDB("seiyaku");
@@ -24,7 +24,7 @@ db.records.insertMany([
     username: "clerk",
     password: "records_clerk_pw",
     role: "clerk",
-    subject: "Hunter License Registry — General Index",
+    subject: "Hunter License Registry: General Index",
     note: "Public index of active Hunter licenses. Nothing sensitive here.",
   },
   {
@@ -40,7 +40,7 @@ db.records.insertMany([
     username: "auditor",
     password: "ledger_check_2026",
     role: "auditor",
-    subject: "Association Treasury Audit — Draft",
+    subject: "Association Treasury Audit: Draft",
     note: "Draft audit notes, not yet finalized.",
   },
   {
@@ -56,7 +56,7 @@ db.records.insertMany([
     username: "admin",
     password: "records_room_master",
     role: "admin",
-    subject: "Zodiac Committee Correspondence — Sealed",
+    subject: "Zodiac Committee Correspondence: Sealed",
     note: "Administrative eyes only.",
   },
 ]);

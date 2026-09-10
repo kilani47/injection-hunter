@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Bypassing the Archive Guardian — The Seiyaku Arc{% endblock %}
+{% block title %}Bypassing the Archive Guardian · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-p4{% endblock %}
 
 {% block content %}
@@ -9,7 +9,7 @@
     <h1 class="font-display text-3xl font-semibold text-bone mb-4">Bypassing the Archive Guardian</h1>
     <p class="max-w-md text-bone/80 leading-relaxed mb-4">
       A second door, deeper in the archive. This one doesn't just report a
-      match/no-match bit like the front desk — it logs you in as whoever
+      match/no-match bit like the front desk. It logs you in as whoever
       it decides you are. The guardian staffing it checks that a username
       and a password were both supplied. It was never told to check what
       kind of thing "supplied" actually means.
@@ -23,14 +23,14 @@
   <div class="license-card glass rounded-[1.75rem] p-6">
     <div class="exam-terminal rounded-xl p-5">
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> archive guardian &mdash; agent sign-in
+        <span class="text-accent">&gt;</span> archive guardian: agent sign-in
       </p>
 
       {% if attempted %}
         {% if success and agent %}
           <div class="rounded-lg border border-accent bg-accent-20 px-4 py-3 mb-4">
             <p class="font-mono text-xs text-accent mb-2">
-              access granted &mdash;
+              access granted:
               {% if agent.privileged %}guardian console{% else %}agent console{% endif %}
             </p>
             <p class="font-mono text-[12px] text-bone/90 break-all">
@@ -96,8 +96,8 @@
         This form only ever sends plain strings. The sign-in endpoint
         itself, <code class="text-accent">POST /p4/guardian</code>, takes
         whatever shape <code class="text-accent">username</code> and
-        <code class="text-accent">password</code> arrive in &mdash; a JSON
-        body or a form-encoded body, either one &mdash; and does not
+        <code class="text-accent">password</code> arrive in, a JSON
+        body or a form-encoded body, either one, and does not
         require either field to be a plain string. Send
         <code class="text-accent">Accept: application/json</code> for a
         compact JSON answer instead of this page.

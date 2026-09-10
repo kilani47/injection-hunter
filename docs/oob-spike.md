@@ -1,4 +1,4 @@
-# OOB emitter spike — design decision for the next lesson
+# OOB emitter spike, design decision for the next lesson
 
 **Status:** decided. **Scope:** this memo is the only input the next task
 (Phase 3 lesson content, `challenges/phase3.py`) should need to build the
@@ -11,13 +11,13 @@ build against.
 Out-of-band (OOB) confirmation is the standard technique where a tester,
 unable to see a query's result in the application's normal response, gets
 the database (or the app acting on the database's behalf) to make a
-*separate*, independent network call — carrying data pulled from the query
-— to a diagnostic host the tester controls. The tester then reads the
+*separate*, independent network call, carrying data pulled from the query,
+to a diagnostic host the tester controls. The tester then reads the
 confirmation off that separate channel instead of the app's own response.
 
 The question this spike answers: **which stock, out-of-the-box MariaDB
-capability** — no third-party plugins, no UDFs, must work against a vanilla
-`mariadb:11` image — **can make a real, separate outbound network call**
+capability**, no third-party plugins, no UDFs, must work against a vanilla
+`mariadb:11` image, **can make a real, separate outbound network call**
 (DNS or HTTP) to another host on the docker network, so the lab can
 demonstrate this faithfully?
 
@@ -32,7 +32,7 @@ network and probed directly.
 The often-cited example of DB-triggered OOB is a Windows SQL Server/UNC
 path (`\\host\share`) coaxing the OS into an SMB session that leaks a DNS
 lookup of `host`. This is Windows-SMB-specific machinery, and it does
-**not** carry over to Linux MariaDB — confirmed directly rather than
+**not** carry over to Linux MariaDB, confirmed directly rather than
 assumed:
 
 ```sql
@@ -43,7 +43,7 @@ SELECT LOAD_FILE('\\\\collaborator\\test');          -- NULL, no error
 `secure_file_priv` is `NULL` on this image, which disables `LOAD_FILE`/
 `... INTO OUTFILE`/`DUMPFILE` entirely regardless of path. But even setting
 that aside, a Linux `LOAD_FILE()` call just treats a `\\host\share`-style
-string as a literal (invalid) local path — Linux has no built-in SMB
+string as a literal (invalid) local path, Linux has no built-in SMB
 client wired into `fopen()`-style file access the way Windows does, so
 there is no DNS lookup, no network call, nothing. This textbook example is
 Windows-only and does not apply here.
@@ -55,12 +55,12 @@ mariadb -uroot -p... -e "SHOW ENGINES;"
 ```
 
 Default-enabled engines: `MEMORY, CSV, PERFORMANCE_SCHEMA, Aria, MyISAM,
-MRG_MyISAM, InnoDB, SEQUENCE` — none of these touch the network.
+MRG_MyISAM, InnoDB, SEQUENCE`, none of these touch the network.
 
 Checking `plugin_dir` (`/usr/lib/mysql/plugin/`) for anything network-
 capable that ships in the image but isn't loaded by default turned up
 `ha_federated.so`, `ha_federatedx.so`, and `ha_blackhole.so`. `BLACKHOLE`
-is a no-op/discard engine (writes vanish, no I/O of any kind) — not
+is a no-op/discard engine (writes vanish, no I/O of any kind), not
 relevant. `FEDERATED` **is** relevant: it's a stock storage engine (ships
 in the official image, not a third-party install), just disabled by
 default. Enabling it is a single in-database statement, no filesystem or
@@ -82,7 +82,7 @@ SELECT * FROM oobtest.fed_test;   -- issued from the mariadb client
 Querying the table made MariaDB genuinely dial out: `collaborator`'s HTTP
 listener accepted a real TCP connection from the `mariadb` container and
 then errored out (`ConnectionResetError` while trying to read an HTTP
-request line — MariaDB's client was waiting for a MySQL handshake packet
+request line, MariaDB's client was waiting for a MySQL handshake packet
 instead of speaking HTTP), and the `mariadb` client itself blocked until
 the surrounding shell's timeout killed it. That confirms the round trip is
 real: an actual TCP connection, initiated from inside the MariaDB process,
@@ -96,19 +96,19 @@ being real:**
   MySQL-protocol listener, not the HTTP/DNS listener the rest of this
   lab's capture UX (and `/captures` shape) is built around.
 - The outbound target (host/port/user/db in `CONNECTION=`) is fixed at
-  `CREATE`/`ALTER TABLE` time — that's DDL, not something a read-only
+  `CREATE`/`ALTER TABLE` time, that's DDL, not something a read-only
   injected `SELECT` can parameterize with a value pulled from a query
   result. There's no clean way to make the destination hostname/path
   *carry exfiltrated data* through the kind of single-statement
   boolean-blind/UNION-based injection the rest of this lab's floors use.
 - `INSTALL SONAME` is a privileged, DBA-level bootstrap step that has to
-  happen before any of this works — not something an injection at
+  happen before any of this works, not something an injection at
   application-user privilege could trigger itself.
 
 Net finding: **FEDERATED proves a vanilla Linux MariaDB process can make a
 real outbound network call, but not in a shape a SQL-injection lesson can
 practically drive.** No other stock, default-installable engine or plugin
-in this image (no `CONNECT`, no `SPIDER` — neither ships in this image,
+in this image (no `CONNECT`, no `SPIDER`, neither ships in this image,
 and both would count as extra, non-stock components anyway) offers
 anything closer.
 
@@ -117,13 +117,13 @@ anything closer.
 **The next lesson's OOB-confirmation mechanism lives at the Flask
 application layer, not inside MariaDB.** The pattern: a challenge route
 reads a value back from a MariaDB query (via `core.db.mysql_conn()`), and
-the *application code* — not the database — relays that value onward as a
+the *application code*, not the database, relays that value onward as a
 real, separate outbound network request to the `collaborator` service
 (an HTTP call to `collaborator` carrying the value in the path/query/
 header, and/or a DNS lookup of a hostname built from the value, e.g.
 `<value>.collaborator`). The tester never sees this value in the
 challenge's own HTTP response; they read it out of `collaborator`'s
-`GET /captures` instead — the same tester-visible confirmation UX a
+`GET /captures` instead, the same tester-visible confirmation UX a
 genuine DB-native OOB primitive would produce.
 
 This is a well-known, commonly-documented simplification for self-
@@ -133,15 +133,15 @@ without requiring an unstable third-party database extension.
 ## What's genuinely real vs. what's modeled
 
 **Genuinely real:** the network hop from the app process to `collaborator`
-is an actual, independent HTTP/DNS round trip over the docker network —
+is an actual, independent HTTP/DNS round trip over the docker network,
 `collaborator` observes it as a real incoming connection carrying real
 data, entirely separate from the challenge's own HTTP response, and a
 tester reads the confirmation off `/captures` with no cooperation from the
 in-process request/response cycle (nothing is faked, logged in-process, or
-short-circuited — it is a genuine second network request, verified live in
+short-circuited, it is a genuine second network request, verified live in
 this spike). **What's simplified:** in a real-world OOB-SQLi scenario, the
 *component that decides to make that network call* is normally something
-invoked directly by the injected SQL itself (a DB-native extension/UDF —
+invoked directly by the injected SQL itself (a DB-native extension/UDF,
 an `xp_dirtree`-style call, `UTL_HTTP`, a working `dblink`/`FEDERATED`
 setup, etc.) with no application code involved at all; here, that
 triggering role is played by the Flask application layer instead, because
@@ -154,27 +154,27 @@ application code rather than inside MariaDB.
 
 ## Collaborator service recap (for the next task's reference)
 
-- `collaborator/collaborator.py` — stdlib-only, single process:
+- `collaborator/collaborator.py`, stdlib-only, single process:
   - HTTP capture server on port 80: logs every request (method, path,
     query string, headers, body, client IP, timestamp) to an in-memory,
     size-bounded (`deque(maxlen=500)`) list. `GET /captures` is
-    special-cased — it returns the capture list as JSON instead of being
+    special-cased, it returns the capture list as JSON instead of being
     logged as a capture itself.
   - DNS capture server on UDP port 53: parses just enough of RFC 1035 to
-    log the queried name + type, then replies **NOERROR** — an A record
+    log the queried name + type, then replies **NOERROR**, an A record
     (`127.0.0.1`, TTL 60) for `A` queries, an empty-answer NOERROR for
     anything else. NOERROR (not NXDOMAIN) was chosen so a real resolver's
     lookup completes promptly instead of retrying/falling back to another
-    nameserver — this is a lab, and the point is observing the query land
+    nameserver, this is a lab, and the point is observing the query land
     quickly, not modeling authoritative DNS correctly.
   - `GET /captures` returns a JSON array, **newest first**, mixing both
     capture types, distinguished by a `"type": "http"` / `"type": "dns"`
     field. See the verification output below for the exact shape.
-- `collaborator/Dockerfile` — `python:3.12-slim`, no dependencies, runs as
+- `collaborator/Dockerfile`, `python:3.12-slim`, no dependencies, runs as
   root only because ports 80/53 are privileged.
 - `docker-compose.yml`'s `collaborator` service now builds this image and
   `expose`s `80` and `53/udp` on the internal compose network only (no
-  published host ports) — only reachable by other containers via the
+  published host ports), only reachable by other containers via the
   service name `collaborator`.
 
 ## End-to-end verification (this spike)
@@ -239,16 +239,16 @@ the DNS query name, confirming the mechanism end-to-end and confirming
 ## Open questions for the next task (Phase 3 lesson content)
 
 - Whether the Phase-3 challenge(s) use the HTTP path, the DNS lookup, or
-  both as the actual confirmation channel — this spike proved both work;
+  both as the actual confirmation channel, this spike proved both work;
   the lesson design should pick based on which better fits the injection
   technique being taught (e.g., a DNS-lookup framing may read as more
   "classic OOB-SQLi" to students than an HTTP GET).
 - Whether `/captures` needs a filter/query param (e.g. by a per-challenge
   token prefix) once real lesson traffic starts mixing with polling noise
-  from multiple concurrent students — not needed for this spike's
+  from multiple concurrent students, not needed for this spike's
   single-entry test, but worth considering before Phase 3 ships.
 - The FEDERATED-engine finding above is recorded for completeness/honesty
-  but deliberately **not** wired into any lesson — nothing in
+  but deliberately **not** wired into any lesson, nothing in
   `docker-compose.yml`, seed SQL, or challenge code should depend on
   `INSTALL SONAME 'ha_federated'` being active; the test table and plugin
   were fully torn down (`DROP TABLE`, `DROP DATABASE`, `UNINSTALL SONAME`)

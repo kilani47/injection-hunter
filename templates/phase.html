@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ phase.label }} — The Seiyaku Arc{% endblock %}
+{% block title %}{{ phase.label }} · The Seiyaku Arc{% endblock %}
 {% block body_class %}{{ phase.css_class }}{% endblock %}
 
 {% block content %}
@@ -16,7 +16,7 @@
     <img
       class="splash-art"
       src="{{ url_for('static', filename='img/' ~ phase.image) }}"
-      alt="{{ phase.label }} — {{ phase.nen }}"
+      alt="{{ phase.label }}: {{ phase.nen }}"
       fetchpriority="high"
       decoding="async"
     >

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""solvers/f2.py — Task F.2 "Chairman Election Infiltration" (OmniGrid)
+"""solvers/f2.py, Task F.2 "Chairman Election Infiltration" (OmniGrid)
 canonical exploit.
 
-Four independent faction systems, four independent injection classes —
+Four independent faction systems, four independent injection classes,
 each one already taught earlier in this arc, now applied against a
 brand-new target with no other hints:
 
-  Onboarding faction   — MariaDB, error-based SQLi        (Phase 1 technique)
-  Mobile API faction   — MongoDB, $ne operator auth bypass (Phase 4 technique)
-  Directory faction    — OpenLDAP, filter-injection dump   (Phase 4 technique)
-  Document Import      — XXE external-entity file read     (Phase 5 technique)
+  Onboarding faction:  MariaDB, error-based SQLi        (Phase 1 technique)
+  Mobile API faction:  MongoDB, $ne operator auth bypass (Phase 4 technique)
+  Directory faction:   OpenLDAP, filter-injection dump   (Phase 4 technique)
+  Document Import:     XXE external-entity file read     (Phase 5 technique)
 
 None of the four faction routes accepts a fragment as input, and none of
 them know about each other or about the final flag. This script extracts
@@ -109,19 +109,19 @@ def seize(fragments: dict) -> dict:
 def main() -> int:
     print(f"[f2] target: {BASE}/f/omnigrid")
 
-    print("[f2] faction 1 — Onboarding (MariaDB, error-based SQLi)")
+    print("[f2] faction 1, Onboarding (MariaDB, error-based SQLi)")
     onboarding = onboarding_fragment()
     print(f"  ok: fragment = {onboarding!r}")
 
-    print("[f2] faction 2 — Mobile API (MongoDB, $ne auth bypass)")
+    print("[f2] faction 2, Mobile API (MongoDB, $ne auth bypass)")
     mobile = mobile_fragment()
     print(f"  ok: fragment = {mobile!r}")
 
-    print("[f2] faction 3 — Directory (OpenLDAP, filter-injection dump)")
+    print("[f2] faction 3, Directory (OpenLDAP, filter-injection dump)")
     directory = directory_fragment()
     print(f"  ok: fragment = {directory!r}")
 
-    print("[f2] faction 4 — Document Import (XXE file read)")
+    print("[f2] faction 4, Document Import (XXE file read)")
     document = document_fragment()
     print(f"  ok: fragment = {document!r}")
 
@@ -142,7 +142,7 @@ def main() -> int:
         print(f"  got: {result}")
         return 1
 
-    print(f"  ok: Chairman seat seized — flag recovered: {result['flag']}")
+    print(f"  ok: Chairman seat seized, flag recovered: {result['flag']}")
     print("[f2] PASS")
     return 0
 

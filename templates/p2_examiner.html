@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Examiner Check-In — The Seiyaku Arc{% endblock %}
+{% block title %}Examiner Check-In · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-p2{% endblock %}
 
 {% block content %}
@@ -11,7 +11,7 @@
       Every applicant who reaches this floor is asked to check in with an
       examiner's badge id, so the tower can confirm who they claim to be
       talking to. It's a reasonable-looking form, and it's exactly what it
-      looks like — a plain, parameterized lookup. Nothing you type into it
+      looks like: a plain, parameterized lookup. Nothing you type into it
       ever reaches an unsafe query.
     </p>
     <p class="max-w-md text-bone/60 leading-relaxed text-sm">
@@ -25,7 +25,7 @@
   <div class="license-card glass rounded-[1.75rem] p-6">
     <div class="exam-terminal rounded-xl p-5">
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> examiner check-in &mdash; look up by badge id
+        <span class="text-accent">&gt;</span> examiner check-in: look up by badge id
       </p>
 
       <form method="get" action="{{ url_for('phase2.p2_examiner') }}" class="flex flex-col gap-3 mb-4">

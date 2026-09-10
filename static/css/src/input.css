@@ -26,10 +26,58 @@
 }
 
 /* ---------------------------------------------------------------------
-   The Seiyaku Arc — Nen aura design system
+   The Seiyaku Arc. Nen aura design system.
    Bespoke layer on top of Tailwind: aura backdrop, glassmorphic cards,
    the mono "exam terminal" panel, per-phase Nen accent classes.
    ------------------------------------------------------------------- */
+
+/* Self-hosted fonts (Rajdhani, IBM Plex Mono, both SIL Open Font
+   License). Files under static/fonts/. Self-hosted instead of loaded
+   from Google Fonts so the lab makes zero third-party network requests
+   at runtime, matching the "runs entirely on your own machine" premise
+   and the privacy policy at /privacy. */
+@font-face {
+  font-family: "Rajdhani";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/rajdhani-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Rajdhani";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/rajdhani-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Rajdhani";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/rajdhani-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/ibm-plex-mono-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/ibm-plex-mono-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/ibm-plex-mono-600.woff2") format("woff2");
+}
 
 @layer base {
   :root {
@@ -52,10 +100,8 @@
     color: #0a0b10;
   }
 
-  /* Respect reduced-motion preferences: kill the ambient aura + pulses. */
+  /* Respect reduced-motion preferences: kill the remaining pulses. */
   @media (prefers-reduced-motion: reduce) {
-    .aura-layer,
-    .aura-ring,
     .ren-pulse,
     .burst-ring,
     .flicker {
@@ -65,39 +111,37 @@
 }
 
 @layer components {
-  /* Full-viewport ambient aura backdrop, tinted by --nen-accent. Sits
-     behind everything via fixed positioning + negative z-index. */
+  /* Full-viewport ambient backdrop. Deliberately NOT a soft color-tinted
+     gradient blob (that reads as generic and, on Phase 2's violet accent
+     specifically, as the cliche "purple gradient" look): a flat near-black
+     ground, a fine neutral grain for tactile depth (never accent-tinted,
+     so it can't pick up any phase's color), and the phase identity is
+     carried instead by the crisp solid-color rule below, not a glow. */
   .aura-layer {
     position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
     overflow: hidden;
-    background:
-      radial-gradient(60vw 60vw at 15% -10%, color-mix(in srgb, var(--nen-accent) 20%, transparent), transparent 60%),
-      radial-gradient(50vw 50vw at 110% 10%, color-mix(in srgb, var(--nen-accent) 14%, transparent), transparent 55%),
-      #0a0b10;
+    background: #0a0b10;
   }
 
   .aura-layer::before {
     content: "";
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 140vmax;
-    height: 140vmax;
-    margin: -70vmax 0 0 -70vmax;
-    background: conic-gradient(
-      from 0deg,
-      transparent 0deg,
-      color-mix(in srgb, var(--nen-accent) 10%, transparent) 40deg,
-      transparent 90deg,
-      transparent 220deg,
-      color-mix(in srgb, var(--nen-accent) 8%, transparent) 270deg,
-      transparent 320deg
-    );
-    animation: aura-spin 34s linear infinite reverse;
-    opacity: 0.6;
+    inset: -10%;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+    background-size: 90px 90px;
+  }
+
+  /* One solid, flat-color rule at the very top of the viewport carries
+     each phase's identity: a deliberate stripe, not an ambient glow. */
+  .accent-rule {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 20;
+    height: 3px;
+    background: var(--nen-accent);
   }
 
   /* Glassmorphic surface used for every panel/card. */
@@ -108,26 +152,43 @@
     -webkit-backdrop-filter: blur(14px);
   }
 
-  /* The signature hero component: the applicant's Hunter License. */
+  /* The signature hero component: the applicant's Hunter License. A
+     crisp solid border plus reinforced corner marks (registration marks
+     on an official document/ID card), not a spinning color-gradient
+     ring: distinctive without reading as an ambient glow effect. */
   .license-card {
     position: relative;
     border-radius: 1.75rem;
+    border: 1px solid color-mix(in srgb, var(--nen-accent) 45%, transparent);
+  }
+
+  .license-card::before,
+  .license-card::after {
+    content: "";
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--nen-accent);
+    pointer-events: none;
   }
 
   .license-card::before {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    padding: 1px;
-    background: conic-gradient(from 180deg, var(--nen-accent), transparent 40%, var(--nen-accent) 100%);
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    animation: aura-spin 18s linear infinite;
+    top: -1px;
+    left: -1px;
+    border-right: 0;
+    border-bottom: 0;
+    border-top-left-radius: 1.75rem;
   }
 
-  /* Mono "exam terminal" panel — used for status readouts, DB-error
+  .license-card::after {
+    bottom: -1px;
+    right: -1px;
+    border-left: 0;
+    border-top: 0;
+    border-bottom-right-radius: 1.75rem;
+  }
+
+  /* Mono "exam terminal" panel, used for status readouts, DB-error
      echoes (later phases), and the flag submission box. */
   .exam-terminal {
     font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -156,49 +217,30 @@
     animation: ren-pulse 2.6s ease-in-out infinite;
   }
 
-  /* Taxonomy / primer cards: flip on click via a checkbox-free
-     [data-open] toggle (hub.js). */
-  .flip-card {
-    perspective: 1200px;
-  }
-  .flip-card-inner {
-    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1);
-    transform-style: preserve-3d;
-  }
-  .flip-card[data-open="true"] .flip-card-inner {
-    transform: rotateY(180deg);
-  }
-  .flip-face {
-    backface-visibility: hidden;
-  }
+  /* Taxonomy / primer cards: the hook text swaps for the detail text on
+     click via a checkbox-free [data-open] toggle (hub.js). This used to
+     be a 3D rotateY flip, but that relied on backface-visibility to hide
+     whichever face wasn't current, and backface-visibility is unreliable
+     once a face also has backdrop-filter (.glass) and overflow-y (the
+     detail text needs to scroll): several engines painted both faces at
+     once instead of one cleanly replacing the other. An instant visibility
+     swap has no such failure mode, since there is no rotation for a
+     browser to get wrong: whichever face isn't current is simply hidden,
+     full stop. */
+  /* The back face is hidden unconditionally by default, not just when
+     [data-open="false"]: the static markup never sets data-open at all
+     until the first click (see hub.js), so a rule that only fires on
+     data-open="false" would never match on initial load, and the back
+     face (later in DOM order, so it paints over the front) would cover
+     the hook text before anyone ever clicks anything. */
   .flip-face-back {
-    transform: rotateY(180deg);
-  }
-
-  /* backface-visibility alone is unreliable once a face also uses
-     backdrop-filter (.glass) and overflow-y (the back face's longer
-     detail text needs to scroll) — several engines still paint the
-     "hidden" face in that combination, which is what makes the front
-     hook text and the back detail text both readable at once instead of
-     one cleanly replacing the other. Belt-and-suspenders: explicitly
-     hide whichever face isn't current, on a delay matched to half the
-     card's 0.3s rotation so the switch lands right at the 90-degree
-     crossover, independent of whether backface-visibility itself works. */
-  .flip-card[data-open="false"] .flip-face-back {
     visibility: hidden;
-    transition: visibility 0s linear 0s;
   }
   .flip-card[data-open="true"] .flip-face-back {
     visibility: visible;
-    transition: visibility 0s linear 0.15s;
   }
   .flip-card[data-open="true"] .flip-face:not(.flip-face-back) {
     visibility: hidden;
-    transition: visibility 0s linear 0.15s;
-  }
-  .flip-card[data-open="false"] .flip-face:not(.flip-face-back) {
-    visibility: visible;
-    transition: visibility 0s linear 0s;
   }
 
   /* Cinematic key-art hero used on the entrance + phase pages. The image
@@ -278,7 +320,7 @@
     border-color: rgba(232, 228, 218, 0.1);
   }
 
-  /* Original CSS Nen-burst — the shipped default victory visual. */
+  /* Original CSS Nen-burst, the shipped default victory visual. */
   .burst-ring {
     position: absolute;
     inset: 50%;

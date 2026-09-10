@@ -1,11 +1,11 @@
-# Exam Results Board — Debrief
+# Exam Results Board, Debrief
 
 **Node:** `p1_3` &middot; **Flag:** `SEIYAKU{append_your_own_select}` &middot; **Route:** `GET /p1/results` &middot; **Sink:** `challenges/phase1.py`, `mariadb` (`results` table, `staff` table)
 
 ## Root cause
 
 The results search builds its query the same way every other floor on
-this exam does — raw f-string concatenation, no escaping:
+this exam does, raw f-string concatenation, no escaping:
 
 ```python
 # challenges/phase1.py
@@ -22,7 +22,7 @@ lesson is a third technique: the query's *entire result set* is rendered
 into an HTML table, with no filtering on which columns or how many rows
 come back. That means a `q` which closes the string, appends its own
 `UNION SELECT`, and comments out the trailing wildcard can make MariaDB
-return rows from a completely different table — and the app will print
+return rows from a completely different table, and the app will print
 them exactly like any other search result, no error required.
 
 ## The technique: `UNION SELECT`
@@ -31,7 +31,7 @@ SQL's `UNION` operator stacks the results of two `SELECT` statements into
 one result set, with one hard requirement: **both sides must return the
 same number of columns.** If they do, MariaDB is happy to run a
 completely unrelated second query and hand its rows back as if they'd
-always belonged to the first one's result set — column names in the
+always belonged to the first one's result set, column names in the
 combined output come from the *first* `SELECT`, so the injected data
 lands under whatever headers the legitimate query already uses.
 
@@ -51,13 +51,13 @@ of:
 /p1/results?q=' ORDER BY 3-- -
 ```
 
-Renders the board normally — 3 is in range. Bump it by one:
+Renders the board normally, 3 is in range. Bump it by one:
 
 ```
 /p1/results?q=' ORDER BY 4-- -
 ```
 
-The route's `except` block (same house pattern as p1_1/p1_2 — the raw
+The route's `except` block (same house pattern as p1_1/p1_2, the raw
 DBMS error is echoed to the page) surfaces, verbatim from this seed:
 
 ```
@@ -78,12 +78,12 @@ before you know (or care) what types they are:
 
 Against this seed, the board renders its usual 5 rows (Gon, Killua,
 Kurapika, Leorio, Hisoka) plus one new row: `id`/`name`/`score` all show
-`None` — the union'd row landed cleanly, confirming 3 columns is exactly
+`None`, the union'd row landed cleanly, confirming 3 columns is exactly
 right and every column tolerates `NULL`.
 
 **3. Find something worth reading.** Here the target table name
-(`staff`) is given by the challenge itself, but in general — with no
-whitebox source to read — the standard way to enumerate what a database
+(`staff`) is given by the challenge itself, but in general, with no
+whitebox source to read, the standard way to enumerate what a database
 holds is MariaDB's `information_schema`:
 
 ```sql
@@ -93,7 +93,7 @@ holds is MariaDB's `information_schema`:
 lists every table the current schema has (`results`, `staff`, plus any
 migration/metadata tables), and swapping `information_schema.tables` for
 `information_schema.columns WHERE table_name='staff'` lists that table's
-column names (`username`, `password`) the same way — no prior knowledge
+column names (`username`, `password`) the same way, no prior knowledge
 of the schema required, only a database account that can read
 `information_schema` (which, by default, every account can).
 
@@ -108,8 +108,8 @@ of the schema required, only a database account that can read
 
 - `'` closes the `LIKE '%...'` string literal the app opened.
 - `UNION SELECT NULL,CONCAT(username,0x3a,password),NULL FROM staff`
-  supplies exactly 3 columns — `NULL` for `id`, the real payload for
-  `name`, `NULL` for `score` — reading from `staff` instead of `results`.
+  supplies exactly 3 columns, `NULL` for `id`, the real payload for
+  `name`, `NULL` for `score`, reading from `staff` instead of `results`.
   `0x3a` is a hex literal for `:`, just a readable separator between the
   two stolen columns (same trick p1_2 used inside its `extractvalue()`
   payload).
@@ -130,32 +130,32 @@ id: None    name: chief_examiner:SEIYAKU{append_your_own_select}    score: None
 ```
 
 No error, no truncation window (unlike p1_2's `extractvalue()`, which
-only leaks the first ~32 characters of its argument) — the entire
+only leaks the first ~32 characters of its argument), the entire
 `staff.password` value rides home in an ordinary table cell, because
 `UNION` has no length limit on what a column can carry.
 
 ## HxH analogy
 
 Chrollo Lucilfer's Skill Hunter doesn't out-fight an opponent's Nen
-ability — it steals it, and the moment it's stolen, that ability is
+ability, it steals it, and the moment it's stolen, that ability is
 simply *appended* to Chrollo's own book. It doesn't sit apart, flagged as
 foreign; from then on it executes exactly like every technique Chrollo
 was born with, indistinguishable at the point of use. The book doesn't
 check where a page came from before it lets him read from it.
 
 The results board has the identical blind spot. Its `SELECT` was only
-ever supposed to run against `results` — but SQL's `UNION` lets a second,
+ever supposed to run against `results`, but SQL's `UNION` lets a second,
 completely unrelated `SELECT` get appended onto the first one's result
 set, and the moment it's appended, the board can't tell the difference.
 It renders the stolen rows in the same table, under the same headers,
 with the same formatting, as if they'd been part of the applicants'
 scores all along. The vulnerability isn't that the board *can* be
-searched — it's that anything shaped like a valid extension of its own
+searched, it's that anything shaped like a valid extension of its own
 query gets treated as if it always belonged there.
 
 ## Remediation
 
-- **Parameterized queries, always** — the same root fix as p1_1/p1_2:
+- **Parameterized queries, always**, the same root fix as p1_1/p1_2:
 
   ```python
   cur.execute(
@@ -165,7 +165,7 @@ query gets treated as if it always belonged there.
   ```
 
   With the value passed as a bound parameter, `q` can never break out of
-  the string literal in the first place — `UNION`, `ORDER BY`, and every
+  the string literal in the first place, `UNION`, `ORDER BY`, and every
   other injected clause above depend entirely on the attacker's text
   being re-parsed as SQL grammar, which parameterization prevents
   outright.
@@ -176,6 +176,6 @@ query gets treated as if it always belonged there.
   table-level grants, or a dedicated read-only view) so a table it was
   never meant to touch simply isn't a valid target, injection or not.
 - **Don't echo raw DBMS error text to the client** (the same second bug
-  as p1_1/p1_2) — it's what made the `ORDER BY` column-count probe this
+  as p1_1/p1_2), it's what made the `ORDER BY` column-count probe this
   fast; a generic "no results" message on any query error removes that
   signal, forcing an attacker toward slower blind techniques.

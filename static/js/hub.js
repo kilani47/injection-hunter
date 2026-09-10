@@ -1,4 +1,4 @@
-// static/js/hub.js — hub interactivity: onboarding-primer taxonomy cards flip
+// static/js/hub.js, hub interactivity: onboarding-primer taxonomy cards flip
 // on click/keyboard activation. No network calls; the flag form is a plain
 // HTML POST handled server-side (core/unlock.submit_flag).
 (function () {
