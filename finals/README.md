@@ -34,7 +34,7 @@ demands more than one skill at once.
 | # | Node | Directory | Status |
 |---|------|-----------|--------|
 | 1 | Trick Tower Final Exam (BookHaven) | [`trick-tower-final/`](trick-tower-final/) | built |
-| 2 | Chairman Election Infiltration (OmniGrid) | — | not yet built |
+| 2 | Chairman Election Infiltration (OmniGrid) | [`chairman-election/`](chairman-election/) | built |
 
 "Trick Tower Final Exam" chains all four of Phase 1's core SQLi
 techniques (error-based, union-based, boolean-blind, time-blind) into
@@ -42,3 +42,18 @@ one four-stage descent: each stage's vulnerable query is inert until the
 *previous* stage's real, extracted key is supplied as that stage's
 `token` — a genuinely safe, parameterized gate, not a cosmetic one. There
 is no shortcut past a stage except actually running its real technique.
+
+"Chairman Election Infiltration" closes the whole arc with four
+*independent* faction systems instead of one chain: MariaDB (error-based
+SQLi), MongoDB (`$ne` auth bypass), OpenLDAP (filter-injection dump), and
+XXE (external-entity file read) — every one of them the identical bug
+shape as a floor already solved earlier in the arc, on an unfamiliar
+target with no narrative hint pointing at which technique it wants. A
+final `/f/omnigrid/seize` endpoint independently re-derives all four
+factions' real current values via safe, non-injectable lookups and grants
+the flag only when every submitted fragment genuinely matches.
+
+The Seiyaku Arc is now complete end-to-end: every phase, every floor, and
+both finals are solvable against real MariaDB, MongoDB, OpenLDAP, and a
+real XML parser, with no simulated or hardcoded responses anywhere in the
+chain.

@@ -18,9 +18,15 @@ phaseN.py module.
 
 from __future__ import annotations
 
-from flask import Blueprint, redirect, render_template, request, url_for
+import os
 
-from core.db import mysql_conn
+import ldap
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for
+from lxml import etree
+
+from core import xml_parser
+from core.db import ldap_conn, mongo_db, mysql_conn
+from challenges.phase4 import _resolve_login_credentials
 
 bp = Blueprint("finals", __name__)
 finals_bp = bp
@@ -204,3 +210,311 @@ def f1_stage4():
         lookup_id=lookup_id,
         checked=checked,
     )
+
+
+# ---------------------------------------------------------------------------
+# F.2 — Chairman Election Infiltration (OmniGrid)
+# ---------------------------------------------------------------------------
+#
+# Unlike F.1's single chained target, OmniGrid is four *independent*
+# faction systems, each built on a different real backend and vulnerable
+# to a different injection class this whole arc has already taught:
+#
+#   Onboarding   — MariaDB, error-based SQLi        (Phase 1's technique)
+#   Mobile API   — MongoDB, $ne auth bypass          (Phase 4's technique)
+#   Directory    — OpenLDAP, filter-injection dump   (Phase 4's technique)
+#   Document Import — XXE file read                  (Phase 5's technique)
+#
+# Each faction's route leaks exactly one fragment of the Chairman seat's
+# final key. None of the four routes accepts a fragment as input, and none
+# of them knows about the other three — the only place all four fragments
+# are ever compared together is the final `/f/omnigrid/seize` route below,
+# which re-derives each faction's *true* current fragment itself, via a
+# completely safe, non-injectable lookup against that faction's own
+# backend, and grants the flag only if all four caller-submitted values
+# match. There is no way to "guess" a fragment past this check — each one
+# has to be genuinely extracted from its own real system first.
+
+_OMNIGRID_LDAP_BASE = "ou=omnigrid," + os.environ.get(
+    "LDAP_BASE_DN", "dc=hunterassoc,dc=org"
+)
+_OMNIGRID_FRAGMENT_FILE = "/opt/omnigrid/fragment.txt"
+
+
+@bp.route("/f/omnigrid", methods=["GET"])
+def f2_omnigrid():
+    return render_template("f2_omnigrid.html", seize_result=None, seize_error=None)
+
+
+# --- Onboarding faction — MariaDB error-based SQLi --------------------------
+
+@bp.route("/f/omnigrid/onboarding", methods=["GET"])
+def f2_onboarding():
+    lookup_id = request.args.get("id", "")
+    status = None
+    error = None
+
+    if lookup_id:
+        conn = mysql_conn()
+        try:
+            with conn.cursor() as cur:
+                # VULN: string concat, raw error text echoed — identical
+                # sink shape to p1_2 / f1's stage 1.
+                q = f"SELECT status FROM omnigrid_onboarding WHERE id='{lookup_id}'"
+                cur.execute(q)
+                row = cur.fetchone()
+                status = row["status"] if row else None
+        except Exception as exc:
+            error = str(exc)
+        finally:
+            conn.close()
+
+    return render_template(
+        "f2_faction.html",
+        faction="onboarding",
+        faction_label="Onboarding",
+        lookup_id=lookup_id,
+        result_label="status",
+        result=status,
+        error=error,
+    )
+
+
+def _true_onboarding_fragment() -> str:
+    """The Onboarding faction's real fragment, fetched with a genuinely
+    safe, fully parameterized query — never the vulnerable half."""
+    conn = mysql_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT fragment FROM omnigrid_fragments WHERE faction=%s",
+                ("onboarding",),
+            )
+            row = cur.fetchone()
+            return row["fragment"] if row else ""
+    finally:
+        conn.close()
+
+
+# --- Mobile API faction — MongoDB $ne auth bypass ---------------------------
+
+@bp.route("/f/omnigrid/mobile", methods=["GET", "POST"])
+def f2_mobile():
+    agent = None
+    error = None
+    attempted = False
+
+    if request.method == "POST":
+        attempted = True
+        # Reuses Phase 4's exact dual-channel credential resolver
+        # (_resolve_login_credentials) — same JSON-body-or-bracket-
+        # notation-form-field support as p4_2's Archive Guardian, so
+        # `username[$ne]=1&password[$ne]=1` works here identically to
+        # there, not just a JSON-body variant.
+        username, password = _resolve_login_credentials()
+
+        if username is not None and password is not None:
+            db = mongo_db()
+            try:
+                # VULN: `username`/`password` reach MongoDB's query
+                # language completely unvalidated — identical bug shape to
+                # p4_2's Archive Guardian. A dict for either field (e.g.
+                # {"$ne": None}) is honored as a real operator instead of
+                # a literal to compare against.
+                query = {"username": username, "password": password}
+                agent = db.omnigrid_agents.find_one(query)
+            except Exception:
+                agent = None
+                error = "the mobile API rejected that request"
+
+    return render_template(
+        "f2_faction.html",
+        faction="mobile",
+        faction_label="Mobile API",
+        attempted=attempted,
+        result_label="fragment",
+        result=(agent.get("fragment") if agent else None),
+        error=error,
+    )
+
+
+def _true_mobile_fragment() -> str:
+    """The Mobile API faction's real fragment, fetched with a direct,
+    fully-specified find_one() — no attacker-influenced query shape."""
+    db = mongo_db()
+    doc = db.omnigrid_agents.find_one({"service": "mobile-api"})
+    return doc.get("fragment", "") if doc else ""
+
+
+# --- Directory faction — OpenLDAP filter-injection dump ---------------------
+
+def _omnigrid_ldap_search(ldap_filter: str):
+    conn = ldap_conn()
+    try:
+        return conn.search_s(
+            _OMNIGRID_LDAP_BASE, ldap.SCOPE_SUBTREE, ldap_filter
+        ), None
+    except ldap.LDAPError as exc:
+        return [], str(exc)
+    finally:
+        conn.unbind_s()
+
+
+def _ldap_attr(attrs: dict, name: str) -> str | None:
+    values = attrs.get(name) or []
+    return values[0].decode("utf-8", "replace") if values else None
+
+
+@bp.route("/f/omnigrid/directory", methods=["GET"])
+def f2_directory():
+    uid = request.args.get("uid", "")
+    members = []
+    error = None
+    dump_mode = False
+
+    if uid:
+        # VULN: string concat into an LDAP filter, identical bug shape to
+        # p4_3's Zodiac Breach — no escape_filter_chars() call anywhere
+        # before this f-string is built.
+        ldap_filter = f"(&(uid={uid})(objectClass=inetOrgPerson))"
+        entries, error = _omnigrid_ldap_search(ldap_filter)
+        entries = [(dn, attrs) for dn, attrs in entries if dn]
+        dump_mode = len(entries) > 1
+        for dn, attrs in entries:
+            member = {
+                "dn": dn,
+                "uid": _ldap_attr(attrs, "uid"),
+                "cn": _ldap_attr(attrs, "cn"),
+                "mail": _ldap_attr(attrs, "mail"),
+            }
+            if dump_mode:
+                member["description"] = _ldap_attr(attrs, "description")
+            members.append(member)
+
+    return render_template(
+        "f2_faction.html",
+        faction="directory",
+        faction_label="Directory",
+        lookup_id=uid,
+        members=members,
+        dump_mode=dump_mode,
+        error=error,
+    )
+
+
+def _true_directory_fragment() -> str:
+    """The Directory faction's real fragment, fetched with a fixed,
+    non-attacker-influenced filter against exactly one known DN."""
+    conn = ldap_conn()
+    try:
+        dn = f"uid=directory-svc,{_OMNIGRID_LDAP_BASE}"
+        entries = conn.search_s(dn, ldap.SCOPE_BASE, "(objectClass=*)")
+        for entry_dn, attrs in entries:
+            if entry_dn:
+                return _ldap_attr(attrs, "description") or ""
+        return ""
+    finally:
+        conn.unbind_s()
+
+
+# --- Document Import faction — XXE file read --------------------------------
+
+@bp.route("/f/omnigrid/import", methods=["GET", "POST"])
+def f2_import():
+    document_text = None
+    error = None
+    raw_xml = None
+
+    if request.method == "POST":
+        raw_xml = request.form.get("xml", "")
+        try:
+            # VULN: identical parser + reflecting-sink shape to p5_3's
+            # Sealed Archives — core.xml_parser.parse() has
+            # resolve_entities=True / load_dtd=True, and this route
+            # echoes back the parsed <document> element's resolved text.
+            doc = xml_parser.parse(raw_xml.encode("utf-8"))
+            document_el = doc.find(".//document")
+            document_text = document_el.text if document_el is not None else None
+        except etree.XMLSyntaxError as exc:
+            error = f"the import pipeline rejected that document: {exc}"
+
+    return render_template(
+        "f2_faction.html",
+        faction="document",
+        faction_label="Document Import",
+        raw_xml=raw_xml,
+        result_label="document",
+        result=document_text,
+        error=error,
+    )
+
+
+def _true_document_fragment() -> str:
+    """The Document Import faction's real fragment, read directly by the
+    app's own code from the file it controls — never via a caller-supplied
+    path or query of any kind."""
+    with open(_OMNIGRID_FRAGMENT_FILE, "r", encoding="utf-8") as fh:
+        return fh.read().strip()
+
+
+# --- Seize the Chairman seat — combine all four fragments -------------------
+
+@bp.route("/f/omnigrid/seize", methods=["POST"])
+def f2_seize():
+    if request.is_json:
+        payload = request.get_json(silent=True) or {}
+    else:
+        payload = request.form
+
+    submitted = {
+        "onboarding": (payload.get("onboarding") or "").strip(),
+        "mobile": (payload.get("mobile") or "").strip(),
+        "directory": (payload.get("directory") or "").strip(),
+        "document": (payload.get("document") or "").strip(),
+    }
+
+    true_values = {
+        "onboarding": _true_onboarding_fragment(),
+        "mobile": _true_mobile_fragment(),
+        "directory": _true_directory_fragment(),
+        "document": _true_document_fragment(),
+    }
+
+    matches = {
+        faction: bool(value) and submitted[faction] == value
+        for faction, value in true_values.items()
+    }
+    success = all(matches.values())
+
+    flag = _chairman_flag() if success else None
+
+    wants_json = request.is_json or request.headers.get("Accept") == "application/json"
+    if wants_json:
+        return jsonify(success=success, matches=matches, flag=flag)
+
+    return render_template(
+        "f2_omnigrid.html",
+        seize_result=matches,
+        seize_success=success,
+        seize_flag=flag,
+        seize_error=None,
+    )
+
+
+def _chairman_flag() -> str:
+    """The Chairman seat's own key — a fifth, safe, parameterized lookup
+    against omnigrid_fragments, reachable only after `success` above has
+    already confirmed all four faction fragments genuinely matched. Never
+    hardcoded in this module: like every other node in this arc, the flag
+    lives entirely in seeded backend data, not in application code."""
+    conn = mysql_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT fragment FROM omnigrid_fragments WHERE faction=%s",
+                ("chairman",),
+            )
+            row = cur.fetchone()
+            return row["fragment"] if row else ""
+    finally:
+        conn.close()
