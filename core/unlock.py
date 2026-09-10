@@ -90,7 +90,7 @@ NODES: list[dict[str, Any]] = [
     {"id": "p5_1", "phase": "5", "name": "Manipulator's Firewall",
      "path": "/p5/firewall", "flag": FLAGS["p5_1"], "built": True},
     {"id": "p5_2", "phase": "5", "name": "Palace Blueprint Tampering",
-     "path": "/p5/blueprint", "flag": FLAGS["p5_2"], "built": False},
+     "path": "/p5/blueprint", "flag": FLAGS["p5_2"], "built": True},
     {"id": "p5_3", "phase": "5", "name": "The King's Sealed Archives",
      "path": "/p5/archives", "flag": FLAGS["p5_3"], "built": False},
 
