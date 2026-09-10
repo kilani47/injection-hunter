@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}The King's Sealed Archives — The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p5{% endblock %}
+
+{% block content %}
+<div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+  <div>
+    <p class="font-mono text-xs text-muted mb-2">chimera ant palace &middot; archive request desk</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4">The King's Sealed Archives</h1>
+    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+      Deep beneath the Palace sits an archive of documents nobody outside
+      the King's own household has ever read. The request desk above it
+      is simple: submit a small request document naming the title you
+      want, and the desk reads your request back to you to confirm it
+      understood what you asked for.
+    </p>
+    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+      Objective: the desk only ever confirms what's written in your own
+      request. Find a way to make what's written in your request point
+      somewhere the desk was never meant to look.
+    </p>
+  </div>
+
+  <div class="license-card glass rounded-[1.75rem] p-6">
+    <div class="exam-terminal rounded-xl p-5">
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent">&gt;</span> archive request desk &mdash; raw request document
+      </p>
+
+      {% if attempted %}
+        {% if error %}
+          <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+            <p class="font-mono text-xs text-muted mb-1">the desk rejected that request:</p>
+            <p class="font-mono text-[11px] text-nen-p1 break-all">{{ error }}</p>
+          </div>
+        {% else %}
+          <div class="rounded-lg border border-accent bg-accent-20 px-4 py-3 mb-4">
+            <p class="font-mono text-xs text-accent mb-2">request confirmed &mdash; document title read back:</p>
+            <pre class="font-mono text-[12px] text-bone/90 whitespace-pre-wrap break-all">{{ document_title }}</pre>
+          </div>
+        {% endif %}
+      {% endif %}
+
+      <form method="post" action="{{ url_for('phase5.p5_archives') }}" class="flex flex-col gap-3">
+        <textarea
+          name="xml"
+          rows="8"
+          spellcheck="false"
+          placeholder="&lt;request&gt;&lt;document&gt;ancient-history-vol-3&lt;/document&gt;&lt;/request&gt;"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-xs text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >{{ raw_xml or '' }}</textarea>
+        <button type="submit"
+          class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+          Submit request
+        </button>
+      </form>
+
+      <p class="font-mono text-[11px] text-muted mb-2 mt-6 border-t border-white/10 pt-4">
+        request shape
+      </p>
+      <p class="font-mono text-[11px] text-bone/60 mb-3">
+        <code class="text-accent">POST /p5/archives</code> accepts a
+        single form field, <code class="text-accent">xml</code>, whose
+        value is your entire raw request document &mdash; DOCTYPE
+        declaration included, if you send one. Send
+        <code class="text-accent">Accept: application/json</code> for a
+        compact JSON answer instead of this page.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

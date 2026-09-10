@@ -292,3 +292,73 @@ def p5_blueprint():
         error=error,
         submitted_name=submitted_name,
     )
+
+
+# ---------------------------------------------------------------------------
+# p5_3 — The King's Sealed Archives
+# ---------------------------------------------------------------------------
+#
+# p5_2's bug lived entirely upstream of the parser, in how a document was
+# ever *built*. This floor's bug (notes §11, "XXE") lives in the parser's
+# own configuration: core/xml_parser.parse() sets `resolve_entities=True`
+# and `load_dtd=True`, which together mean a caller-supplied document is
+# free to declare its own DOCTYPE with its own <!ENTITY> definitions — and
+# a `SYSTEM` entity's value isn't a literal string the way an internal
+# entity's is, it's a *reference the parser goes and resolves itself*,
+# including `file://` URIs pointing anywhere on the local filesystem the
+# app's own process can read. Whatever that resolved content is then
+# becomes indistinguishable, to the rest of the parsed tree, from text the
+# caller typed directly — so anything the route echoes back out of the
+# document echoes the file's contents right along with it.
+#
+# The route below is a deliberately ordinary "archive request" feature: a
+# caller submits a small XML document naming a document title they want
+# summarized, and the route echoes that title back in its response. There
+# is nothing suspicious about that feature on its own — the vulnerability
+# is entirely in *how* the title is read out of the document (a resolved
+# entity reads identically to plain text) and in the shared parser
+# configuration this whole phase uses (core/xml_parser.py).
+
+@bp.route("/p5/archives", methods=["GET", "POST"])
+def p5_archives():
+    document_title = None
+    error = None
+    raw_xml = None
+
+    if request.method == "POST":
+        raw_xml = request.form.get("xml", "")
+        try:
+            # VULN: this is the exact same core.xml_parser.parse() call
+            # p5_2 used, with the exact same resolve_entities=True,
+            # load_dtd=True configuration — but this floor's route
+            # reflects an element's resolved .text back in its response,
+            # which is what turns "the parser will resolve a SYSTEM
+            # entity" into "the app will hand you the resolved file
+            # content." p5_2 never had a route that echoed parsed
+            # content back at all, so the same parser posture was inert
+            # there — the sink, not just the parser config, is what
+            # makes a bug reachable.
+            doc = xml_parser.parse(raw_xml.encode("utf-8"))
+            title_el = doc.find(".//document")
+            document_title = title_el.text if title_el is not None else None
+        except etree.XMLSyntaxError as exc:
+            error = f"the archive rejected that request: {exc}"
+
+    wants_json = request.method == "POST" and (
+        request.headers.get("Accept") == "application/json"
+    )
+
+    if wants_json:
+        return jsonify(
+            document_title=document_title,
+            raw_xml=raw_xml,
+            error=error,
+        )
+
+    return render_template(
+        "p5_archives.html",
+        attempted=request.method == "POST",
+        document_title=document_title,
+        raw_xml=raw_xml,
+        error=error,
+    )

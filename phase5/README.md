@@ -36,7 +36,7 @@ raw queries were.
 |---|------|-----------|--------|
 | 1 | Manipulator's Firewall | [`manipulators-firewall/`](manipulators-firewall/) | built |
 | 2 | Palace Blueprint Tampering | [`blueprint-tampering/`](blueprint-tampering/) | built |
-| 3 | The King's Sealed Archives | — | not yet built |
+| 3 | The King's Sealed Archives | [`sealed-archives/`](sealed-archives/) | built |
 
 "Manipulator's Firewall" shows that an ORM is not automatically a fix
 for injection: SQLAlchemy parameterizes everything that goes through
@@ -55,3 +55,18 @@ but a *well-formed* document with extra, attacker-added structure is,
 correctly, accepted, letting a crafted name add a second `<clearance>`
 element that a naive first-match lookup reads instead of the
 template's own.
+
+"The King's Sealed Archives" closes the phase with genuine XXE: the
+same shared parser's `resolve_entities=True`/`load_dtd=True`
+configuration was dormant in the previous floor (nothing there ever
+echoed parsed content back), but this floor's request desk reflects an
+element's resolved text in its response — turning "the parser will
+follow a caller-declared `SYSTEM` entity" into a real local
+filesystem-read primitive, recovering a flag file that exists only
+inside the container image, outside the app's own source tree, and is
+never served by any other route.
+
+Phase 5 is complete across all three floors: every route in
+`challenges/phase5.py` runs against a real backend (MariaDB via a real
+SQLAlchemy ORM for the first floor, a real `lxml` parser for the other
+two) with no simulated or hardcoded responses anywhere in the chain.
