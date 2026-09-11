@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Gate of Trust · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-p1{% endblock %}
+{% block phase_nav %}<a href="{{ url_for('phase', phase_id='1') }}" class="hover:text-accent transition-colors">phase 1</a>{% endblock %}
 
 {% block main %}
 <main class="relative flex-1 flex flex-col justify-center {% if has_hero('p1_gate') %}cine{% endif %}">
