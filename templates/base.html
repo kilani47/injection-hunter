@@ -26,14 +26,13 @@
       </div>
     </header>
 
-    {% block disclaimer %}
-    <div class="border-b border-white/10 bg-black/30">
-      <p class="mx-auto max-w-5xl px-6 py-2 font-mono text-[11px] leading-relaxed text-muted">
-        Fan-made training lab. Authorized, local use only: every target here runs on your own machine.
-        Not affiliated with, endorsed by, or sponsored by the rights holders of Hunter × Hunter.
-      </p>
-    </div>
-    {% endblock %}
+    {# Disclaimer + footer are opt-in, not opt-out: empty here by default so
+       every phase/challenge/entrance page runs its key art clean and full-
+       bleed, with nothing competing for attention. hub.html is the one
+       place that overrides both blocks with the real legal text below, and
+       carrying it once there (not on all 18+ node pages) is enough: it's
+       the first stop after the entrance, and every node links back to it. #}
+    {% block disclaimer %}{% endblock %}
 
     {% block main %}
     <main class="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
@@ -41,17 +40,7 @@
     </main>
     {% endblock %}
 
-    {% block footer %}
-    <footer class="border-t border-white/10">
-      <div class="mx-auto max-w-5xl px-6 py-4 font-mono text-[11px] text-muted flex flex-wrap items-center justify-between gap-2">
-        <span>&copy; 2026 the author. Original code and writing under MIT, see LICENSE / NOTICE.</span>
-        <span class="flex items-center gap-4">
-          <a href="{{ url_for('privacy') }}" class="hover:text-accent transition-colors">privacy</a>
-          <span>Hunter × Hunter names used unofficially, for non-commercial fan theming only.</span>
-        </span>
-      </div>
-    </footer>
-    {% endblock %}
+    {% block footer %}{% endblock %}
   </div>
 
   {% block scripts %}{% endblock %}
