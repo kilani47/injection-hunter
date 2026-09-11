@@ -2,89 +2,94 @@
 {% block title %}Exam Results Board · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-p1{% endblock %}
 
-{% block content %}
-{% if has_hero('p1_results') %}
-<div class="rounded-2xl overflow-hidden border border-white/10 mb-8 h-64">
-  <img src="{{ url_for('static', filename='img/p1_results.png') }}"
-       alt="A member of the Phantom Troupe studying the live results board"
-       class="w-full h-full object-cover" loading="lazy" decoding="async">
-</div>
-{% endif %}
-<div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
-  <div>
-    <p class="font-mono text-xs text-muted mb-2">the written exam &middot; floor 3</p>
-    <h1 class="font-display text-3xl font-semibold text-bone mb-4">Exam Results Board</h1>
-    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
-      Every applicant's score goes up on the public board the moment it's
-      graded. Search it by name and it prints back whatever rows match:
-      nobody proofread how many columns the board actually promises to
-      show, or thought about what a search term could ask it to show
-      instead.
-    </p>
-    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
-      Objective: get the board to print something it was never scored to
-      display.
-    </p>
-  </div>
+{% block main %}
+<main class="relative flex-1 flex flex-col justify-center {% if has_hero('p1_results') %}cine{% endif %}">
+  {% if has_hero('p1_results') %}
+    <img class="cine-img" src="{{ url_for('static', filename='img/p1_results.png') }}"
+         alt="A member of the Phantom Troupe studying the live results board"
+         loading="eager" decoding="async">
+    <div class="cine-scrim-content"></div>
+  {% endif %}
+  <div class="relative mx-auto w-full max-w-5xl px-6 py-10">
+    {% block content %}
+    <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+      <div>
+        <p class="font-mono text-xs text-muted mb-2 text-shadow-wallpaper">the written exam &middot; floor 3</p>
+        <h1 class="font-display text-3xl font-semibold text-bone mb-4 text-shadow-wallpaper">Exam Results Board</h1>
+        <p class="max-w-md text-bone/85 leading-relaxed mb-4 text-shadow-wallpaper">
+          Every applicant's score goes up on the public board the moment it's
+          graded. Search it by name and it prints back whatever rows match:
+          nobody proofread how many columns the board actually promises to
+          show, or thought about what a search term could ask it to show
+          instead.
+        </p>
+        <p class="max-w-md text-bone/70 leading-relaxed text-sm text-shadow-wallpaper">
+          Objective: get the board to print something it was never scored to
+          display.
+        </p>
+      </div>
 
-  <div class="license-card glass rounded-[1.75rem] p-6">
-    <div class="exam-terminal rounded-xl p-5">
-      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> results board: search by name
-      </p>
+      <div class="license-card glass rounded-[1.75rem] p-6">
+        <div class="exam-terminal rounded-xl p-5">
+          <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+            <span class="text-accent text-glow">&gt;</span> results board: search by name
+          </p>
 
-      <form method="get" action="{{ url_for('phase1.p1_results') }}" class="flex flex-col gap-3 mb-4">
-        <input
-          type="text"
-          name="q"
-          autocomplete="off"
-          spellcheck="false"
-          placeholder="applicant name"
-          value="{{ q or '' }}"
-          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        >
-        <button type="submit"
-          class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
-          Search
-        </button>
-      </form>
+          <form method="get" action="{{ url_for('phase1.p1_results') }}" class="flex flex-col gap-3 mb-4">
+            <input
+              type="text"
+              name="q"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="applicant name"
+              value="{{ q or '' }}"
+              class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+            <button type="submit"
+              class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
+              Search
+            </button>
+          </form>
 
-      {% if rows is not none %}
-        {% if rows %}
-          <div class="rounded-lg border border-white/15 bg-black/20 overflow-hidden mb-4">
-            <table class="w-full font-mono text-[12px] text-bone/90">
-              <thead>
-                <tr class="border-b border-white/15 text-muted text-left">
-                  <th class="px-3 py-2 font-mono font-semibold">id</th>
-                  <th class="px-3 py-2 font-mono font-semibold">name</th>
-                  <th class="px-3 py-2 font-mono font-semibold">score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for row in rows %}
-                <tr class="border-b border-white/5 last:border-b-0">
-                  <td class="px-3 py-2 break-all">{{ row.id }}</td>
-                  <td class="px-3 py-2 break-all">{{ row.name }}</td>
-                  <td class="px-3 py-2 break-all">{{ row.score }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        {% else %}
-          <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
-            <p class="font-mono text-xs text-muted">no matching applicants.</p>
-          </div>
-        {% endif %}
-      {% endif %}
+          {% if rows is not none %}
+            {% if rows %}
+              <div class="rounded-lg border border-white/15 bg-black/20 overflow-hidden mb-4">
+                <table class="w-full font-mono text-[12px] text-bone/90">
+                  <thead>
+                    <tr class="border-b border-white/15 text-muted text-left">
+                      <th class="px-3 py-2 font-mono font-semibold">id</th>
+                      <th class="px-3 py-2 font-mono font-semibold">name</th>
+                      <th class="px-3 py-2 font-mono font-semibold">score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in rows %}
+                    <tr class="border-b border-white/5 last:border-b-0">
+                      <td class="px-3 py-2 break-all">{{ row.id }}</td>
+                      <td class="px-3 py-2 break-all">{{ row.name }}</td>
+                      <td class="px-3 py-2 break-all">{{ row.score }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+                <p class="font-mono text-xs text-muted">no matching applicants.</p>
+              </div>
+            {% endif %}
+          {% endif %}
 
-      {% if error %}
-        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
-          <p class="font-mono text-xs text-muted mb-1">the board stumbled over your search:</p>
-          <p class="font-mono text-[11px] text-nen-p1 break-all">{{ error }}</p>
+          {% if error %}
+            <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+              <p class="font-mono text-xs text-muted mb-1">the board stumbled over your search:</p>
+              <p class="font-mono text-[11px] text-nen-p1 break-all">{{ error }}</p>
+            </div>
+          {% endif %}
         </div>
-      {% endif %}
+      </div>
     </div>
+    {% endblock %}
   </div>
-</div>
+</main>
 {% endblock %}

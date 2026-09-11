@@ -1,13 +1,6 @@
 {% extends "base.html" %}
 {% block title %}The Seiyaku Arc: Hunter Exam{% endblock %}
 
-{# The entrance is a splash before the exam hall. The disclaimer bar and
-   footer reappear on /hub and every page after it (and the full legal
-   text lives in NOTICE / README.md / LICENSE), so hiding them here just
-   lets the key art run edge-to-edge on this one screen. #}
-{% block disclaimer %}{% endblock %}
-{% block footer %}{% endblock %}
-
 {% block main %}
 <main class="cine flex-1 flex items-end">
   <img
@@ -35,7 +28,7 @@
 
     <div class="mt-9 flex flex-wrap items-center gap-5">
       <a href="{{ url_for('hub') }}"
-         class="ren-pulse inline-flex items-center rounded-lg bg-accent-20 border border-accent px-6 py-3 font-display text-lg font-semibold text-bone hover:bg-accent-10 transition-colors">
+         class="ren-pulse inline-flex items-center rounded-lg bg-accent-20 border border-accent px-6 py-3 font-display text-lg font-semibold text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
         Enter the Exam Hall
       </a>
       <span class="font-mono text-xs text-muted">

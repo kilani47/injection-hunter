@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Exam Hall · The Seiyaku Arc{% endblock %}
 
+{% block disclaimer %}
+<div class="border-b border-white/10 bg-black/30">
+  <p class="mx-auto max-w-5xl px-6 py-2 font-mono text-[11px] leading-relaxed text-muted">
+    Fan-made training lab. Authorized, local use only: every target here runs on your own machine.
+    Not affiliated with, endorsed by, or sponsored by the rights holders of Hunter × Hunter.
+  </p>
+</div>
+{% endblock %}
+
 {% block content %}
 <section class="grid gap-8 lg:grid-cols-[1.05fr_1fr] items-stretch mb-14">
   <div class="license-card glass rounded-[1.75rem] p-6 flex flex-col justify-between">
@@ -19,7 +28,7 @@
 
   <div class="exam-terminal rounded-2xl p-5">
     <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-3">
-      <span class="text-accent">&gt;</span> submit a vow-break to unlock the next floor
+      <span class="text-accent text-glow">&gt;</span> submit a vow-break to unlock the next floor
     </p>
     <form method="post" action="{{ url_for('flag') }}" class="flex flex-col gap-3">
       <input
@@ -31,7 +40,7 @@
         class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
       <button type="submit"
-        class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+        class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
         Submit
       </button>
     </form>
@@ -144,6 +153,18 @@
     {% endfor %}
   </div>
 </section>
+{% endblock %}
+
+{% block footer %}
+<footer class="border-t border-white/10">
+  <div class="mx-auto max-w-5xl px-6 py-4 font-mono text-[11px] text-muted flex flex-wrap items-center justify-between gap-2">
+    <span>&copy; 2026 the author. Original code and writing under MIT, see LICENSE / NOTICE.</span>
+    <span class="flex items-center gap-4">
+      <a href="{{ url_for('privacy') }}" class="hover:text-accent transition-colors">privacy</a>
+      <span>Hunter × Hunter names used unofficially, for non-commercial fan theming only.</span>
+    </span>
+  </div>
+</footer>
 {% endblock %}
 
 {% block scripts %}

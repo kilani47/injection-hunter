@@ -34,7 +34,7 @@
 
     {% if stage == 1 %}
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> stage 1: catalogue lookup by id
+        <span class="text-accent text-glow">&gt;</span> stage 1: catalogue lookup by id
       </p>
       <p class="font-mono text-[11px] text-bone/60 mb-4">
         No token required. This is the entry point. Recover stage 1's
@@ -55,12 +55,12 @@
         <input type="text" name="id" autocomplete="off" spellcheck="false" placeholder="catalogue id"
           value="{{ lookup_id or '' }}"
           class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">Look up</button>
+        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">Look up</button>
       </form>
 
     {% elif stage == 2 %}
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> stage 2: catalogue search
+        <span class="text-accent text-glow">&gt;</span> stage 2: catalogue search
       </p>
       <p class="font-mono text-[11px] text-bone/60 mb-4">
         Requires stage 1's key as <code class="text-accent">token</code>.
@@ -96,12 +96,12 @@
         <input type="text" name="q" autocomplete="off" spellcheck="false" placeholder="title search"
           value="{{ q or '' }}"
           class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">Search</button>
+        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">Search</button>
       </form>
 
     {% elif stage == 3 %}
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> stage 3: catalogue id oracle
+        <span class="text-accent text-glow">&gt;</span> stage 3: catalogue id oracle
       </p>
       <p class="font-mono text-[11px] text-bone/60 mb-4">
         Requires stage 2's key as <code class="text-accent">token</code>.
@@ -120,12 +120,12 @@
         <input type="text" name="code" autocomplete="off" spellcheck="false" placeholder="catalogue id"
           value="{{ code or '' }}"
           class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">Present code</button>
+        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">Present code</button>
       </form>
 
     {% elif stage == 4 %}
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-        <span class="text-accent">&gt;</span> stage 4: the final locked door
+        <span class="text-accent text-glow">&gt;</span> stage 4: the final locked door
       </p>
       <p class="font-mono text-[11px] text-bone/60 mb-4">
         Requires stage 3's key as <code class="text-accent">token</code>.
@@ -143,7 +143,7 @@
         <input type="text" name="id" autocomplete="off" spellcheck="false" placeholder="catalogue id"
           value="{{ lookup_id or '' }}"
           class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">Check status</button>
+        <button type="submit" class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">Check status</button>
       </form>
     {% endif %}
 

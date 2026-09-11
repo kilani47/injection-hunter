@@ -104,7 +104,8 @@
   @media (prefers-reduced-motion: reduce) {
     .ren-pulse,
     .burst-ring,
-    .flicker {
+    .flicker,
+    .accent-rule {
       animation: none !important;
     }
   }
@@ -142,6 +143,19 @@
     z-index: 20;
     height: 3px;
     background: var(--nen-accent);
+    animation: rule-breathe 3.6s ease-in-out infinite;
+  }
+  @keyframes rule-breathe {
+    0%, 100% {
+      box-shadow:
+        0 0 10px 1px var(--nen-glow),
+        0 0 32px 3px color-mix(in srgb, var(--nen-accent) 35%, transparent);
+    }
+    50% {
+      box-shadow:
+        0 0 16px 2px var(--nen-glow),
+        0 0 46px 5px color-mix(in srgb, var(--nen-accent) 48%, transparent);
+    }
   }
 
   /* Glassmorphic surface used for every panel/card. */
@@ -160,6 +174,7 @@
     position: relative;
     border-radius: 1.75rem;
     border: 1px solid color-mix(in srgb, var(--nen-accent) 45%, transparent);
+    box-shadow: 0 0 40px -12px var(--nen-glow);
   }
 
   .license-card::before,
@@ -170,6 +185,7 @@
     height: 20px;
     border: 2px solid var(--nen-accent);
     pointer-events: none;
+    filter: drop-shadow(0 0 5px var(--nen-glow));
   }
 
   .license-card::before {
@@ -278,6 +294,26 @@
       radial-gradient(130% 90% at 50% 30%, transparent 45%, rgba(10, 11, 16, 0.55) 100%);
   }
 
+  /* Scrim for a challenge page's full-bleed wallpaper: unlike the entrance
+     (where only a title + one line of copy sit over the art), a challenge
+     page's briefing text and terminal panel fill the whole area, so this
+     darkens progressively from top to bottom instead of staying light at
+     the top: the art stays recognizable near the header, and reading
+     material lower on the page sits on a nearly opaque ground. */
+  .cine-scrim-content {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(10, 11, 16, 0.45) 0%,
+        rgba(10, 11, 16, 0.8) 40%,
+        rgba(10, 11, 16, 0.96) 85%
+      ),
+      radial-gradient(120% 60% at 50% 0%, transparent 25%, rgba(10, 11, 16, 0.4) 100%);
+  }
+
   /* A phase splash whose art already carries its own baked-in text
      (phase1.png). Shown in full (contain), never cropped, with only a
      bottom fade to blend into the floors list below it. */
@@ -305,9 +341,14 @@
     background: linear-gradient(180deg, rgba(232, 228, 218, 0.05), rgba(232, 228, 218, 0.02));
     transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
   }
+  /* An unlocked card carries a resting glow (not just on hover) so the
+     open, reachable phase visibly stands out as the inviting next step. */
+  .phase-card[data-locked="false"] {
+    box-shadow: -3px 0 20px -6px var(--nen-glow);
+  }
   .phase-card:hover {
-    border-color: color-mix(in srgb, var(--nen-accent) 55%, transparent);
-    box-shadow: 0 0 28px -6px var(--nen-glow);
+    border-color: color-mix(in srgb, var(--nen-accent) 65%, transparent);
+    box-shadow: 0 0 36px -4px var(--nen-glow), -3px 0 24px -6px var(--nen-glow);
     transform: translateY(-2px);
   }
   .phase-card[data-locked="true"] {
@@ -346,4 +387,12 @@
   .bg-accent-10 { background-color: color-mix(in srgb, var(--nen-accent) 10%, transparent); }
   .bg-accent-20 { background-color: color-mix(in srgb, var(--nen-accent) 20%, transparent); }
   .shadow-accent { box-shadow: 0 0 24px 0 var(--nen-glow); }
+
+  /* Legibility insurance for plain (non-card) text sitting directly over a
+     challenge page's full-bleed wallpaper background. */
+  .text-shadow-wallpaper { text-shadow: 0 1px 16px rgba(0, 0, 0, 0.85); }
+
+  /* A small glowing accent, used on the terminal ">" prompt glyph that
+     opens nearly every panel. */
+  .text-glow { text-shadow: 0 0 10px var(--nen-glow); }
 }

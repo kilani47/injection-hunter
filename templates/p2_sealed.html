@@ -61,7 +61,7 @@
       <div class="exam-terminal rounded-xl p-5">
         {% if page == 'news' %}
           <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-            <span class="text-accent">&gt;</span> bulletin board: look up post by id
+            <span class="text-accent text-glow">&gt;</span> bulletin board: look up post by id
           </p>
 
           <form method="get" action="{{ url_for('phase2.p2_sealed') }}" class="flex flex-col gap-3 mb-4">
@@ -76,7 +76,7 @@
               class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
             <button type="submit"
-              class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-10 transition-colors">
+              class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
               Look up
             </button>
           </form>
@@ -120,7 +120,7 @@
           {% endif %}
         {% else %}
           <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-            <span class="text-accent">&gt;</span> static page: {{ page }}
+            <span class="text-accent text-glow">&gt;</span> static page: {{ page }}
           </p>
           {% if pages %}
             {% for p in pages %}
