@@ -1,22 +1,15 @@
-# Injection Hunter
+# The Seiyaku Arc
 
 [![License: MIT](https://img.shields.io/badge/code%20license-MIT-blue.svg)](LICENSE)
-[![Challenges](https://img.shields.io/badge/challenges-18-informational.svg)](docs/traceability.md)
-[![Backends](https://img.shields.io/badge/real%20backends-MariaDB%20%7C%20MongoDB%20%7C%20OpenLDAP%20%7C%20lxml-informational.svg)](docker-compose.yml)
 
-A full-spectrum injection-attack training lab. Eighteen challenges, each
-one running against a real backend engine, no simulated responses
-anywhere: error-based, union-based, boolean-blind, and time-blind SQL
-injection; SQLMap methodology against real targets; out-of-band and
-second-order SQLi; NoSQL operator injection; LDAP injection; ORM
-injection; and XML/XXE, closing with two chained, multi-vulnerability
-final exams.
+> *Every Nen ability is governed by a vow the caster wrote for themselves,
+> and every vow hides a loophole its author never saw.*
 
-The lab ships under its own name, **The Seiyaku Arc**: a Hunter Exam-themed
-narrative where each phase is an examiner enforcing one Vow (an
-input-validation rule) against that real infrastructure. Every Vow has a
-loophole the examiner never anticipated. Find it, and the flag it yields
-unlocks the next floor.
+The Seiyaku Arc is a single-site, deliberately-vulnerable web security lab
+themed around the Hunter Exam. Each phase is an examiner enforcing one Vow
+(an input-validation rule) against a **real** backend engine, MariaDB,
+MongoDB, OpenLDAP, and a real `lxml` XML parser. Every Vow has a loophole.
+Find it, and the flag it yields unlocks the next floor.
 
 **Complete**, all 18 nodes across 5 phases and 2 Finals are built and
 solver-verified end to end against real, freshly-seeded backends. See
