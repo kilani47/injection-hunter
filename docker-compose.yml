@@ -1,12 +1,14 @@
 services:
-  # The portal. This is the only service Task 0 needs actually running —
-  # `docker compose up -d flask` is the smoke-test entrypoint.
+  # The portal.
   flask:
     build: .
     ports:
       - "8000:8000"
     depends_on:
       - mariadb
+      - mongo
+      - openldap
+      - collaborator
     environment:
       MARIADB_HOST: mariadb
       MARIADB_PORT: "3306"
@@ -20,11 +22,6 @@ services:
       LDAP_PORT: "389"
       LDAP_BIND_DN: cn=admin,dc=hunterassoc,dc=org
       LDAP_BIND_PASSWORD: seiyaku_pw
-
-  # --- Declared for later tasks; not required for the Task 0 smoke test. ---
-  # No route in this scaffold calls core/db.py yet, so flask has no
-  # depends_on here on purpose — later tasks that actually wire a challenge
-  # to one of these add both the depends_on and the seed mount.
 
   mariadb:
     image: mariadb:11
@@ -48,17 +45,33 @@ services:
   # OpenLDAP image choice: osixia/openldap:1.5.0. bitnami/openldap (the
   # image originally declared here) no longer resolves on any tag in this
   # environment (Bitnami has deprecated/moved its free-tier Docker Hub
-  # images) — osixia/openldap:1.5.0 is confirmed pullable and is a
-  # widely-used, well-documented image, so it replaces bitnami here.
+  # images), so osixia/openldap:1.5.0 replaces it: confirmed pullable and a
+  # widely-used, well-documented image.
   # Env vars are osixia's convention (LDAP_ORGANISATION/LDAP_DOMAIN/
   # LDAP_ADMIN_PASSWORD), not bitnami's (LDAP_ROOT/LDAP_ADMIN_USERNAME).
   # LDAP_DOMAIN=hunterassoc.org makes osixia derive the base DN
   # dc=hunterassoc,dc=org itself on first boot. Custom sub-tree seeding
-  # (zodiac.ldif) is loaded via osixia's LDAP_SEED_INTERNAL_LDIF_PATH:
-  # that env var names a mounted directory of *.ldif files which the
-  # image's startup script copies into its internal custom-bootstrap-ldif
-  # directory and applies once, on first boot of an empty data volume,
-  # right after it bootstraps the root suffix itself.
+  # (zodiac.ldif, omnigrid.ldif) is loaded via osixia's
+  # LDAP_SEED_INTERNAL_LDIF_PATH: that env var names a mounted directory of
+  # *.ldif files which the image's startup script copies into its internal
+  # custom-bootstrap-ldif directory and applies once, on first boot of an
+  # empty data volume, right after it bootstraps the root suffix itself.
+  #
+  # LDAP_REMOVE_CONFIG_AFTER_SETUP is set to "false" here to work around a
+  # real bug in this image: it defaults to "true", which deletes the whole
+  # assets/config directory tree (including the bootstrap/ldif parent
+  # directory) once first boot finishes. The image's own startup script
+  # unconditionally tries to re-copy LDAP_SEED_INTERNAL_LDIF_PATH into that
+  # same directory tree on every subsequent boot, regardless of whether
+  # first-boot setup already ran, so with the default "true" the container
+  # crashes on its second boot with "cp: cannot create directory ... No
+  # such file or directory" the moment anything restarts it, whether
+  # that's `docker compose restart openldap`, a host reboot, or a crash
+  # from an unrelated cause. "false" keeps that directory tree around so
+  # the redundant copy always has somewhere to land; it doesn't change
+  # what LDAP data actually loads, since the LDIF files themselves are
+  # only ever applied once, gated by the image's own separate first-start
+  # marker file.
   openldap:
     image: osixia/openldap:1.5.0
     environment:
@@ -67,6 +80,7 @@ services:
       LDAP_ADMIN_PASSWORD: seiyaku_pw
       LDAP_TLS: "false"
       LDAP_SEED_INTERNAL_LDIF_PATH: /ldifs
+      LDAP_REMOVE_CONFIG_AFTER_SETUP: "false"
     volumes:
       - openldap_data:/var/lib/ldap
       - openldap_config:/etc/ldap/slapd.d
@@ -75,7 +89,7 @@ services:
   # Out-of-band (OOB) collaborator: logs any HTTP request and any DNS
   # query it receives, in-memory, and exposes GET /captures (JSON) for the
   # portal to poll. Only needs to be reachable from other services on the
-  # internal compose network by its service name (`collaborator`) — not
+  # internal compose network by its service name (collaborator), not
   # published to the host. See docs/oob-spike.md for the emitter mechanism
   # that actually calls this service.
   collaborator:

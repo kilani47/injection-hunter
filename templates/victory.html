@@ -29,16 +29,26 @@
 
     {% if next_node %}
     <p class="text-bone/80 mb-4">Next floor unlocked: <span class="text-accent">{{ next_node.name }}</span></p>
-    <a href="{{ url_for('hub') }}"
-       class="ren-pulse inline-flex items-center rounded-lg bg-accent-20 border border-accent px-5 py-3 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
-      Continue the exam
-    </a>
+    <div class="flex flex-col items-center gap-3">
+      <a href="{{ url_for('phase', phase_id=next_node.phase) }}"
+         class="ren-pulse inline-flex items-center rounded-lg bg-accent-20 border border-accent px-5 py-3 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
+        {% if next_node.phase == node.phase %}Continue {{ next_node.phase_meta.label }}{% else %}Enter {{ next_node.phase_meta.label }}{% endif %}
+      </a>
+      <a href="{{ url_for('hub') }}" class="font-mono text-xs text-muted hover:text-accent transition-colors">
+        or back to the exam hall
+      </a>
+    </div>
     {% else %}
     <p class="text-bone/80 mb-4">Every floor cleared. The exam is over.</p>
-    <a href="{{ url_for('hub') }}"
-       class="inline-flex items-center rounded-lg bg-accent-20 border border-accent px-5 py-3 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
-      Back to the terminal
-    </a>
+    <div class="flex flex-col items-center gap-3">
+      <a href="{{ url_for('hub') }}"
+         class="inline-flex items-center rounded-lg bg-accent-20 border border-accent px-5 py-3 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
+        Back to the exam hall
+      </a>
+      <a href="{{ url_for('phase', phase_id=node.phase) }}" class="font-mono text-xs text-muted hover:text-accent transition-colors">
+        or revisit {{ phase_meta.label }}
+      </a>
+    </div>
     {% endif %}
   </div>
 </div>

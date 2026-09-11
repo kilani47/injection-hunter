@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Trick Tower Final Exam · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-finals{% endblock %}
+{% block phase_nav %}<a href="{{ url_for('phase', phase_id='finals') }}" class="hover:text-accent transition-colors">finals</a>{% endblock %}
 
 {% block content %}
 <div class="mb-8">

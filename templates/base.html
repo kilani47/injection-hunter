@@ -20,6 +20,11 @@
           seiyaku-arc <span class="text-muted">· applicant terminal</span>
         </a>
         <nav class="flex items-center gap-4 font-mono text-xs text-muted">
+          {# Challenge pages override this with a link back to their own
+             phase page, so there's always a way to see the phase's other
+             floors without needing to solve the current one first or hunt
+             for a link buried in page content. #}
+          {% block phase_nav %}{% endblock %}
           <a href="{{ url_for('hub') }}" class="hover:text-accent transition-colors">hub</a>
           <a href="{{ url_for('reset') }}" class="hover:text-accent transition-colors" title="Wipe your progress and start over">reset</a>
         </nav>
