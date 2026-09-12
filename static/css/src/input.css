@@ -372,6 +372,32 @@
     border: 2px solid var(--nen-accent);
     animation: burst 1.8s cubic-bezier(0.2, 0.8, 0.3, 1) infinite;
   }
+
+  /* Static concentric aura rings for the entrance fallback (no operator
+     key art supplied): crisp accent-colored borders with a box-shadow
+     glow, the same technique as the license-card and accent-rule, never
+     a gradient fill, so it holds up as a still frame (a screenshot, a
+     README gif) and not just mid-animation. */
+  .hero-rings::before,
+  .hero-rings::after {
+    content: "";
+    position: absolute;
+    inset: 50%;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in srgb, var(--nen-accent) 40%, transparent);
+    box-shadow: 0 0 40px 0 var(--nen-glow);
+  }
+  .hero-rings::before {
+    width: 24rem;
+    height: 24rem;
+    margin: -12rem 0 0 -12rem;
+  }
+  .hero-rings::after {
+    width: 38rem;
+    height: 38rem;
+    margin: -19rem 0 0 -19rem;
+    opacity: 0.55;
+  }
 }
 
 @layer utilities {

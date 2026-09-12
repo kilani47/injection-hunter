@@ -43,34 +43,31 @@ FLAGS: dict[str, str] = {
 
 # Per-phase Nen accent colours (see spec §6 / plan Global Constraints).
 # `order` fixes the phase sequence for the hub overview; `engine` and
-# `topic` feed the phase-page hero; `image` is the key-art splash filename
-# under static/img/ (None until art is supplied for that phase).
+# `topic` feed the phase-page hero. Key-art splash images aren't tracked
+# here: phase.html checks has_hero('phase' ~ phase.id) against the actual
+# file on disk (static/img/phase<id>.png), the same convention every
+# challenge template uses, so a missing file always falls back gracefully
+# instead of depending on a config flag staying in sync with reality.
 PHASE_META: dict[str, dict[str, Any]] = {
     "1": {"label": "The Written Exam", "nen": "Enhancement", "color": "#e5484d",
           "css_class": "nen-p1", "order": 1, "engine": "MariaDB",
-          "topic": "SQLi fundamentals + the four core techniques",
-          "image": "phase1.png"},
+          "topic": "SQLi fundamentals + the four core techniques"},
     "2": {"label": "Trick Tower", "nen": "Transmutation", "color": "#8b5cf6",
           "css_class": "nen-p2", "order": 2, "engine": "MariaDB",
-          "topic": "Testing methodology, SQLMap, header & CVE injection",
-          "image": None},
+          "topic": "Testing methodology, SQLMap, header & CVE injection"},
     "3": {"label": "Greed Island", "nen": "Specialization", "color": "#f5c518",
           "css_class": "nen-p3", "order": 3, "engine": "MariaDB + collaborator",
-          "topic": "Out-of-band and second-order SQLi",
-          "image": None},
+          "topic": "Out-of-band and second-order SQLi"},
     "4": {"label": "Hunter Association HQ", "nen": "Manipulation", "color": "#22c55e",
           "css_class": "nen-p4", "order": 4, "engine": "MongoDB + OpenLDAP",
-          "topic": "NoSQL and LDAP injection",
-          "image": None},
+          "topic": "NoSQL and LDAP injection"},
     "5": {"label": "Chimera Ant Palace", "nen": "Conjuration", "color": "#6366f1",
           "css_class": "nen-p5", "order": 5, "engine": "SQLAlchemy + lxml",
-          "topic": "ORM injection and XML / XXE",
-          "image": None},
+          "topic": "ORM injection and XML / XXE"},
     "finals": {"label": "The Exam Finals", "nen": "Emission", "color": "#22d3ee",
                "css_class": "nen-finals", "order": 6,
                "engine": "every engine at once",
-               "topic": "Two chained, multi-vuln final trials",
-               "image": None},
+               "topic": "Two chained, multi-vuln final trials"},
 }
 
 # Short, spoiler-free hooks per node: one line describing the floor's
