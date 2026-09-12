@@ -14,7 +14,7 @@
      and framing (e.g. phase1.png). Shown in full, never cropped. Checked
      against the actual file on disk (has_hero), not a config flag, so a
      missing image falls back gracefully instead of a broken <img>. #}
-  <div class="cine rounded-2xl overflow-hidden border border-white/10 mb-10">
+  <div class="cine splash-frame rounded-2xl overflow-hidden border border-white/10 mb-10">
     <img
       class="splash-art"
       src="{{ url_for('static', filename='img/phase' ~ phase.id ~ '.png') }}"

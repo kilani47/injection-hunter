@@ -276,6 +276,14 @@
     object-fit: cover;
     object-position: center 28%;
     z-index: -2;
+    /* Source art arrives at whatever brightness/saturation its own scene
+       called for (a few are bright daytime shots), but every other surface
+       on the site is a dark, desaturated crimson terminal. Without this,
+       a bright frame reads as a screenshot pasted in from somewhere else
+       rather than art that belongs to this UI. Grading every frame the
+       same way, rather than tuning each image by hand, is what makes them
+       read as one consistent site. */
+    filter: saturate(0.62) brightness(0.8) contrast(1.08);
   }
   /* Scrim tuned for text overlaid on cover art (entrance): dark floor that
      fades up into the image so the title + CTA stay legible. */
@@ -307,24 +315,43 @@
     background:
       linear-gradient(
         180deg,
-        rgba(10, 11, 16, 0.45) 0%,
-        rgba(10, 11, 16, 0.8) 40%,
-        rgba(10, 11, 16, 0.96) 85%
+        rgba(10, 11, 16, 0.62) 0%,
+        rgba(10, 11, 16, 0.85) 40%,
+        rgba(10, 11, 16, 0.97) 85%
       ),
-      radial-gradient(120% 60% at 50% 0%, transparent 25%, rgba(10, 11, 16, 0.4) 100%);
+      radial-gradient(120% 60% at 50% 0%, transparent 15%, rgba(10, 11, 16, 0.55) 100%);
   }
 
   /* A phase splash whose art already carries its own baked-in text
-     (phase1.png). Shown in full (contain), never cropped, with only a
-     bottom fade to blend into the floors list below it. */
+     (phase1.png). Shown in full (contain), never cropped, with a bottom
+     fade to blend into the floors list below it. Graded the same way as
+     the wallpaper art (.cine-img) so a bright, fully-saturated poster
+     doesn't sit like a screenshot pasted next to the site's own dark,
+     desaturated chrome; the wrapping .splash-frame adds a vignette on
+     top for the same reason. */
   .splash-art {
     display: block;
     width: 100%;
     height: auto;
     max-height: 78vh;
     object-fit: contain;
+    filter: saturate(0.62) brightness(0.8) contrast(1.08);
     -webkit-mask-image: linear-gradient(to bottom, #000 82%, transparent 100%);
     mask-image: linear-gradient(to bottom, #000 82%, transparent 100%);
+  }
+  .splash-frame {
+    position: relative;
+  }
+  .splash-frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      120% 100% at 50% 40%,
+      transparent 55%,
+      rgba(10, 11, 16, 0.55) 100%
+    );
   }
 
   /* Phase card on the hub: a taut accent-keyed tile that drills into its
