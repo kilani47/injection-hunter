@@ -7,6 +7,12 @@ every hero section that expects key art falls back to a plain themed panel
 when the file is missing. Nothing is downloaded by any build step, and
 none of the files below are committed to this repository.
 
+The one exception is `docs/hero.gif`: a short recording of the live site
+with this key art in place, committed deliberately by the maintainer so
+the README can show what the site looks like. See the NOTICE file's
+"Embedded demo GIF" section. The source images below stay git-ignored
+either way.
+
 If you (the operator, running this locally for your own use) want to add
 Hunter × Hunter art for the full visual experience, drop files at these
 paths. Each one is optional and independent: a missing file just falls
