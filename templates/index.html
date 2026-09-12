@@ -2,17 +2,31 @@
 {% block title %}The Seiyaku Arc: Hunter Exam{% endblock %}
 
 {% block main %}
-<main class="cine flex-1 flex items-end">
-  <img
-    class="cine-img"
-    src="{{ url_for('static', filename='img/entrance.png') }}"
-    alt="Applicants standing before the sealed gate of the Hunter Exam"
-    fetchpriority="high"
-    decoding="async"
-  >
-  <div class="cine-scrim"></div>
+<main class="relative flex-1 flex items-end {% if has_hero('entrance') %}cine{% endif %}">
+  {% if has_hero('entrance') %}
+    <img
+      class="cine-img"
+      src="{{ url_for('static', filename='img/entrance.png') }}"
+      alt="Applicants standing before the sealed gate of the Hunter Exam"
+      fetchpriority="high"
+      decoding="async"
+    >
+    <div class="cine-scrim"></div>
+  {% else %}
+    {# No operator-supplied key art: an original, static-friendly aura
+       treatment instead (concentric rings, the same crisp glow technique
+       as the license-card and accent-rule, never a gradient fill), with
+       the victory screen's burst-ring pulses layered on top for motion
+       on a live page. Holds up as a still frame too, not just mid-pulse. #}
+    <div class="hero-rings pointer-events-none absolute inset-0" aria-hidden="true"></div>
+    <div class="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
+      <div class="burst-ring"></div>
+      <div class="burst-ring" style="animation-delay: .6s;"></div>
+      <div class="burst-ring" style="animation-delay: 1.2s;"></div>
+    </div>
+  {% endif %}
 
-  <div class="mx-auto w-full max-w-5xl px-6 pb-16 pt-24">
+  <div class="relative mx-auto w-full max-w-5xl px-6 pb-16 pt-24">
     <p class="font-mono text-xs text-muted mb-4">hunter exam &middot; applicant registration</p>
     <h1 class="font-display text-5xl sm:text-7xl font-bold leading-[0.98] text-bone max-w-3xl"
         style="text-shadow: 0 2px 40px rgba(0,0,0,0.8);">

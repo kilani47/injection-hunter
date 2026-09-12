@@ -9,13 +9,15 @@
   {% if phase.id == 'finals' %}the finals{% else %}phase {{ phase.order }}{% endif %}
 </p>
 
-{% if phase.image %}
+{% if has_hero('phase' ~ phase.id) %}
   {# Key-art splash whose own composition already carries the phase title
-     and framing (e.g. phase1.png). Shown in full, never cropped. #}
+     and framing (e.g. phase1.png). Shown in full, never cropped. Checked
+     against the actual file on disk (has_hero), not a config flag, so a
+     missing image falls back gracefully instead of a broken <img>. #}
   <div class="cine rounded-2xl overflow-hidden border border-white/10 mb-10">
     <img
       class="splash-art"
-      src="{{ url_for('static', filename='img/' ~ phase.image) }}"
+      src="{{ url_for('static', filename='img/phase' ~ phase.id ~ '.png') }}"
       alt="{{ phase.label }}: {{ phase.nen }}"
       fetchpriority="high"
       decoding="async"
