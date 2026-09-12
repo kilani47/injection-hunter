@@ -2,6 +2,8 @@
 
 [![License: MIT](https://img.shields.io/badge/code%20license-MIT-blue.svg)](LICENSE)
 
+![The exam hall, entrance through the first floor of the Written Exam](docs/hero.gif)
+
 > *Every Nen ability is governed by a vow the caster wrote for themselves,
 > and every vow hides a loophole its author never saw.*
 
