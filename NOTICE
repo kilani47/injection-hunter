@@ -51,6 +51,19 @@ operator has chosen to add locally. It is:
   those frames, and (b) this disclaimer. Keeping the default (original
   animation, no gif) avoids the risk entirely.
 
+## Embedded demo GIF (residual risk, accepted by this repository)
+
+`docs/hero.gif`, referenced from `README.md`, is a short screen recording
+of the live site with the operator's own Hunter × Hunter key art in place
+(see `assets/README.md`), included so the README can show what the site
+actually looks like. Unlike the opt-in victory-media slot above, this file
+**is** committed and distributed by this repository: it is a deliberate,
+one-off exception made by the project's maintainer, not something a build
+step fetches or bundles automatically. The individual source images under
+`static/img/` remain git-ignored and are never committed; only this single
+recording is. Regenerating it is a manual, deliberate action, not part of
+any automated pipeline.
+
 ## Trademarks
 
 Any product names, logos, or brands referenced (Hunter × Hunter or

@@ -128,6 +128,12 @@ a file is a residual legal risk the operator accepts personally, not
 something this project's license covers or protects. Leaving the slot empty
 avoids that risk entirely and is the default state of a fresh clone.
 
+The one deliberate exception is `docs/hero.gif` above: a short recording of
+the live site with key art in place, committed by this project's own
+maintainer so the README can show what the site looks like. See NOTICE's
+"Embedded demo GIF" section for the same residual-risk reasoning applied to
+that one file.
+
 ## Ethics
 
 Authorized, local use only. Every vulnerable engine in this lab runs on your
