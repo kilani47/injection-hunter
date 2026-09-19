@@ -25,6 +25,17 @@
 -- VARCHAR(128)) deliberately mirrors `player_cards` (id, owner,
 -- inscription) so a 3-column UNION lines up cleanly.
 
+-- Per-challenge isolation: this challenge lives in its own database
+-- with its own restricted user, granted access to nothing else. From
+-- this challenge's injection point, other challenges' tables are not
+-- just unreferenced but invisible (information_schema is filtered by
+-- the connecting user's privileges) and cross-database reads are
+-- denied. core/db.py's mysql_conn('p3_cursed') connects as this user.
+CREATE DATABASE IF NOT EXISTS seiyaku_p3_cursed;
+CREATE USER IF NOT EXISTS 'svc_p3_cursed'@'%' IDENTIFIED BY 'p3_cursed_pw';
+GRANT SELECT, INSERT, DELETE ON seiyaku_p3_cursed.* TO 'svc_p3_cursed'@'%';
+USE seiyaku_p3_cursed;
+
 CREATE TABLE IF NOT EXISTS player_cards (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     owner       VARCHAR(64)  NOT NULL,

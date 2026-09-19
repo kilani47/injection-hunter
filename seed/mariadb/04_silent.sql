@@ -17,6 +17,17 @@
 -- 1),N,1)='x'-- -`) and reading the resulting PASS/FAIL bit back, never
 -- by any query this app's own code path can construct on its own.
 
+-- Per-challenge isolation: this challenge lives in its own database
+-- with its own restricted user, granted access to nothing else. From
+-- this challenge's injection point, other challenges' tables are not
+-- just unreferenced but invisible (information_schema is filtered by
+-- the connecting user's privileges) and cross-database reads are
+-- denied. core/db.py's mysql_conn('p1_silent') connects as this user.
+CREATE DATABASE IF NOT EXISTS seiyaku_p1_silent;
+CREATE USER IF NOT EXISTS 'svc_p1_silent'@'%' IDENTIFIED BY 'p1_silent_pw';
+GRANT SELECT ON seiyaku_p1_silent.* TO 'svc_p1_silent'@'%';
+USE seiyaku_p1_silent;
+
 CREATE TABLE IF NOT EXISTS door (
     id   INT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(64) NOT NULL UNIQUE

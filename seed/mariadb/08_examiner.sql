@@ -23,6 +23,17 @@
 -- header injection into a UNION SELECT against it, never through
 -- anything the visible check-in form submits.
 
+-- Per-challenge isolation: this challenge lives in its own database
+-- with its own restricted user, granted access to nothing else. From
+-- this challenge's injection point, other challenges' tables are not
+-- just unreferenced but invisible (information_schema is filtered by
+-- the connecting user's privileges) and cross-database reads are
+-- denied. core/db.py's mysql_conn('p2_examiner') connects as this user.
+CREATE DATABASE IF NOT EXISTS seiyaku_p2_examiner;
+CREATE USER IF NOT EXISTS 'svc_p2_examiner'@'%' IDENTIFIED BY 'p2_examiner_pw';
+GRANT SELECT, INSERT ON seiyaku_p2_examiner.* TO 'svc_p2_examiner'@'%';
+USE seiyaku_p2_examiner;
+
 CREATE TABLE IF NOT EXISTS examiners (
     id       INT PRIMARY KEY,
     badge_id VARCHAR(32) NOT NULL,

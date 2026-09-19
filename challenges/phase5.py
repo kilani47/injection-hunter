@@ -71,9 +71,14 @@ def _get_session():
     if _SessionLocal is None:
         host = os.environ.get("MARIADB_HOST", "mariadb")
         port = os.environ.get("MARIADB_PORT", "3306")
-        user = os.environ.get("MARIADB_USER", "seiyaku")
-        password = os.environ.get("MARIADB_PASSWORD", "seiyaku_pw")
-        database = os.environ.get("MARIADB_DATABASE", "seiyaku")
+        # This floor's own isolated database + restricted user, the same
+        # per-challenge convention core/db.py's mysql_conn() follows and
+        # that seed/mariadb/11_firewall.sql creates. The user's grants are
+        # confined to seiyaku_p5_firewall, so even the ORM's raw-SQL escape
+        # hatch can't reach another challenge's tables or flags.
+        user = "svc_p5_firewall"
+        password = "p5_firewall_pw"
+        database = "seiyaku_p5_firewall"
         engine = create_engine(
             f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
         )
@@ -212,7 +217,7 @@ def _lookup_clearance(level: str | None) -> dict | None:
     earlier phase's seed data."""
     if not level:
         return None
-    conn = mysql_conn()
+    conn = mysql_conn("p5_blueprint")
     try:
         with conn.cursor() as cur:
             cur.execute(

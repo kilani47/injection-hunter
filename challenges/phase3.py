@@ -82,7 +82,7 @@ def p3_spellcard():
 
     if card:
         value = None
-        conn = mysql_conn()
+        conn = mysql_conn("p3_spellcard")
         try:
             with conn.cursor() as cur:
                 # VULN: string concat, raw query param spliced directly
@@ -200,7 +200,7 @@ def p3_cursedcard():
     """The Cursed Card console: shows the current deck and the inscribe
     form. No query on this route ever touches request-supplied data,
     it's a plain, safe listing."""
-    conn = mysql_conn()
+    conn = mysql_conn("p3_cursed")
     try:
         with conn.cursor() as cur:
             cards = _fetch_player_cards(cur)
@@ -227,7 +227,7 @@ def p3_cursedcard_inscribe():
     owner = request.form.get("owner", "").strip() or "anonymous"
     inscription = request.form.get("inscription", "")
 
-    conn = mysql_conn()
+    conn = mysql_conn("p3_cursed")
     try:
         with conn.cursor() as cur:
             # SAFE: parameterized insert. `inscription` (and `owner`) are
@@ -255,7 +255,7 @@ def p3_cursedcard_report():
     takes no input from the request at all, every value it acts on was
     already sitting in `player_cards` before this request began.
     """
-    conn = mysql_conn()
+    conn = mysql_conn("p3_cursed")
     report_rows: list[dict] = []
     report_error = None
     latest = None
@@ -308,12 +308,15 @@ def p3_cursedcard_report():
 
 @bp.route("/p3/cursedcard/reset", methods=["GET"])
 def p3_cursedcard_reset():
-    """Truncate `player_cards` back to its two clean seeded rows, so this
-    lesson can be replayed without restarting the whole stack."""
-    conn = mysql_conn()
+    """Clear `player_cards` back to its two clean seeded rows, so this
+    lesson can be replayed without restarting the whole stack. Uses DELETE
+    rather than TRUNCATE so this challenge's restricted DB user needs only
+    DML grants (no DROP privilege, which TRUNCATE requires) on its own
+    isolated database."""
+    conn = mysql_conn("p3_cursed")
     try:
         with conn.cursor() as cur:
-            cur.execute("TRUNCATE TABLE player_cards")
+            cur.execute("DELETE FROM player_cards")
             cur.executemany(
                 "INSERT INTO player_cards (owner, inscription) VALUES (%s, %s)",
                 _CURSED_SEED_ROWS,

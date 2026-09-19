@@ -19,6 +19,17 @@
 -- takes to come back, never by any query this app's own code path can
 -- construct on its own, and never visible anywhere in the rendered page.
 
+-- Per-challenge isolation: this challenge lives in its own database
+-- with its own restricted user, granted access to nothing else. From
+-- this challenge's injection point, other challenges' tables are not
+-- just unreferenced but invisible (information_schema is filtered by
+-- the connecting user's privileges) and cross-database reads are
+-- denied. core/db.py's mysql_conn('p1_medbay') connects as this user.
+CREATE DATABASE IF NOT EXISTS seiyaku_p1_medbay;
+CREATE USER IF NOT EXISTS 'svc_p1_medbay'@'%' IDENTIFIED BY 'p1_medbay_pw';
+GRANT SELECT ON seiyaku_p1_medbay.* TO 'svc_p1_medbay'@'%';
+USE seiyaku_p1_medbay;
+
 CREATE TABLE IF NOT EXISTS patients (
     id     VARCHAR(64) PRIMARY KEY,
     status VARCHAR(64) NOT NULL

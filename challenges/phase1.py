@@ -51,7 +51,7 @@ def p1_gate():
         p = request.form.get("password", "")
         submitted_user = u
 
-        conn = mysql_conn()
+        conn = mysql_conn("p1_gate")
         try:
             with conn.cursor() as cur:
                 # VULN: string concat, raw user input spliced directly into
@@ -100,7 +100,7 @@ def p1_recipe():
     error = None
 
     if recipe_id:
-        conn = mysql_conn()
+        conn = mysql_conn("p1_recipe")
         try:
             with conn.cursor() as cur:
                 # VULN: string concat, raw query param spliced directly
@@ -150,7 +150,7 @@ def p1_results():
     error = None
 
     if q:
-        conn = mysql_conn()
+        conn = mysql_conn("p1_results")
         try:
             with conn.cursor() as cur:
                 # VULN: string concat, raw query param spliced directly
@@ -203,7 +203,7 @@ def p1_silent():
     result = None  # None: no code submitted yet. True: PASS. False: FAIL.
 
     if code is not None:
-        conn = mysql_conn()
+        conn = mysql_conn("p1_silent")
         try:
             with conn.cursor() as cur:
                 # VULN: string concat, raw query param spliced directly
@@ -255,7 +255,7 @@ def p1_medbay():
     checked = False
 
     if patient_id is not None:
-        conn = mysql_conn()
+        conn = mysql_conn("p1_medbay")
         try:
             with conn.cursor() as cur:
                 # VULN: string concat, raw query param spliced directly

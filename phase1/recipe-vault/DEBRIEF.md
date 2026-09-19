@@ -77,54 +77,34 @@ Your own literal string came back inside the DBMS's own error. `0x7e`
 is just a hex literal for `~`, a visible marker so the leaked value is
 easy to spot in the text; it carries no special meaning to MariaDB.
 
-**3. Don't assume the table name, find it.** Nothing so far has named
-`vault`, and nothing so far requires reading the app's source either.
-Two column names are already sitting in plain view, from things anyone
-testing this black-box would already have looked at:
-
-- A completely ordinary, non-malicious lookup, `/p1/recipe?id=1`, no
-  injection involved at all, renders `name> Roasted Nen Beast Stew`.
-  The app's own UI labels that field `name` for you.
-- `CHALLENGER.md`'s objective line names `secret` as the field being
-  chased: "Read the vault's hidden `secret` field."
-
-That's it, that's the whole basis for the next query: not a guess, not
-a peek at `challenges/phase1.py`, just two labels the app and the
-briefing already handed over. MariaDB's own `information_schema` can
-now answer "which table has both":
+**3. Don't assume the table name, ask the database for it.** Nothing so
+far has named `vault`, and nothing so far requires reading the app's
+source. Each challenge in this lab runs in its **own isolated database**
+(see the "Isolation" note below), and the connecting user can only see
+that one database's tables. So the simplest possible enumeration just
+works, list the tables in your current database:
 
 ```
-id=1' AND extractvalue(1,concat(0x7e,(SELECT c1.table_name
-    FROM information_schema.columns c1
-    WHERE c1.table_schema=database() AND c1.column_name='secret'
-    AND EXISTS (SELECT 1 FROM information_schema.columns c2
-                WHERE c2.table_schema=c1.table_schema
-                AND c2.table_name=c1.table_name
-                AND c2.column_name='name')
-    LIMIT 1)))-- -
+id=1' AND extractvalue(1,concat(0x7e,(SELECT group_concat(table_name)
+    FROM information_schema.tables WHERE table_schema=database())))-- -
 ```
 
 ```
 (1105, "XPATH syntax error: '~vault'")
 ```
 
-Two things worth calling out about this step:
+That is the whole answer: this floor's database contains exactly one
+table, `vault`, and no other challenge's tables are even visible to this
+connection, so the result comes back short and unambiguous. There's
+nothing to guess and nothing to sift through.
 
-- Filtering on `column_name='secret'` alone is **not** enough. This
-  MariaDB instance is one shared schema across every phase of the whole
-  arc, `records`, `keeper`, `sealed_cards`, `examiner_vault`, and others
-  all have their own `secret` column too. The `name`+`secret` combination
-  is what actually narrows it down to this floor's table, matching the
-  two labels step 3 actually observed (the rendered `name>` field and
-  the briefing's `secret`), not a guess at either one.
-- A cruder first instinct, dumping every table name in the schema via
-  `group_concat(table_name)`, genuinely doesn't work here: the result is
-  long enough (dozens of tables across 18 floors) that it blows straight
-  through `extractvalue()`'s ~32-character truncation before you ever
-  see something recognizable. The targeted, column-shape-aware query
-  above is the one that actually fits in that window.
+(On a single shared schema this would be much messier, `group_concat`
+of every table across all 18 floors would overrun `extractvalue()`'s
+~32-character truncation, and a `secret` column would show up in a dozen
+different tables. The per-challenge isolation is exactly what keeps this
+step clean; see the Isolation note at the end.)
 
-**4. Now extract the secret**, from the table this step actually found:
+**4. Now extract the secret**, from the table step 3 just discovered:
 
 ```
 1' AND extractvalue(1,concat(0x7e,(SELECT secret FROM vault LIMIT 1)))-- -
@@ -188,3 +168,26 @@ gave up the secret in the recoil.
   `SELECT` the `name` column it needs (column-level grants, or a view
   that never exposes `secret`) limits what even a successful injection
   can reach.
+
+## Isolation (why step 3 was so clean)
+
+Every MariaDB-backed challenge in this lab runs in its **own database**
+(`seiyaku_p1_recipe` here) and connects as its **own restricted user**
+(`svc_p1_recipe`), granted access to nothing but that one database.
+This is a deliberate design choice, and it's what keeps a challenge's
+injection point from leaking anything beyond that challenge:
+
+- `information_schema` is filtered by the connecting user's privileges,
+  so from inside this floor you can only see this floor's own tables.
+  Other challenges' tables (and their flags) are not merely
+  unreferenced, they're invisible.
+- Cross-database reads (`SELECT ... FROM seiyaku_p1_gate.applicants`) are
+  denied outright, as is `USE`-ing another challenge's database.
+
+That's why step 3's table enumeration returned a single clean answer.
+It also means a solver never has to wonder whether they pulled *this*
+floor's flag or accidentally wandered into another one, the database
+account they're injecting through simply cannot reach anywhere else.
+The tradeoff is that this floor no longer doubles as a lesson in
+cross-schema enumeration; that technique belongs in an environment
+that genuinely shares one schema, which this lab intentionally does not.

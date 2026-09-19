@@ -69,7 +69,7 @@ def p2_floors():
     rows = None
     error = None
 
-    conn = mysql_conn()
+    conn = mysql_conn("p2_floors")
     try:
         with conn.cursor() as cur:
             if floor_id:
@@ -139,7 +139,7 @@ def p2_sealed():
     pages = None
     error = None
 
-    conn = mysql_conn()
+    conn = mysql_conn("p2_sealed")
     try:
         with conn.cursor() as cur:
             if page == "news":
@@ -217,7 +217,7 @@ def p2_examiner():
 
     user_agent = request.headers.get("User-Agent", "")
 
-    conn = mysql_conn()
+    conn = mysql_conn("p2_examiner")
     try:
         with conn.cursor() as cur:
             # --- visible surface: badge lookup, fully parameterized. This

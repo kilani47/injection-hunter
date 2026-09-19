@@ -21,6 +21,17 @@
 -- remembered was still sitting in the same database, reachable only by
 -- riding the `id` injection into a UNION SELECT / subquery against it.
 
+-- Per-challenge isolation: this challenge lives in its own database
+-- with its own restricted user, granted access to nothing else. From
+-- this challenge's injection point, other challenges' tables are not
+-- just unreferenced but invisible (information_schema is filtered by
+-- the connecting user's privileges) and cross-database reads are
+-- denied. core/db.py's mysql_conn('p2_sealed') connects as this user.
+CREATE DATABASE IF NOT EXISTS seiyaku_p2_sealed;
+CREATE USER IF NOT EXISTS 'svc_p2_sealed'@'%' IDENTIFIED BY 'p2_sealed_pw';
+GRANT SELECT ON seiyaku_p2_sealed.* TO 'svc_p2_sealed'@'%';
+USE seiyaku_p2_sealed;
+
 CREATE TABLE IF NOT EXISTS cms_pages (
     id    INT PRIMARY KEY,
     slug  VARCHAR(32)  NOT NULL,

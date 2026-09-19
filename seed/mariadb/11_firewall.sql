@@ -15,6 +15,17 @@
 -- purpose (notes §10 is about SQLi through the ORM, not password storage)
 -- and are never displayed by the app regardless of which account is used.
 
+-- Per-challenge isolation: this challenge lives in its own database
+-- with its own restricted user, granted access to nothing else. From
+-- this challenge's injection point, other challenges' tables are not
+-- just unreferenced but invisible (information_schema is filtered by
+-- the connecting user's privileges) and cross-database reads are
+-- denied. core/db.py's mysql_conn('p5_firewall') connects as this user.
+CREATE DATABASE IF NOT EXISTS seiyaku_p5_firewall;
+CREATE USER IF NOT EXISTS 'svc_p5_firewall'@'%' IDENTIFIED BY 'p5_firewall_pw';
+GRANT SELECT ON seiyaku_p5_firewall.* TO 'svc_p5_firewall'@'%';
+USE seiyaku_p5_firewall;
+
 CREATE TABLE IF NOT EXISTS firewall_users (
     id       INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(64)  NOT NULL,

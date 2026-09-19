@@ -20,6 +20,17 @@
 -- its own. Its single "true" row is styled as Greed Island's own
 -- in-universe forbidden card, matching this floor's flavor text.
 
+-- Per-challenge isolation: this challenge lives in its own database
+-- with its own restricted user, granted access to nothing else. From
+-- this challenge's injection point, other challenges' tables are not
+-- just unreferenced but invisible (information_schema is filtered by
+-- the connecting user's privileges) and cross-database reads are
+-- denied. core/db.py's mysql_conn('p3_spellcard') connects as this user.
+CREATE DATABASE IF NOT EXISTS seiyaku_p3_spellcard;
+CREATE USER IF NOT EXISTS 'svc_p3_spellcard'@'%' IDENTIFIED BY 'p3_spellcard_pw';
+GRANT SELECT ON seiyaku_p3_spellcard.* TO 'svc_p3_spellcard'@'%';
+USE seiyaku_p3_spellcard;
+
 CREATE TABLE IF NOT EXISTS cards (
     id     VARCHAR(32)  PRIMARY KEY,
     name   VARCHAR(64)  NOT NULL,

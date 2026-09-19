@@ -42,7 +42,7 @@ def _stage_key(stage: int) -> str:
     genuinely safe, fully parameterized query, this lookup is never the
     vulnerable half of any stage. Used only to gate whether a stage's own
     vulnerable query runs at all, never exposed directly to a caller."""
-    conn = mysql_conn()
+    conn = mysql_conn("f1_bookhaven")
     try:
         with conn.cursor() as cur:
             cur.execute(
@@ -75,7 +75,7 @@ def f1_stage1():
     error = None
 
     if lookup_id:
-        conn = mysql_conn()
+        conn = mysql_conn("f1_bookhaven")
         try:
             with conn.cursor() as cur:
                 # VULN: string concat, raw error text echoed, identical
@@ -112,7 +112,7 @@ def f1_stage2():
     unlocked = bool(token) and token == _stage_key(1)
 
     if unlocked and q:
-        conn = mysql_conn()
+        conn = mysql_conn("f1_bookhaven")
         try:
             with conn.cursor() as cur:
                 # VULN: string concat, 3-column result set rendered
@@ -152,7 +152,7 @@ def f1_stage3():
     result = None
 
     if unlocked and code is not None:
-        conn = mysql_conn()
+        conn = mysql_conn("f1_bookhaven")
         try:
             with conn.cursor() as cur:
                 # VULN: string concat, PASS/FAIL-only response, identical
@@ -188,7 +188,7 @@ def f1_stage4():
     checked = False
 
     if unlocked and lookup_id is not None:
-        conn = mysql_conn()
+        conn = mysql_conn("f1_bookhaven")
         try:
             with conn.cursor() as cur:
                 # VULN: string concat, result discarded, identical response
@@ -255,7 +255,7 @@ def f2_onboarding():
     error = None
 
     if lookup_id:
-        conn = mysql_conn()
+        conn = mysql_conn("f2_omnigrid")
         try:
             with conn.cursor() as cur:
                 # VULN: string concat, raw error text echoed, identical
@@ -283,7 +283,7 @@ def f2_onboarding():
 def _true_onboarding_fragment() -> str:
     """The Onboarding faction's real fragment, fetched with a genuinely
     safe, fully parameterized query, never the vulnerable half."""
-    conn = mysql_conn()
+    conn = mysql_conn("f2_omnigrid")
     try:
         with conn.cursor() as cur:
             cur.execute(
@@ -507,7 +507,7 @@ def _chairman_flag() -> str:
     already confirmed all four faction fragments genuinely matched. Never
     hardcoded in this module: like every other node in this arc, the flag
     lives entirely in seeded backend data, not in application code."""
-    conn = mysql_conn()
+    conn = mysql_conn("f2_omnigrid")
     try:
         with conn.cursor() as cur:
             cur.execute(
