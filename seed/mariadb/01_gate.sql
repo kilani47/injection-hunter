@@ -1,4 +1,4 @@
--- seed/mariadb/01_gate.sql — Task 1.1 "Gate of Trust" seed data.
+-- seed/mariadb/01_gate.sql: Task 1.1 "Gate of Trust" seed data.
 --
 -- Mounted read-only into /docker-entrypoint-initdb.d/ (see docker-compose.yml,
 -- mariadb service). MariaDB's entrypoint runs every *.sql file in that
@@ -7,7 +7,7 @@
 --
 -- `applicants` backs the Written Exam's login gate (challenges/phase1.py,
 -- route /p1/gate). The admin row's `secret` column holds this challenge's
--- flag — the vulnerable route reveals it once the attacker authenticates
+-- flag: the vulnerable route reveals it once the attacker authenticates
 -- as that row via SQL injection, without ever knowing its real password.
 
 CREATE TABLE IF NOT EXISTS applicants (

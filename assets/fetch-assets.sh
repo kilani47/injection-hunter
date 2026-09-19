@@ -4,7 +4,7 @@
 # OPTIONAL, author-run script. Populates the victory-gif asset slot
 # (static/img/victory/<node-id>.gif) described in assets/README.md.
 #
-# This script is NEVER run automatically by the build, Dockerfile, or CI —
+# This script is NEVER run automatically by the build, Dockerfile, or CI,
 # it ships with placeholder URLs only, and does nothing useful until you
 # (the operator) edit the URL_* variables below to point at media you
 # personally have the rights to use, or knowingly accept the residual risk
@@ -17,7 +17,7 @@ DEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/static/img/victory"
 mkdir -p "$DEST_DIR"
 
 # --------------------------------------------------------------------------
-# Fill these in yourself. Leave a slot commented out / blank to skip it —
+# Fill these in yourself. Leave a slot commented out / blank to skip it,
 # templates/victory.html falls back to the original CSS burst animation for
 # any node with no file present.
 # --------------------------------------------------------------------------
@@ -43,7 +43,7 @@ declare -A URLS=(
 )
 
 if [ "${#URLS[@]}" -eq 0 ]; then
-  echo "assets/fetch-assets.sh: no URLs configured — edit the URLS map in this" >&2
+  echo "assets/fetch-assets.sh: no URLs configured, edit the URLS map in this" >&2
   echo "script with your own author-supplied links first. Nothing to do." >&2
   exit 0
 fi

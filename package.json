@@ -2,7 +2,7 @@
   "name": "seiyaku-arc-css",
   "private": true,
   "version": "1.0.0",
-  "description": "Tailwind build for the Seiyaku Arc Nen aura design system. Not shipped to the Flask container — static/css/nen.css is the committed build output.",
+  "description": "Tailwind build for the Seiyaku Arc Nen aura design system. Not shipped to the Flask container; static/css/nen.css is the committed build output.",
   "scripts": {
     "build": "tailwindcss -i ./static/css/src/input.css -o ./static/css/nen.css --minify",
     "watch": "tailwindcss -i ./static/css/src/input.css -o ./static/css/nen.css --watch"

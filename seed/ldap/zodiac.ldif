@@ -1,4 +1,4 @@
-# seed/ldap/zodiac.ldif — Lesson-Group 4 "Zodiac Committee" directory seed.
+# seed/ldap/zodiac.ldif: Lesson-Group 4 "Zodiac Committee" directory seed.
 #
 # Loaded once, on first boot of an EMPTY openldap data volume, by
 # osixia/openldap's internal-seed mechanism (see docker-compose.yml,
@@ -6,17 +6,17 @@
 # container, which copies it into the image's custom-bootstrap-ldif
 # directory and applies every *.ldif file there before slapd's first
 # start). The root suffix dc=hunterassoc,dc=org and its admin entry are
-# created by the image itself from LDAP_DOMAIN/LDAP_ADMIN_PASSWORD — this
+# created by the image itself from LDAP_DOMAIN/LDAP_ADMIN_PASSWORD; this
 # file only adds the sub-tree under it.
 #
 # Structure:
-#   ou=zodiac,dc=hunterassoc,dc=org        — organizational unit
-#     uid=<animal>,ou=zodiac,...            — twelve committee-member
+#   ou=zodiac,dc=hunterassoc,dc=org        : organizational unit
+#     uid=<animal>,ou=zodiac,...            : twelve committee-member
 #                                              entries, codenamed after the
 #                                              twelve traditional zodiac
-#                                              animals (fake names/titles —
+#                                              animals (fake names/titles,
 #                                              no real persons)
-#     uid=chairman,ou=zodiac,...            — one additional entry whose
+#     uid=chairman,ou=zodiac,...            : one additional entry whose
 #                                              `description` holds a
 #                                              placeholder secret string;
 #                                              a later lesson task swaps
@@ -24,7 +24,7 @@
 #
 # Later NoSQL/LDAP-injection lesson tasks (4.1+) should target this DIT via
 # `ldapsearch -b dc=hunterassoc,dc=org` / an LDAP filter built from this
-# tree — the OU and attribute names here (`ou`, `uid`, `cn`, `title`,
+# tree; the OU and attribute names here (`ou`, `uid`, `cn`, `title`,
 # `description`) are the stable surface for that lesson's filter-injection
 # payloads.
 

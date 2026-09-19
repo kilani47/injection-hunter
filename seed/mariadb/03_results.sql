@@ -1,4 +1,4 @@
--- seed/mariadb/03_results.sql — Task 1.3 "Exam Results Board" seed data.
+-- seed/mariadb/03_results.sql: Task 1.3 "Exam Results Board" seed data.
 --
 -- Mounted alongside 01_gate.sql/02_recipe.sql (see docker-compose.yml,
 -- mariadb service); MariaDB's entrypoint runs every *.sql file here in
@@ -6,13 +6,13 @@
 -- after the Recipe Vault's seed.
 --
 -- `results` backs the public results-board search (challenges/phase1.py,
--- route /p1/results). It has exactly 3 columns — id, name, score — which
+-- route /p1/results). It has exactly 3 columns (id, name, score), which
 -- matters: the sink's query is `SELECT id,name,score FROM results WHERE
 -- name LIKE '%{q}%'`, and a UNION SELECT can only splice onto that result
 -- set if it supplies the same column count.
 --
 -- `staff` is a second, unrelated table that an ordinary results search
--- never touches — no legitimate code path in this floor ever SELECTs from
+-- never touches: no legitimate code path in this floor ever SELECTs from
 -- it. It only becomes reachable once an attacker appends their own UNION
 -- SELECT onto the board's query, matching its 3-column shape. This
 -- floor's flag lives in `staff.password`.
