@@ -1,4 +1,4 @@
--- seed/mariadb/07_sealed.sql — Task 2.2 "A Sealed Floor" seed data.
+-- seed/mariadb/07_sealed.sql: Task 2.2 "A Sealed Floor" seed data.
 --
 -- Mounted alongside 01_gate.sql..06_floors.sql (see docker-compose.yml,
 -- mariadb service); MariaDB's entrypoint runs every *.sql file here in
@@ -8,16 +8,16 @@
 -- This floor models the class of bug behind CVE-2015-3933 (GeniX CMS): an
 -- old, unauthenticated content-management module nobody has touched since
 -- it was first wired up, addressed by a `page` selector plus a record
--- `id` — the kind of dated URL shape (`?page=news&id=1`) that was
+-- `id`, the kind of dated URL shape (`?page=news&id=1`) that was
 -- completely ordinary to write a decade-plus ago, and that nobody came
 -- back to patch once parameterized queries became the obvious default.
 --
 -- `cms_pages` holds the module's static informational content (About,
--- Contact) — never touched by the injectable code path at all.
+-- Contact), never touched by the injectable code path at all.
 -- `cms_news` is the module the vulnerable route actually queries: a news
 -- listing, looked up by a bare, unquoted numeric `id`, exactly like the
 -- catalog in 06_floors.sql. `cms_admin` is a *third*, unrelated table this
--- CMS module's own code never queries — the old admin login table nobody
+-- CMS module's own code never queries: the old admin login table nobody
 -- remembered was still sitting in the same database, reachable only by
 -- riding the `id` injection into a UNION SELECT / subquery against it.
 
@@ -49,7 +49,7 @@ INSERT INTO cms_news (id, title, body, author) VALUES
     (3, 'Maintenance Window',
      'The bulletin board will be briefly unreachable during the next scheduled maintenance window.', 'tower-staff');
 
--- The old admin login this module was originally built with — the account
+-- The old admin login this module was originally built with: the account
 -- and its password were carried straight over from the original install,
 -- unrotated, in a table this news module's legitimate query never joins
 -- against or selects from.

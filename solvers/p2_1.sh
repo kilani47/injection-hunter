@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# solvers/p2_1.sh — Task 2.1 "Automated Floor Skip" canonical exploit.
+# solvers/p2_1.sh, Task 2.1 "Automated Floor Skip" canonical exploit.
 #
 # Unlike every Phase 1 floor (solved by hand-crafting one payload), this
 # floor's whole point is the sqlmap workflow itself: the numeric `id` param
 # on /p2/floors is spliced unescaped into the query with no quoting at all,
 # so it's injectable via boolean-blind, error-based, UNION, and time-based
-# techniques all at once — sqlmap's default detection finds it with zero
+# techniques all at once; sqlmap's default detection finds it with zero
 # special tuning. This script saves a raw HTTP request to a file and drives
 # sqlmap exactly the way an operator would: point it at the request, let it
 # confirm the injection, enumerate down to the hidden `vault_floors` table,
-# and dump it — then grep sqlmap's own dump output for the flag.
+# and dump it, then grep sqlmap's own dump output for the flag.
 set -uo pipefail
 
 BASE="${SEIYAKU_BASE:-http://localhost:8000}"
@@ -41,7 +41,7 @@ sed 's/^/  | /' "$REQ"
 echo "[p2_1] running: sqlmap -r req.txt -p id --batch --dump -T vault_floors"
 # --ignore-stdin: this script's own stdin isn't an interactive terminal, and
 # without this flag sqlmap treats a non-tty stdin as a *second* target-list
-# source (piped URLs) and races it against -r's request file — under a
+# source (piped URLs) and races it against -r's request file, under a
 # closed/non-tty stdin that source hits EOF instantly and sqlmap exits
 # having never actually scanned anything. -r plus --batch alone is not
 # enough in that environment; --ignore-stdin makes -r the sole target

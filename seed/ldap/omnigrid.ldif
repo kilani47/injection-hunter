@@ -1,19 +1,19 @@
-# seed/ldap/omnigrid.ldif — Task F.2 "Chairman Election Infiltration"
-# (OmniGrid) seed data — the Directory faction's OpenLDAP system.
+# seed/ldap/omnigrid.ldif: Task F.2 "Chairman Election Infiltration"
+# (OmniGrid) seed data, the Directory faction's OpenLDAP system.
 #
 # Loaded once, on first boot of an EMPTY openldap data volume, alongside
 # seed/ldap/zodiac.ldif (see docker-compose.yml, openldap service:
 # LDAP_SEED_INTERNAL_LDIF_PATH mounts seed/ldap/ into the container, which
 # applies every *.ldif file there before slapd's first start). This file
-# adds a second, independent sub-tree under the same root suffix — it
+# adds a second, independent sub-tree under the same root suffix; it
 # doesn't reference or depend on zodiac.ldif's tree at all, so load order
 # between the two doesn't matter.
 #
 # Structure:
-#   ou=omnigrid,dc=hunterassoc,dc=org        — organizational unit
-#     uid=onboarding-svc,ou=omnigrid,...      — ordinary service entry
-#     uid=mobile-svc,ou=omnigrid,...          — ordinary service entry
-#     uid=directory-svc,ou=omnigrid,...       — the entry whose
+#   ou=omnigrid,dc=hunterassoc,dc=org        : organizational unit
+#     uid=onboarding-svc,ou=omnigrid,...      : ordinary service entry
+#     uid=mobile-svc,ou=omnigrid,...          : ordinary service entry
+#     uid=directory-svc,ou=omnigrid,...       : the entry whose
 #                                                `description` holds this
 #                                                faction's fragment of the
 #                                                Chairman seat's key
@@ -26,7 +26,7 @@
 dn: ou=omnigrid,dc=hunterassoc,dc=org
 objectClass: organizationalUnit
 ou: omnigrid
-description: OmniGrid Directory Service — Chairman Election Infrastructure
+description: OmniGrid Directory Service, Chairman Election Infrastructure
 
 dn: uid=onboarding-svc,ou=omnigrid,dc=hunterassoc,dc=org
 objectClass: inetOrgPerson

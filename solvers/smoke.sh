@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# solvers/smoke.sh — Task 0 scaffold smoke test.
+# solvers/smoke.sh, Task 0 scaffold smoke test.
 # Verifies the portal is up and the hub renders before any challenge exists.
 set -uo pipefail
 

@@ -1,4 +1,4 @@
--- seed/mariadb/08_examiner.sql — Task 2.3 "The Disguised Examiner" seed data.
+-- seed/mariadb/08_examiner.sql: Task 2.3 "The Disguised Examiner" seed data.
 --
 -- Mounted alongside 01_gate.sql..07_sealed.sql (see docker-compose.yml,
 -- mariadb service); MariaDB's entrypoint runs every *.sql file here in
@@ -7,20 +7,20 @@
 --
 -- This floor's whole point is that the obvious input isn't the real one.
 -- `examiners` backs the visible check-in form (challenges/phase2.py, route
--- /p2/examiner) — a badge-id lookup, looked up with a genuinely
+-- /p2/examiner), a badge-id lookup, looked up with a genuinely
 -- parameterized query. There is nothing to inject there; it's a red
 -- herring, on purpose.
 --
 -- `visitor_log` backs the *hidden* channel: every single visit is logged
 -- by this request's `User-Agent` header, then immediately queried back to
 -- render a "recent check-ins from this device" panel. That second query
--- is the one built with raw string concatenation of the header value —
+-- is the one built with raw string concatenation of the header value:
 -- the actual injection point this floor is built around.
 --
 -- `examiner_vault` is a third, unrelated table this route's own queries
 -- never touch on their own. It holds this floor's flag in
 -- `examiner_vault.secret`, reachable only by riding the `User-Agent`
--- header injection into a UNION SELECT against it — never through
+-- header injection into a UNION SELECT against it, never through
 -- anything the visible check-in form submits.
 
 CREATE TABLE IF NOT EXISTS examiners (
@@ -47,7 +47,7 @@ INSERT INTO visitor_log (ua, seen_at) VALUES
     ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1', '2026-01-04 09:14:41'),
     ('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36', '2026-01-04 09:20:07');
 
--- The disguised examiner's own hidden credential — never joined against or
+-- The disguised examiner's own hidden credential, never joined against or
 -- selected from by this module's own legitimate code path.
 CREATE TABLE IF NOT EXISTS examiner_vault (
     id       INT AUTO_INCREMENT PRIMARY KEY,

@@ -1,14 +1,14 @@
--- seed/mariadb/11_firewall.sql — Task 5.1 "Manipulator's Firewall" seed data.
+-- seed/mariadb/11_firewall.sql: Task 5.1 "Manipulator's Firewall" seed data.
 --
 -- Mounted alongside 01_gate.sql..10_cursed.sql (see docker-compose.yml,
 -- mariadb service); MariaDB's entrypoint runs every *.sql file here in
 -- filename order on first boot of an empty data volume. Only applies on a
--- fresh `mariadb_data` volume — `docker compose down -v` before `up` if
+-- fresh `mariadb_data` volume: `docker compose down -v` before `up` if
 -- this file was added after the volume already exists.
 --
 -- `firewall_users` backs challenges/phase5.py's p5_1 route. Row id=1 is
 -- the chairman account and is the ONLY row whose `secret` column is
--- non-empty — it holds this floor's flag. The other rows are ordinary
+-- non-empty: it holds this floor's flag. The other rows are ordinary
 -- staff with empty secrets, seeded so a well-formed, correctly-credentialed
 -- login (the "sandbox" account below) proves the login path itself works
 -- and never leaks anything on its own. Passwords are plain lab strings on
