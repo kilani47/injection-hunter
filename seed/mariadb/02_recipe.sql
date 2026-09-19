@@ -11,6 +11,17 @@
 -- returned by any legitimate query path. It only ever reaches the client
 -- via the vulnerable route's error-based injection sink.
 
+-- Per-challenge isolation: this challenge lives in its own database
+-- with its own restricted user, granted access to nothing else. From
+-- this challenge's injection point, other challenges' tables are not
+-- just unreferenced but invisible (information_schema is filtered by
+-- the connecting user's privileges) and cross-database reads are
+-- denied. core/db.py's mysql_conn('p1_recipe') connects as this user.
+CREATE DATABASE IF NOT EXISTS seiyaku_p1_recipe;
+CREATE USER IF NOT EXISTS 'svc_p1_recipe'@'%' IDENTIFIED BY 'p1_recipe_pw';
+GRANT SELECT ON seiyaku_p1_recipe.* TO 'svc_p1_recipe'@'%';
+USE seiyaku_p1_recipe;
+
 CREATE TABLE IF NOT EXISTS vault (
     id     VARCHAR(16)  PRIMARY KEY,
     name   VARCHAR(128) NOT NULL,

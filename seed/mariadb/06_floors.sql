@@ -18,6 +18,17 @@
 -- hand) into a UNION SELECT / subquery against `vault_floors`, never by
 -- any query this app's own /p2/floors code path constructs on its own.
 
+-- Per-challenge isolation: this challenge lives in its own database
+-- with its own restricted user, granted access to nothing else. From
+-- this challenge's injection point, other challenges' tables are not
+-- just unreferenced but invisible (information_schema is filtered by
+-- the connecting user's privileges) and cross-database reads are
+-- denied. core/db.py's mysql_conn('p2_floors') connects as this user.
+CREATE DATABASE IF NOT EXISTS seiyaku_p2_floors;
+CREATE USER IF NOT EXISTS 'svc_p2_floors'@'%' IDENTIFIED BY 'p2_floors_pw';
+GRANT SELECT ON seiyaku_p2_floors.* TO 'svc_p2_floors'@'%';
+USE seiyaku_p2_floors;
+
 CREATE TABLE IF NOT EXISTS floors (
     id          INT PRIMARY KEY,
     name        VARCHAR(64) NOT NULL,

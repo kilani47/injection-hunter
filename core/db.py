@@ -19,20 +19,44 @@ import os
 # MariaDB
 # ---------------------------------------------------------------------------
 
-def mysql_conn():
-    """Open a PyMySQL connection to the MariaDB service.
+def mysql_conn(challenge: str):
+    """Open a PyMySQL connection scoped to one challenge's own database.
 
-    Env: MARIADB_HOST, MARIADB_PORT, MARIADB_USER, MARIADB_PASSWORD,
-    MARIADB_DATABASE (defaults match docker-compose.yml's `mariadb` service).
+    Each MariaDB-backed challenge lives in its own database with its own
+    restricted DB user, granted access to nothing but that one database.
+    This is what actually isolates challenges from each other: from inside
+    one challenge's SQL injection point, `information_schema` is filtered
+    by the connecting user's privileges (so other challenges' tables are
+    invisible, not just unreferenced) and cross-database queries like
+    `SELECT ... FROM seiyaku_other.flags` are denied outright. Sharing one
+    privileged user across a single schema, the old design, let any one
+    injection reach every other challenge's tables and flags.
+
+    `challenge` is the challenge key (e.g. "p1_gate", "f2_omnigrid"). The
+    database name, user, and password are derived from it by a fixed
+    convention that the seed files in seed/mariadb/ create to match:
+
+        database : seiyaku_<challenge>
+        user     : svc_<challenge>
+        password : <challenge>_pw
+
+    Host and port still come from the environment (MARIADB_HOST/PORT) so
+    the app works both inside the compose network and against a local
+    engine. There is deliberately no shared fallback user: a missing or
+    unknown challenge key should fail loudly, not silently connect
+    somewhere with broad access.
     """
     import pymysql
+
+    if not challenge or not all(c.isalnum() or c == "_" for c in challenge):
+        raise ValueError(f"invalid challenge key: {challenge!r}")
 
     return pymysql.connect(
         host=os.environ.get("MARIADB_HOST", "mariadb"),
         port=int(os.environ.get("MARIADB_PORT", "3306")),
-        user=os.environ.get("MARIADB_USER", "seiyaku"),
-        password=os.environ.get("MARIADB_PASSWORD", "seiyaku_pw"),
-        database=os.environ.get("MARIADB_DATABASE", "seiyaku"),
+        user=f"svc_{challenge}",
+        password=f"{challenge}_pw",
+        database=f"seiyaku_{challenge}",
         charset="utf8mb4",
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=True,

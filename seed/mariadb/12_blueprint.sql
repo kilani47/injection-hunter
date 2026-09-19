@@ -15,6 +15,17 @@
 -- <clearance> element that lxml's `.find()` picks up ahead of the
 -- template's real one, and it's the only row whose `flag` is non-empty.
 
+-- Per-challenge isolation: this challenge lives in its own database
+-- with its own restricted user, granted access to nothing else. From
+-- this challenge's injection point, other challenges' tables are not
+-- just unreferenced but invisible (information_schema is filtered by
+-- the connecting user's privileges) and cross-database reads are
+-- denied. core/db.py's mysql_conn('p5_blueprint') connects as this user.
+CREATE DATABASE IF NOT EXISTS seiyaku_p5_blueprint;
+CREATE USER IF NOT EXISTS 'svc_p5_blueprint'@'%' IDENTIFIED BY 'p5_blueprint_pw';
+GRANT SELECT ON seiyaku_p5_blueprint.* TO 'svc_p5_blueprint'@'%';
+USE seiyaku_p5_blueprint;
+
 CREATE TABLE IF NOT EXISTS palace_clearances (
     level       VARCHAR(32)  PRIMARY KEY,
     description VARCHAR(255) NOT NULL,

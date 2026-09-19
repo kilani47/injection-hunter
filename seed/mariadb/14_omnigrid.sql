@@ -20,6 +20,17 @@
 -- reachable only via challenges/finals.py's f2_seize(), and only once all
 -- four faction fragments have already been proven to genuinely match.
 
+-- Per-challenge isolation: this challenge lives in its own database
+-- with its own restricted user, granted access to nothing else. From
+-- this challenge's injection point, other challenges' tables are not
+-- just unreferenced but invisible (information_schema is filtered by
+-- the connecting user's privileges) and cross-database reads are
+-- denied. core/db.py's mysql_conn('f2_omnigrid') connects as this user.
+CREATE DATABASE IF NOT EXISTS seiyaku_f2_omnigrid;
+CREATE USER IF NOT EXISTS 'svc_f2_omnigrid'@'%' IDENTIFIED BY 'f2_omnigrid_pw';
+GRANT SELECT ON seiyaku_f2_omnigrid.* TO 'svc_f2_omnigrid'@'%';
+USE seiyaku_f2_omnigrid;
+
 CREATE TABLE IF NOT EXISTS omnigrid_onboarding (
     id        INT AUTO_INCREMENT PRIMARY KEY,
     applicant VARCHAR(64)  NOT NULL,

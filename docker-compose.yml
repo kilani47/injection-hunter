@@ -10,11 +10,12 @@ services:
       - openldap
       - collaborator
     environment:
+      # Only host/port are shared. Each MariaDB-backed challenge connects
+      # as its own restricted per-challenge user (svc_<challenge>) to its
+      # own database (seiyaku_<challenge>); core/db.py derives those creds
+      # from the challenge key, so there is no shared app-level DB user.
       MARIADB_HOST: mariadb
       MARIADB_PORT: "3306"
-      MARIADB_USER: seiyaku
-      MARIADB_PASSWORD: seiyaku_pw
-      MARIADB_DATABASE: seiyaku
       MONGO_HOST: mongo
       MONGO_PORT: "27017"
       MONGO_DATABASE: seiyaku
@@ -26,10 +27,11 @@ services:
   mariadb:
     image: mariadb:11
     environment:
+      # Root is only used to run the seed scripts on first boot. Those
+      # scripts (seed/mariadb/*.sql) each create their own per-challenge
+      # database and a restricted user scoped to it, so there is no shared
+      # application database or user to configure here.
       MARIADB_ROOT_PASSWORD: seiyaku_root_pw
-      MARIADB_DATABASE: seiyaku
-      MARIADB_USER: seiyaku
-      MARIADB_PASSWORD: seiyaku_pw
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./seed/mariadb:/docker-entrypoint-initdb.d:ro
