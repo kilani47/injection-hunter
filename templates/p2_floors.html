@@ -3,25 +3,34 @@
 {% block body_class %}nen-p2{% endblock %}
 {% block phase_nav %}<a href="{{ url_for('phase', phase_id='2') }}" class="hover:text-accent transition-colors">phase 2</a>{% endblock %}
 
-{% block content %}
-<div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
-  <div>
-    <p class="font-mono text-xs text-muted mb-2">trick tower &middot; floor 1</p>
-    <h1 class="font-display text-3xl font-semibold text-bone mb-4">Automated Floor Skip</h1>
-    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
-      Trick Tower enforces one rule per floor and grinds down anyone who
-      tries to satisfy it by hand, one floor at a time. This catalog looks
-      up a floor by its number, a plain integer, no quotes anywhere near
-      it, because whoever wired it up assumed a number can't possibly
-      carry anything but itself.
-    </p>
-    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
-      Objective: skip past every floor this catalog was ever meant to show
-      you, and reach whatever's sealed behind them.
-    </p>
-  </div>
+{% block main %}
+<main class="relative flex-1 flex flex-col justify-center {% if has_hero('p2_floors') %}cine{% endif %}">
+  {% if has_hero('p2_floors') %}
+    <img class="cine-img" src="{{ url_for('static', filename='img/p2_floors.png') }}"
+         alt="An endless stairwell of identical Trick Tower floors"
+         loading="eager" decoding="async">
+    <div class="cine-scrim-content"></div>
+  {% endif %}
+  <div class="relative mx-auto w-full max-w-5xl px-6 py-10">
+    {% block content %}
+    <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+      <div>
+        <p class="font-mono text-xs text-muted mb-2 text-shadow-wallpaper">trick tower &middot; floor 1</p>
+        <h1 class="font-display text-3xl font-semibold text-bone mb-4 text-shadow-wallpaper">Automated Floor Skip</h1>
+        <p class="max-w-md text-bone/85 leading-relaxed mb-4 text-shadow-wallpaper">
+          Trick Tower enforces one rule per floor and grinds down anyone who
+          tries to satisfy it by hand, one floor at a time. This catalog looks
+          up a floor by its number, a plain integer, no quotes anywhere near
+          it, because whoever wired it up assumed a number can't possibly
+          carry anything but itself.
+        </p>
+        <p class="max-w-md text-bone/70 leading-relaxed text-sm text-shadow-wallpaper">
+          Objective: skip past every floor this catalog was ever meant to show
+          you, and reach whatever's sealed behind them.
+        </p>
+      </div>
 
-  <div class="license-card glass rounded-[1.75rem] p-6">
+      <div class="license-card glass rounded-[1.75rem] p-6">
     <div class="exam-terminal rounded-xl p-5">
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
         <span class="text-accent text-glow">&gt;</span> floor catalog: look up by id
@@ -81,4 +90,7 @@
     </div>
   </div>
 </div>
+    {% endblock %}
+  </div>
+</main>
 {% endblock %}

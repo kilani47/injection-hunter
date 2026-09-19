@@ -3,27 +3,36 @@
 {% block body_class %}nen-p2{% endblock %}
 {% block phase_nav %}<a href="{{ url_for('phase', phase_id='2') }}" class="hover:text-accent transition-colors">phase 2</a>{% endblock %}
 
-{% block content %}
-<div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
-  <div>
-    <p class="font-mono text-xs text-muted mb-2">trick tower &middot; floor 3</p>
-    <h1 class="font-display text-3xl font-semibold text-bone mb-4">The Disguised Examiner</h1>
-    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
-      Every applicant who reaches this floor is asked to check in with an
-      examiner's badge id, so the tower can confirm who they claim to be
-      talking to. It's a reasonable-looking form, and it's exactly what it
-      looks like: a plain, parameterized lookup. Nothing you type into it
-      ever reaches an unsafe query.
-    </p>
-    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
-      Objective: the form is not the door. Somewhere else on this floor,
-      something you never typed into any box is the thing actually being
-      trusted. Find where the tower is really listening, and use it to
-      reach whatever the disguised examiner is guarding.
-    </p>
-  </div>
+{% block main %}
+<main class="relative flex-1 flex flex-col justify-center {% if has_hero('p2_examiner') %}cine{% endif %}">
+  {% if has_hero('p2_examiner') %}
+    <img class="cine-img" src="{{ url_for('static', filename='img/p2_examiner.png') }}"
+         alt="An examiner checking a badge id at a Trick Tower desk"
+         loading="eager" decoding="async">
+    <div class="cine-scrim-content"></div>
+  {% endif %}
+  <div class="relative mx-auto w-full max-w-5xl px-6 py-10">
+    {% block content %}
+    <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+      <div>
+        <p class="font-mono text-xs text-muted mb-2 text-shadow-wallpaper">trick tower &middot; floor 3</p>
+        <h1 class="font-display text-3xl font-semibold text-bone mb-4 text-shadow-wallpaper">The Disguised Examiner</h1>
+        <p class="max-w-md text-bone/85 leading-relaxed mb-4 text-shadow-wallpaper">
+          Every applicant who reaches this floor is asked to check in with an
+          examiner's badge id, so the tower can confirm who they claim to be
+          talking to. It's a reasonable-looking form, and it's exactly what it
+          looks like: a plain, parameterized lookup. Nothing you type into it
+          ever reaches an unsafe query.
+        </p>
+        <p class="max-w-md text-bone/70 leading-relaxed text-sm text-shadow-wallpaper">
+          Objective: the form is not the door. Somewhere else on this floor,
+          something you never typed into any box is the thing actually being
+          trusted. Find where the tower is really listening, and use it to
+          reach whatever the disguised examiner is guarding.
+        </p>
+      </div>
 
-  <div class="license-card glass rounded-[1.75rem] p-6">
+      <div class="license-card glass rounded-[1.75rem] p-6">
     <div class="exam-terminal rounded-xl p-5">
       <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
         <span class="text-accent text-glow">&gt;</span> examiner check-in: look up by badge id
@@ -114,4 +123,7 @@
     </div>
   </div>
 </div>
+    {% endblock %}
+  </div>
+</main>
 {% endblock %}
