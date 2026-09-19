@@ -78,11 +78,20 @@ is just a hex literal for `~`, a visible marker so the leaked value is
 easy to spot in the text; it carries no special meaning to MariaDB.
 
 **3. Don't assume the table name, find it.** Nothing so far has named
-`vault`. The only things known at this point are what the *app itself*
-already reveals: the ordinary lookup selects a `name` column, and
-`CHALLENGER.md`'s objective names `secret` as the field being chased.
-MariaDB's own `information_schema` can answer "which table has both,"
-without ever touching the app's source:
+`vault`, and nothing so far requires reading the app's source either.
+Two column names are already sitting in plain view, from things anyone
+testing this black-box would already have looked at:
+
+- A completely ordinary, non-malicious lookup, `/p1/recipe?id=1`, no
+  injection involved at all, renders `name> Roasted Nen Beast Stew`.
+  The app's own UI labels that field `name` for you.
+- `CHALLENGER.md`'s objective line names `secret` as the field being
+  chased: "Read the vault's hidden `secret` field."
+
+That's it, that's the whole basis for the next query: not a guess, not
+a peek at `challenges/phase1.py`, just two labels the app and the
+briefing already handed over. MariaDB's own `information_schema` can
+now answer "which table has both":
 
 ```
 id=1' AND extractvalue(1,concat(0x7e,(SELECT c1.table_name
@@ -106,8 +115,8 @@ Two things worth calling out about this step:
   arc, `records`, `keeper`, `sealed_cards`, `examiner_vault`, and others
   all have their own `secret` column too. The `name`+`secret` combination
   is what actually narrows it down to this floor's table, matching the
-  one query shape (`SELECT name FROM <table> WHERE id=...`) the app
-  visibly runs.
+  two labels step 3 actually observed (the rendered `name>` field and
+  the briefing's `secret`), not a guess at either one.
 - A cruder first instinct, dumping every table name in the schema via
   `group_concat(table_name)`, genuinely doesn't work here: the result is
   long enough (dozens of tables across 18 floors) that it blows straight
