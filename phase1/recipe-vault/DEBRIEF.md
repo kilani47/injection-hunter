@@ -30,21 +30,80 @@ raises an exception carrying attacker-chosen text becomes an exfiltration
 channel, no `UNION`, no matching column count, no working `SELECT`
 required.
 
-## The technique: `extractvalue()`
+## Why we can't just read the secret directly
 
-MariaDB (and MySQL) ship `extractvalue(xml_frag, xpath_expr)`, a function
-meant to run an XPath query against a fragment of XML and return the
-matched node. `xpath_expr` is expected to be a *valid XPath expression
-string*. Handing it something that **isn't** valid XPath, like a plain
-colon-prefixed string, makes `extractvalue()` throw before it ever
-touches real XML, and MariaDB's error handler for that failure embeds the
-first ~32 characters of the offending `xpath_expr` string directly in the
-exception text: `XPATH syntax error: '<up to 32 chars here>'`.
+On the Gate of Trust, the app displayed whichever row it found, *including
+that row's `secret` column*, so simply making the right row appear was
+enough. This floor is more careful. Its normal query only ever asks for the
+`name` column (`SELECT name FROM vault ...`), and the page only ever prints
+that `name` back. Even if you rewrite the query to fetch `secret`, the app
+still renders only `name`, so the secret never reaches the screen through
+the normal output. (Black-box check: send a legitimate `?id=1` and notice
+the page labels what it shows as `name>`, that is the only field it will
+ever display.)
 
-That's the whole trick: `xpath_expr` doesn't have to be a literal, it can
-be the *result of a subquery*, computed at query time. Feed it your own
-`SELECT` wrapped in `concat()`, and MariaDB helpfully quotes back
-whatever that subquery returned, packaged inside its own error message.
+So we need a different way out. Recall the second bug from the Root cause:
+when a query *fails*, the app prints the database's raw error message onto
+the page. That is the opening. Instead of trying to make the database
+*return* the secret (it won't show us), we make the database *fail on
+purpose*, in a way that stuffs the secret into the error text, and the
+app's own careless "here's the error" behavior then hands it to us. This is
+called **error-based** extraction: the answer rides home inside an error
+message rather than inside a normal result.
+
+## The SQL pieces, in plain terms
+
+The payloads below are built from a few small parts. Here is each one,
+plainly (the single quote `'` and the `-- ` comment were covered in the
+Gate of Trust primer):
+
+- **`extractvalue(a, b)`** is a built-in MariaDB function. Its real,
+  intended job is to dig a value out of a piece of XML: argument `a` is
+  some XML, argument `b` is an "XPath expression" naming which part to pull
+  out. We don't actually care about XML here, we're abusing the function
+  for its error behavior.
+
+- **XPath**, in one sentence, is a tiny query language for pointing at a
+  spot inside an XML document (think of it as the "address" of an item
+  inside a nested structure). The only thing that matters for us:
+  `extractvalue` expects argument `b` to be a *validly written* XPath
+  address. Hand it something that isn't one, and it gives up and throws an
+  error, and, crucially, that error message quotes back the invalid text we
+  gave it (roughly the first 32 characters). That quoted-back text is our
+  smuggling channel.
+
+- **`concat(x, y, ...)`** glues strings together end to end, like `+` for
+  text. We use it to stick a marker in front of whatever we're stealing, so
+  `concat('~', 'FLAG')` produces `~FLAG`.
+
+- **`0x7e`** is just the number 126 written in hexadecimal (base 16), and
+  126 is the character code for a tilde `~`. So `0x7e` is a compact way to
+  write the character `~` in SQL. We use `~` as a visible marker: when the
+  error comes back reading `...error: '~SEIYAKU{...}'`, the `~` makes it
+  obvious where our stolen value begins. It has no special power; any
+  harmless marker would do. Writing it in hex also spares us from putting
+  yet more quote characters inside a payload that is already juggling
+  quotes.
+
+- **a subquery**, like `(SELECT secret FROM vault LIMIT 1)`, is simply a
+  second, inner query whose single result is used in place of a value.
+  `LIMIT 1` means "just the first row", so the inner query returns exactly
+  one value, which is what `concat`/`extractvalue` expect to receive.
+
+- **`database()`** returns the name of the database you're currently
+  connected to (each challenge has its own; see the Isolation note at the
+  end). It lets us say "only tables in *my* database" without hardcoding a
+  name.
+
+- **`information_schema`** is a database MariaDB keeps about itself: a
+  built-in catalog listing every database, table, and column. Querying
+  `information_schema.tables` is how you *ask the database what tables
+  exist* instead of having to know their names in advance.
+
+Put together, `extractvalue(1, concat(0x7e, (SELECT secret FROM vault LIMIT
+1)))` reads as: "work out my secret, glue a `~` in front of it, then try to
+treat the result as an XPath address." It isn't a valid address, so MariaDB
+throws, and the error politely quotes back `~` followed by the secret.
 
 ## The walk
 

@@ -2,6 +2,55 @@
 
 **Node:** `p1_1` &middot; **Flag:** `SEIYAKU{the_vow_was_never_sealed}` &middot; **Route:** `POST /p1/gate` &middot; **Sink:** `challenges/phase1.py`, `mariadb` (`applicants` table)
 
+## New here? Read this once (SQL injection in plain terms)
+
+This is the first SQL floor, so here is the groundwork the rest of Phase 1
+builds on. It's explained once, here; later floors assume you've read it.
+
+**What a database query is.** The site keeps its data (applicants,
+recipes, exam scores, and so on) in a database. To answer a request, the
+app writes a short instruction in a language called SQL and sends it to the
+database. A login check is really just the question "is there a row in the
+`applicants` table whose username and password both match what was typed?"
+In SQL that question looks like:
+
+```sql
+SELECT * FROM applicants WHERE username='admin' AND password='hunter2'
+```
+
+Read left to right: `SELECT *` means "give me all columns", `FROM
+applicants` means "from the applicants table", and `WHERE ...` means "but
+only rows where this condition holds". The parts wrapped in single quotes
+(`'admin'`, `'hunter2'`) are *values*, the actual data being compared.
+The bare words (`SELECT`, `FROM`, `WHERE`, `AND`) are *code*, the
+instructions.
+
+**Where the bug comes from.** The app builds that SQL by gluing your typed
+input straight into the middle of the instruction (that is what "string
+concatenation" means in the Root cause below). It assumes whatever you
+type will stay a *value* sitting safely inside the quotes. But you decide
+what you type, quote characters included, so you can close the quote
+yourself and make the database read the rest of your input as *code*
+rather than data. That confusion between code and data is the whole
+vulnerability, and it is the same root cause on every SQL floor in this
+lab.
+
+**Two symbols you'll use constantly:**
+
+- A single quote `'` opens or closes a value. If the app already opened one
+  for you (`username='...'`), typing your own `'` closes it early and drops
+  you back into "code" position, where the database will read what follows
+  as SQL.
+- `-- ` (two dashes and a trailing space) starts a comment: MariaDB ignores
+  everything after it on the line. You use it to throw away the leftover
+  tail of the app's original query (the part after where you injected) so
+  the whole statement still parses cleanly.
+
+**One move you'll reuse:** `OR '1'='1'`. `OR` makes a row match if *either*
+side of it is true, and `'1'='1'` is always true, so a `WHERE` clause with
+that ORed into it matches every row in the table. That is how the login
+below is bypassed without knowing any real password.
+
 ## Root cause
 
 The login route builds its SQL query by dropping the raw form fields
