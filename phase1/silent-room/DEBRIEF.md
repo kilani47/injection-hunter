@@ -53,6 +53,14 @@ The walk always has two phases:
 
 ## The walk (verified live against this exact seed)
 
+**Where the input goes, and what you don't get for free.** The one thing
+the page hands you outright is the parameter name: the form field is
+`<input name="code">` submitting over GET, so every attempt is just a URL,
+`/p1/silent?code=...`, and that `code` value is what gets spliced into the
+query. Nothing on the page names any table or column, though. Those you
+have to *discover*, using the very same PASS/FAIL oracle you'll use for the
+flag (steps 2 and 3 below), not by reading the app's source.
+
 **1. Confirm injection + silence.** The base query is
 `SELECT 1 FROM door WHERE code='{code}'`. Closing the string and OR-ing in
 an always-true or always-false condition doesn't depend on knowing any
@@ -98,7 +106,40 @@ the confirmation that matters most for this floor: an attacker gets
 *zero* extra signal from breaking the query. The oracle really is just
 one bit, always.
 
-**2. Fold the hidden secret into the same boolean.** `keeper.secret` is
+**2. Discover where the secret lives.** Nothing so far has named a table or
+a column. The same one-bit oracle finds them, you just ask questions about
+the database's own catalog (`information_schema`, explained in p1_2's
+debrief) instead of about the flag. Because each challenge is isolated to
+its own database (see Remediation below), that database holds only *this*
+floor's tables, so the search is short. Start with a count:
+
+```
+/p1/silent?code=' OR (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=database())=2-- -
+```
+
+`PASS`: exactly two tables. Their names come out one character at a time,
+using the identical `ASCII(SUBSTRING(...,N,1))>=mid` bisection you'll use
+on the flag in step 3, only aimed at `information_schema.tables` instead
+(`SELECT table_name ... LIMIT 1 OFFSET 0`, then `OFFSET 1`). Against this
+seed they resolve to `door` and `keeper`. `door` is the table the visible
+lookup already uses; `keeper` is the extra one, so it's the interesting
+one. Does it hold something called `secret` (the kind of thing the
+objective wants)?
+
+```
+/p1/silent?code=' OR (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=database() AND table_name='keeper' AND column_name='secret')=1-- -
+```
+
+`PASS`: `keeper` has a `secret` column (the same question against `door`
+answers `FAIL`). Enumerating `keeper`'s columns the same char-by-char way
+returns `id, secret`. So the target is `keeper.secret`, found with nothing
+but PASS/FAIL answers and no access to the app's source. (This enumeration
+is tedious by hand, one bit per request; in practice you'd let a tool like
+sqlmap grind it out, but every query it sends is exactly the shape above.
+`solvers/p1_4.py` starts from the discovered `keeper.secret` so it can
+focus on demonstrating the extraction technique itself.)
+
+**3. Fold the hidden secret into the same boolean.** `keeper.secret` is
 never selected by any legitimate query this app makes, it only becomes
 reachable by writing a subquery against it and folding the result into
 the `door` query's own `WHERE` clause via `OR`:

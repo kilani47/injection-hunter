@@ -17,6 +17,15 @@ own hidden `keeper.secret` value and reading which token comes back.
 This is a real, live extraction against the running stack, every
 character below is recovered by actually querying the oracle, not
 hardcoded. The expected flag is only used for the final assertion.
+
+The one thing this script takes as given is the target's name,
+`keeper.secret`. That name is itself discoverable through this very same
+PASS/FAIL oracle, by asking about `information_schema` instead of the
+flag (this challenge's isolated database holds only `door` and `keeper`);
+see phase1/silent-room/DEBRIEF.md, "Discover where the secret lives", for
+the exact queries. This script starts from the discovered name so its
+output stays focused on the extraction technique rather than on a long,
+tedious char-by-char enumeration of the catalog.
 """
 
 from __future__ import annotations
