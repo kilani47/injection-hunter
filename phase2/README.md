@@ -32,6 +32,7 @@ faster than a human reasonably could. That assumption is Phase 2's Vow.
 | 2 | A Sealed Floor | [`sealed-floor/`](sealed-floor/) | built |
 | 3 | The Disguised Examiner | [`disguised-examiner/`](disguised-examiner/) | built |
 | 4 | The Warden's Ledger | [`wardens-ledger/`](wardens-ledger/) | built |
+| 5 | The Echo Chamber | [`echo-chamber/`](echo-chamber/) | built |
 
 Floors 4 and up extend Phase 2 into a full beginner-to-professional SQLMap
 track (request capture behind auth, blind-detection tuning, WAF evasion,
