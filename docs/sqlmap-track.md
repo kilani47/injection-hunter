@@ -1,11 +1,10 @@
 # Phase 2 SQLMap Track: beginner to professional
 
-Phase 2 (Trick Tower) is the lab's SQLMap and testing-methodology phase.
-Its first two floors already teach the basics; this document is the
-design for five further floors that extend it into a complete
-beginner-to-professional sqlmap curriculum. Each floor is built so the
-approach that cleared the previous floor is no longer enough, which forces
-one new sqlmap capability to be learned to pass.
+Phase 2 (Trick Tower) is the lab's SQLMap and testing-methodology phase,
+a complete beginner-to-professional sqlmap curriculum across six built
+floors, with one more (post-exploitation) still to come. Each floor is
+built so the approach that cleared the previous floor is no longer
+enough, which forces one new sqlmap capability to be learned to pass.
 
 Every floor keeps the lab's existing conventions: its own isolated MariaDB
 database (`seiyaku_<key>`) reached through its own restricted user
@@ -40,77 +39,32 @@ Displayed floor numbers below reflect this: A Sealed Floor is Floor 1.
 - **p2_3, The Disguised Examiner** (`/p2/examiner`, key `p2_examiner`),
   Floor 2: header injection, the `*` custom injection marker and
   `--level`.
+- **p2_4, The Warden's Ledger** (`/p2/ledger`, key `p2_ledger`), Floor 3:
+  capturing and replaying a real, authenticated request (`-r`, `--data`,
+  `--cookie`). The injectable lookup is a POST field only reachable with a
+  valid session cookie; an unauthenticated probe sees only the login gate.
+- **p2_5, The Echo Chamber** (`/p2/echo`, key `p2_echo`), Floor 4:
+  defining the true/false oracle yourself (`--technique`, `--string`,
+  `--time-sec`) when a deliberately noisy response defeats sqlmap's
+  default detection.
+- **p2_6, The Warded Door** (`/p2/warded`, key `p2_warded`), Floor 5:
+  getting past a narrow WAF signature (`--random-agent`, `--tamper`). The
+  filter blocks sqlmap's default User-Agent and the literal phrase
+  "union select"; verified live that boolean/error-based already slip
+  through with just `--random-agent`, while forcing UNION specifically
+  needs `--tamper=space2comment` too, an honest lesson that WAF rules are
+  usually narrow, not comprehensive.
+- **p2_7, The Hall of Cells** (`/p2/hall`, key `p2_hall`), Floor 6:
+  targeted enumeration and DBMS recon instead of dumping everything
+  (`--search`, `--count`, `-C`, `--where`, `--current-user`, `--is-dba`,
+  `--privileges`). Sixteen tables, one large (`cell_records`, 401 rows),
+  the flag in one row's `secret` column. Verified live: a full boolean-blind
+  dump extrapolates to ~45 minutes; the targeted extraction (same forced
+  technique) takes 4.4 seconds.
 
-### New floors (this design), in beginner-to-professional order
+### Still to build
 
-Node ids continue the phase-2 sequence (`p2_4`..`p2_8`); DB keys are
-descriptive slugs, matching the existing `p2_sealed`/`p2_examiner` style.
-Displayed floor numbers continue from Floor 2 (Disguised Examiner) above.
-
-1. **p2_4, The Warden's Ledger** (key `p2_ledger`), Floor 3
-   - Skill: capturing and replaying a real, authenticated request.
-   - Flags taught: `-r` (saved raw request), `--data` (POST body),
-     `--cookie` (session).
-   - Mechanic: the injectable prisoner-ledger lookup is a POST field
-     (`cell_id`) that only returns data when a valid `warden_session`
-     cookie is present; without it the route redirects to a login. The
-     briefing gives the login credentials.
-   - Why the naive approach fails: `-u ".../p2/ledger?cell_id=1"` with no
-     session sees only the login redirect, sqlmap finds no injection. You
-     must log in, capture the authenticated request, and hand it to sqlmap
-     with `-r` (or supply `--data` + `--cookie`).
-   - DB: `prisoners` (cell_id, name, status) injectable; hidden
-     `warden_vault` (id, secret) holds the flag.
-
-2. **p2_5, The Echo Chamber** (key `p2_echo`), Floor 4
-   - Skill: defining the true/false oracle yourself when auto-detection is
-     unreliable.
-   - Flags taught: `--technique`, `--string` / `--not-string` / `--code`,
-     `--time-sec`.
-   - Mechanic: a boolean-blind lookup whose response embeds a random nonce
-     every request, so sqlmap's content-diff heuristic cannot settle on a
-     stable true/false marker on its own. The only stable signal is a fixed
-     phrase present on a true condition ("the chamber resonates") and
-     absent on false ("only silence").
-   - Why the naive approach fails: plain `sqlmap -r req.txt -p ...` cannot
-     reliably tell true from false through the noise. Supplying
-     `--technique=B --string="resonates"` (or `--code`) locks the oracle
-     onto the real signal. A time-based path (`--technique=T --time-sec=2`)
-     is documented as the alternative when no string marker exists at all.
-   - DB: `chamber` lookup table; hidden `chamber_vault` (secret) flag.
-
-3. **p2_6, The Warded Door** (key `p2_warded`), Floor 5
-   - Skill: getting past an input filter / WAF.
-   - Flags taught: `--tamper`, `--random-agent` (and `--list-tampers`).
-   - Mechanic: the route runs a small deterministic input filter that (a)
-     rejects any request whose User-Agent contains "sqlmap", and (b)
-     rejects request data containing the upper-case keywords `UNION` /
-     `SELECT` / `SLEEP`. Both are bypassable by known tamper behaviour:
-     `--random-agent` defeats (a), `--tamper=randomcase` (or
-     `space2comment`) defeats (b).
-   - Why the naive approach fails: default sqlmap is blocked outright (its
-     default UA is filtered, and its default payloads use upper-case
-     keywords). `--random-agent --tamper=randomcase` gets through.
-   - DB: `gate_log` lookup; hidden `warded_vault` (secret) flag.
-
-4. **p2_7, The Hall of Cells** (key `p2_hall`), Floor 6
-   - Skill: targeted enumeration and DBMS recon instead of dumping
-     everything.
-   - Flags taught: `--search`, `--count`, `-C`, `--where`, plus recon
-     `--current-user`, `--is-dba`, `--privileges` (and where applicable
-     `--users` / `--passwords`).
-   - Mechanic: this floor's database holds many tables and one large table
-     with many rows; dumping everything is slow and noisy. The flag sits in
-     one column in one table among the many. `--search -C secret` (or by
-     table name) finds where it lives; `--count` sizes a table before
-     dumping; `-C` and `--where` pull only the needed slice.
-   - Why the naive approach fails: `--dump-all` is impractical here (too
-     large, too slow). You have to find the target first, then extract only
-     it.
-   - DB: ~15 filler tables plus one `cell_records` table (many rows) whose
-     single flagged row is found via search + filter.
-
-5. **p2_8, The Groundskeeper's Keys** (key `p2_keys`), Floor 7
+1. **p2_8, The Groundskeeper's Keys** (key `p2_keys`), Floor 7
    - Skill: post-exploitation beyond reading application tables.
    - Flags taught: `--file-read`, `--file-write`, `--sql-shell` (with a
      written explanation of `--os-shell`'s real-world prerequisites, which

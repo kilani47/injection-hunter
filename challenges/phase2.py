@@ -446,3 +446,58 @@ def p2_warded():
     # normal 200, so this floor does too: a probe can tell "refused" apart
     # from "ran the query and found nothing" without reading the page body.
     return (page, 403) if blocked else page
+
+
+# ---------------------------------------------------------------------------
+# p2_7, The Hall of Cells
+# ---------------------------------------------------------------------------
+#
+# An ordinary sink (bare, unquoted numeric `id`, same shape as every core
+# technique needs, raw errors echoed, no filter in front of it this time).
+# What's new is the database behind it: fifteen small, mundane
+# bookkeeping tables plus one large one, `cell_records`, with hundreds of
+# routine rows and exactly one that matters. The lesson isn't finding the
+# injection, sqlmap's defaults find this one as easily as p2_2's, it's
+# what to do once enumeration would otherwise mean dumping everything and
+# reading through all of it by hand: --search to find the interesting
+# column without checking every table one at a time, --count to see a
+# table is too large to dump blindly, and -C / --where to pull out only
+# the row that matters.
+@bp.route("/p2/hall", methods=["GET"])
+def p2_hall():
+    """The Hall of Cells' inspection-log lookup. Deliberately vulnerable
+    to SQL injection on a bare, unquoted numeric `id`, same multi-technique
+    shape as the very first Phase 2 floor. The database behind it is
+    administrative-bloat-shaped on purpose: many small tables, one large
+    one, so the point isn't finding the injection, it's not dumping
+    everything once you have it.
+    """
+    record_id = request.args.get("id", "")
+    rows = None
+    error = None
+
+    if record_id:
+        conn = mysql_conn("p2_hall")
+        try:
+            with conn.cursor() as cur:
+                # VULN: string concat, raw query param spliced directly
+                # into the SQL text as a bare, unquoted numeric slot, no
+                # escaping/parameterization whatsoever. Use a parameterized
+                # query (cur.execute(q, (record_id,))) instead; left
+                # unescaped here on purpose, this is the challenge's sink.
+                q = (
+                    "SELECT id, cell_id, inspector, note FROM cell_records "
+                    f"WHERE id={record_id}"
+                )
+                cur.execute(q)
+                rows = cur.fetchall()
+        except Exception as exc:
+            # Same house style as every other floor: the raw DBMS error is
+            # echoed back to the client.
+            error = str(exc)
+        finally:
+            conn.close()
+
+    return render_template(
+        "p2_hall.html", record_id=record_id, rows=rows, error=error
+    )
