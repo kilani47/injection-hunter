@@ -31,6 +31,10 @@ faster than a human reasonably could. That assumption is Phase 2's Vow.
 | 1 | Automated Floor Skip | [`automated-floor-skip/`](automated-floor-skip/) | built |
 | 2 | A Sealed Floor | [`sealed-floor/`](sealed-floor/) | built |
 | 3 | The Disguised Examiner | [`disguised-examiner/`](disguised-examiner/) | built |
+| 4 | The Warden's Ledger | [`wardens-ledger/`](wardens-ledger/) | built |
 
-All three floors are built. Clearing floor 3 unlocks Phase 3, see
-`.superpowers/sdd/2026-09-05-seiyaku-arc/` for the overall build plan.
+Floors 4 and up extend Phase 2 into a full beginner-to-professional SQLMap
+track (request capture behind auth, blind-detection tuning, WAF evasion,
+targeted enumeration, and post-exploitation); see
+[`docs/sqlmap-track.md`](../docs/sqlmap-track.md) for that curriculum's
+design. Clearing the last Phase 2 floor unlocks Phase 3.

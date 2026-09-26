@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, redirect, render_template, request, session, url_for
 
 from core.db import mysql_conn
 
@@ -270,3 +270,96 @@ def p2_examiner():
         log_rows=log_rows,
         error=error,
     )
+
+
+# ---------------------------------------------------------------------------
+# p2_4, The Warden's Ledger
+# ---------------------------------------------------------------------------
+#
+# The teaching point here is not a new injection technique, it's how you
+# point sqlmap at an injection that only exists *inside an authenticated
+# session*. The vulnerable lookup (`cell_id`, string-concatenated, same sink
+# shape as every other floor) is a POST field that the route refuses to run
+# unless a valid `warden_session` is set first. An unauthenticated probe,
+# the reflex `-u ".../p2/ledger?cell_id=1"`, only ever sees the login
+# gate, so sqlmap finds nothing. The floor forces the solver to log in,
+# capture the authenticated request, and replay it with sqlmap's `-r`
+# (or reconstruct it with `--data` + `--cookie`).
+#
+# The login itself is deliberately NOT injectable: credentials are checked
+# against fixed constants in Python, never a query, so the only sink on this
+# floor is `cell_id`, and only once you're past the gate.
+
+_WARDEN_USER = "warden"
+_WARDEN_PASS = "tower-key-7"
+
+
+@bp.route("/p2/ledger/login", methods=["POST"])
+def p2_ledger_login():
+    """Validate the warden credentials and open a session. Not injectable:
+    the check is a plain constant comparison, never a SQL query."""
+    username = request.form.get("username", "")
+    password = request.form.get("password", "")
+    if username == _WARDEN_USER and password == _WARDEN_PASS:
+        session["warden"] = True
+    else:
+        session.pop("warden", None)
+    return redirect(url_for("phase2.p2_ledger"))
+
+
+@bp.route("/p2/ledger/logout", methods=["GET"])
+def p2_ledger_logout():
+    session.pop("warden", None)
+    return redirect(url_for("phase2.p2_ledger"))
+
+
+@bp.route("/p2/ledger", methods=["GET", "POST"])
+def p2_ledger():
+    """The prisoner-ledger lookup, deliberately vulnerable to SQL injection
+    on `cell_id`, but only reachable once a warden session exists.
+
+    A POST without a session (or a GET) just renders the appropriate page;
+    the injectable query runs only for an authenticated POST carrying
+    `cell_id`. That gate is the whole lesson: the injection is real, but it
+    lives behind auth, so sqlmap has to be handed the authenticated request.
+    """
+    authed = bool(session.get("warden"))
+
+    # Not logged in: never touch the database. Show the login gate. This is
+    # exactly what an unauthenticated sqlmap probe sees, no injectable
+    # parameter is even processed.
+    if not authed:
+        return render_template("p2_ledger.html", authed=False, rows=None,
+                               error=None, cell_id=None)
+
+    rows = None
+    error = None
+    cell_id = request.form.get("cell_id") if request.method == "POST" else None
+
+    if cell_id is not None:
+        conn = mysql_conn("p2_ledger")
+        try:
+            with conn.cursor() as cur:
+                # VULN: string concat, the POST field `cell_id` is spliced
+                # straight into the SQL text with no escaping. Use a
+                # parameterized query (cur.execute(q, (cell_id,))) instead;
+                # left unescaped here on purpose, this is the challenge's
+                # sink. The 3-column shape (cell_id, name, status) is what a
+                # UNION SELECT has to match; the hidden `warden_vault` table
+                # is reachable only through it.
+                q = (
+                    "SELECT cell_id, name, status FROM prisoners "
+                    f"WHERE cell_id = '{cell_id}'"
+                )
+                cur.execute(q)
+                rows = cur.fetchall()
+        except Exception as exc:
+            # Same house style as the other floors: the raw DBMS error is
+            # echoed back, so column-count discovery via ORDER BY is
+            # observable here too.
+            error = str(exc)
+        finally:
+            conn.close()
+
+    return render_template("p2_ledger.html", authed=True, rows=rows,
+                           error=error, cell_id=cell_id)
