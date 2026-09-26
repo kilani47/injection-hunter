@@ -41,6 +41,13 @@ can read.
 
 ## The walk (verified against this exact seed)
 
+**Where the input goes.** The parameter is visible for free: the search
+form is `<input name="q">` submitting over GET, so every attempt is just
+`/p1/results?q=...`, and that `q` value lands inside the query's `LIKE`
+clause. The table this floor hides its flag in is *not* shown anywhere;
+you discover it in step 3, using the board's own output, not the app's
+source.
+
 **1. Discover the column count with `ORDER BY`.** `ORDER BY N` sorts by
 the N-th column of the result set; asking for a column that doesn't exist
 is a MariaDB error, so incrementing `N` until it breaks is a standard,
@@ -81,21 +88,39 @@ Kurapika, Leorio, Hisoka) plus one new row: `id`/`name`/`score` all show
 `None`, the union'd row landed cleanly, confirming 3 columns is exactly
 right and every column tolerates `NULL`.
 
-**3. Find something worth reading.** Here the target table name
-(`staff`) is given by the challenge itself, but in general, with no
-whitebox source to read, the standard way to enumerate what a database
-holds is MariaDB's `information_schema`:
+**3. Find something worth reading (discover the target).** Nothing has
+named a target table yet. You can see `results`, its rows are what the
+board prints, but the flag isn't in it. Since a `UNION` hands you *visible
+rows*, the easiest move is to ask the database's own catalog
+(`information_schema`, explained in p1_2's debrief) to list what else
+exists and read the answer straight off the board:
 
-```sql
-' UNION SELECT NULL,table_name,NULL FROM information_schema.tables WHERE table_schema=database()-- -
+```
+/p1/results?q=' UNION SELECT NULL,table_name,NULL FROM information_schema.tables WHERE table_schema=database()-- -
 ```
 
-lists every table the current schema has (`results`, `staff`, plus any
-migration/metadata tables), and swapping `information_schema.tables` for
-`information_schema.columns WHERE table_name='staff'` lists that table's
-column names (`username`, `password`) the same way, no prior knowledge
-of the schema required, only a database account that can read
-`information_schema` (which, by default, every account can).
+Because each challenge is isolated to its own database (see Remediation
+below), this returns exactly this floor's two tables, as ordinary result
+rows appended under the board's own `name` column:
+
+```
+results
+staff
+```
+
+`results` is the one the board already displays; `staff` is the extra
+table, so it's the one to look inside. List its columns the same way:
+
+```
+/p1/results?q=' UNION SELECT NULL,column_name,NULL FROM information_schema.columns WHERE table_schema=database() AND table_name='staff'-- -
+```
+
+which prints `username` and `password` as rows. So the target is
+`staff.password`, discovered with nothing but the board's own output and
+no access to the app's source. (Every query above needs only a DB account
+that can read `information_schema`, which every account can by default.
+This is exactly the enumeration sqlmap automates for you; see the
+Automated Floor Skip debrief in Phase 2 for driving it with a tool.)
 
 **4. Extract.** With the table and column names in hand, replace the
 `NULL` placeholders with real columns from `staff`, keeping the same
