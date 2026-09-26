@@ -1,10 +1,10 @@
 # Phase 2 SQLMap Track: beginner to professional
 
-Phase 2 (Trick Tower) is the lab's SQLMap and testing-methodology phase,
-a complete beginner-to-professional sqlmap curriculum across six built
-floors, with one more (post-exploitation) still to come. Each floor is
-built so the approach that cleared the previous floor is no longer
-enough, which forces one new sqlmap capability to be learned to pass.
+Phase 2 (Trick Tower) is the lab's SQLMap and testing-methodology phase:
+a complete beginner-to-professional sqlmap curriculum across seven built
+floors. Each floor is built so the approach that cleared the previous
+floor is no longer enough, which forces one new sqlmap capability to be
+learned to pass.
 
 Every floor keeps the lab's existing conventions: its own isolated MariaDB
 database (`seiyaku_<key>`) reached through its own restricted user
@@ -61,30 +61,21 @@ Displayed floor numbers below reflect this: A Sealed Floor is Floor 1.
   the flag in one row's `secret` column. Verified live: a full boolean-blind
   dump extrapolates to ~45 minutes; the targeted extraction (same forced
   technique) takes 4.4 seconds.
-
-### Still to build
-
-1. **p2_8, The Groundskeeper's Keys** (key `p2_keys`), Floor 7
-   - Skill: post-exploitation beyond reading application tables.
-   - Flags taught: `--file-read`, `--file-write`, `--sql-shell` (with a
-     written explanation of `--os-shell`'s real-world prerequisites, which
-     a containerized DB with no web root cannot reliably satisfy, so it is
-     taught conceptually rather than shipped as a fragile path).
-   - Mechanic: this floor's DB user is deliberately over-privileged, it is
-     granted the global `FILE` privilege. A flag file is mounted into the
-     MariaDB container under `secure_file_priv`'s allowed directory
-     (`/var/lib/mysql-files/groundskeeper.flag`). `--file-read` of that
-     path recovers the flag via `LOAD_FILE`.
-   - Isolation note: `FILE` is a global privilege in MySQL/MariaDB (it
-     cannot be scoped to one database), so `svc_p2_keys` can read files the
-     mysql OS user can read. It still cannot read any other challenge's
-     tables, table grants remain per-database. That gap (host-file access
-     without cross-table access) is exactly the over-privileged-account
-     lesson this floor teaches.
-   - Setup deltas beyond a normal floor: a one-line flag file committed
-     under `seed/mariadb-files/`, a read-only mount of it into the mariadb
-     service, an explicit `secure_file_priv` setting, and a `GRANT FILE ON
-     *.*` for this floor's user in its seed.
+- **p2_8, The Groundskeeper's Keys** (`/p2/keys`, key `p2_keys`), Floor 7:
+  post-exploitation via an over-privileged account (`--file-read`,
+  `--sql-shell`, `--is-dba`). No hidden table this time; the flag is a
+  file on the container's own filesystem, reachable only because this
+  floor's DB user, uniquely in this lab, also holds the global `FILE`
+  privilege (`GRANT FILE ON *.*`, which cannot be scoped to one database
+  the way every other grant here is). `secure_file_priv` confines file
+  I/O to one directory at the SQL level; that same directory is also
+  bind-mounted read-only from the host, an independent OS-level layer,
+  verified live that `--file-write` fails because of it even though the
+  SQL grant alone would permit it. `--is-dba` verified live as `False`:
+  `FILE` grants host-file access, not administrative control, and it
+  does not widen table access, cross-database reads are still denied.
+  `--os-shell` is explained (not shipped): it needs a writable,
+  web-servable destination, which this lab deliberately doesn't provide.
 
 ## Build order and per-floor deliverables
 
