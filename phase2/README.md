@@ -33,11 +33,12 @@ faster than a human reasonably could. That assumption is Phase 2's Vow.
 | 3 | The Warden's Ledger | [`wardens-ledger/`](wardens-ledger/) | built |
 | 4 | The Echo Chamber | [`echo-chamber/`](echo-chamber/) | built |
 | 5 | The Warded Door | [`warded-door/`](warded-door/) | built |
+| 6 | The Hall of Cells | [`hall-of-cells/`](hall-of-cells/) | built |
 
 A Sealed Floor is also this phase's foundational sqlmap floor: its own
 DEBRIEF carries the "New to sqlmap? Read this once" primer every later
 floor's debrief points back to. Floors 3 and up extend Phase 2 into a
 full beginner-to-professional SQLMap track (request capture behind auth,
-blind-detection tuning, WAF evasion, and more to come); see
-[`docs/sqlmap-track.md`](../docs/sqlmap-track.md) for that curriculum's
-design. Clearing the last Phase 2 floor unlocks Phase 3.
+blind-detection tuning, WAF evasion, targeted enumeration/recon, and more
+to come); see [`docs/sqlmap-track.md`](../docs/sqlmap-track.md) for that
+curriculum's design. Clearing the last Phase 2 floor unlocks Phase 3.
