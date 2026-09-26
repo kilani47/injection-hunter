@@ -48,6 +48,85 @@ Phase-1 techniques can live behind one single, boring-looking parameter,
 and that a working scanner will find every one of them faster than
 picking a technique by hand ever could.
 
+## New to sqlmap? Read this once (every flag explained)
+
+This is the first floor in the lab solved with `sqlmap` instead of a
+hand-crafted payload, so here's what the tool actually is and what every
+flag in this debrief does. Later Phase 2 floors assume you've read this
+and only explain the flags that are new.
+
+**What sqlmap actually is.** It's a program that automates everything the
+earlier floors in this lab did by hand: given a request that might be
+vulnerable, it tries a large, systematic list of known SQL injection
+payloads against it, and if one works, it can then walk the database for
+you, list what databases and tables exist, and pull out the data inside
+them, all without you typing a single payload yourself. Nothing about
+what it *finds* is different from p1_1 through p1_5; the difference is
+that sqlmap tries every technique from those floors automatically,
+instead of you picking one and hand-writing it.
+
+**Pointing sqlmap at a target.** Two ways, both meaning "here is the
+request to test":
+
+- `-u "http://host/path?id=1"`, a bare URL. Quick, and fine for a simple
+  GET request with no login, no cookies, nothing special.
+- `-r req.txt`, replay a complete request saved to a file (method,
+  headers, cookies, POST body, all of it). This lab mostly uses `-r`
+  because several floors need something a bare URL can't carry (a
+  session cookie, a POST body); see "Saving the request" below for what
+  that file looks like.
+
+**`-p id`**: which parameter to actually test. Without `-p`, sqlmap tries
+to guess which parameters on the page look worth testing; naming one
+directly is faster and removes any ambiguity, this floor's URL only has
+one parameter (`id`) so it's obvious, but later floors with logins and
+multiple fields make this flag genuinely necessary.
+
+**`--batch`**: sqlmap normally stops and asks interactive yes/no
+questions as it works ("do you want to test for other DBMSes too?
+[Y/n]"), waiting for a human to answer. `--batch` tells it to just take
+the default answer to every question instead of stopping, which is what
+lets it run inside a script (or this lab's solvers) with nobody watching
+it.
+
+**`--ignore-stdin`**: a non-interactive-automation gotcha, covered in its
+own callout just below. Every command in this debrief includes it for
+that reason.
+
+**`-v 1`**: the verbosity level, how much sqlmap prints while it works.
+It ranges 0 (almost silent, critical messages only) to 6 (shows the
+literal HTTP requests and every payload it tries, character for
+character). `1`, the default, prints one info line per test it runs,
+enough to follow along without drowning in raw traffic; the transcript
+in "Step 1" below is exactly that level of output.
+
+**Enumeration flags**, once sqlmap has confirmed an injection, these
+walk the database the same way you'd browse a filesystem, one level at a
+time:
+
+| Flag | What it asks the database |
+|---|---|
+| `--dbs` | "What databases exist that this account can see?" |
+| `-D <name>` | "For every command from here on, work inside this database." |
+| `--tables` | "What tables are inside the database I selected?" |
+| `-T <name>` | "For every command from here on, work inside this table." |
+| `--columns` | "What columns (and their types) does the table I selected have?" |
+| `--dump` | "Pull out the actual row data from the table/columns I selected." |
+
+`--dump` is the one that actually extracts data; everything above it is
+narrowing down *where* to point that extraction. `-D`/`-T` are optional,
+if you skip them, sqlmap falls back to whatever database/table the
+request's own query already uses (the "shorter form" near the end of
+this walk relies on exactly that fallback).
+
+**`--banner`**: a one-off recon command, "ask the database to state its
+own version string," useful early on but not required to solve anything.
+
+**`--technique`, `--level`, `--risk`** control *which* injection methods
+sqlmap tries and how aggressively; they matter more once a target doesn't
+cooperate with sqlmap's defaults the way this floor does, so they get
+their own full explanation further down this debrief, after the walk.
+
 ## The technique: driving sqlmap instead of hand-crafting payloads
 
 Every earlier floor's DEBRIEF walked a payload by hand. This floor is

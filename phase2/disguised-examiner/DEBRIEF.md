@@ -56,6 +56,12 @@ never touched by any query `/p2/examiner`'s own code constructs on its
 own. It only becomes reachable by riding the `User-Agent` header
 injection into a `UNION SELECT` against it.
 
+New to the shared `sqlmap` flags below (`-r`, `--batch`, `--ignore-stdin`,
+`--level`, `--risk`)? They're explained in plain terms in the Automated
+Floor Skip debrief's "New to sqlmap? Read this once" section. `--dbms` and
+`--sql-query`, both new on this floor, are explained where they're first
+used below.
+
 ## Why the form field is a genuine dead end, not just "unused"
 
 Confirmed live, by actually testing it, pointing sqlmap straight at
@@ -215,6 +221,16 @@ Connection: close
 ```
 sqlmap -r req.txt --batch --ignore-stdin --dbms=MySQL --sql-query="SELECT secret FROM examiner_vault"
 ```
+
+`--dbms=MySQL` skips sqlmap's own fingerprinting step and tells it
+outright which database engine it's talking to (MariaDB identifies as a
+MySQL fork), useful once you already know the answer from an earlier
+step and want to save the extra detection requests. `--sql-query="..."`
+hands sqlmap a literal SQL statement to run *through* the confirmed
+injection point and print the result of, the direct way to ask one
+specific question once you already know exactly what you want, rather
+than working through the full `--dbs`/`--tables`/`--columns`/`--dump`
+enumeration chain.
 
 Real output from this exact seed:
 

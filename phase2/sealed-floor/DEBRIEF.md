@@ -31,6 +31,11 @@ query `/p2/sealed` constructs on its own. It only surfaces by riding the
 `id` injection into a UNION SELECT / subquery against it, exactly like
 `vault_floors` in the last floor.
 
+New to the `sqlmap` flags used below (`-r`, `-p`, `--batch`, `-v`, `--dbs`,
+`-D`, `--tables`, `-T`, `--columns`, `--dump`)? They're each explained in
+plain terms in the Automated Floor Skip debrief's "New to sqlmap? Read
+this once" section; this floor only covers what's new.
+
 ## What a CVE actually is, and why this floor references one
 
 A CVE (Common Vulnerabilities and Exposures) entry is a public,
