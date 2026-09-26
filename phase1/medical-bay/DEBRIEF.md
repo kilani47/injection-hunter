@@ -99,6 +99,32 @@ The walk always has three phases:
 
 ## The walk (verified live against this exact seed)
 
+**Where the input goes, and finding the target.** The parameter is visible
+for free: the form is `<input name="id">` submitting over GET, so every
+attempt is just `/p1/medbay?id=...`, and that `id` is what gets spliced
+into the query. The table the flag lives in, `records`, is *not* shown
+anywhere. You discover it the same way you'll extract the flag: with the
+timing oracle, folding questions about the database's own catalog
+(`information_schema`, explained in p1_2's debrief) into an
+`IF(condition, SLEEP(N), 0)`. Because each challenge is isolated to its
+own database (see Remediation below), that database holds only this
+floor's two tables, `patients` (the one the visible lookup uses) and
+`records` (the extra one). For example, "does my database contain exactly
+two tables?" is answered by whether this request is slow:
+
+```
+/p1/medbay?id=' OR IF((SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=database())=2,SLEEP(1.2),0)-- -
+```
+
+and each table and column name comes out one character at a time with the
+same `ASCII(SUBSTRING(...))>=mid` timing bisection used on the flag below,
+aimed at `information_schema` instead. That discovery is genuinely slow
+here, every single bit costs a multi-second sleep, so in practice you let
+`sqlmap` grind it out (it sends exactly these `IF(condition, SLEEP(N), 0)`
+shapes); `solvers/p1_5.py` starts from the discovered `records.secret` so
+its output stays on the extraction technique itself. The point stands either way: the
+target is found through timing alone, never from the app's source.
+
 **1. Confirm injection + silence.** The base query is
 `SELECT status FROM patients WHERE id='{id}'`. Closing the string and
 OR-ing in a conditional sleep doesn't depend on knowing any real patient

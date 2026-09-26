@@ -26,6 +26,16 @@ that confirm this.
 This is a real, live extraction against the running stack, every
 character below is recovered by actually timing the oracle, not hardcoded
 or simulated. The expected flag is only used for the final assertion.
+
+The one thing this script takes as given is the target's name,
+`records.secret`. That name is itself discoverable through this same
+timing oracle, by folding `information_schema` questions into
+`IF(condition, SLEEP(N), 0)` (this challenge's isolated database holds
+only `patients` and `records`); see phase1/medical-bay/DEBRIEF.md, "Where
+the input goes, and finding the target", for the queries. This script
+starts from the discovered name so its output stays focused on the
+extraction technique rather than a very slow, timing-based crawl of the
+catalog.
 """
 
 from __future__ import annotations
