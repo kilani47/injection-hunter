@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}The Warden's Ledger · The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p2{% endblock %}
+{% block phase_nav %}<a href="{{ url_for('phase', phase_id='2') }}" class="hover:text-accent transition-colors">phase 2</a>{% endblock %}
+
+{% block main %}
+<main class="relative flex-1 flex flex-col justify-center {% if has_hero('p2_ledger') %}cine{% endif %}">
+  {% if has_hero('p2_ledger') %}
+    <img class="cine-img" src="{{ url_for('static', filename='img/p2_ledger.png') }}"
+         alt="A warden's booth guarding the tower's holding block ledger"
+         loading="eager" decoding="async">
+    <div class="cine-scrim-content"></div>
+  {% endif %}
+  <div class="relative mx-auto w-full max-w-5xl px-6 py-10">
+    {% block content %}
+    <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+      <div>
+        <p class="font-mono text-xs text-muted mb-2 text-shadow-wallpaper">trick tower &middot; floor 4</p>
+        <h1 class="font-display text-3xl font-semibold text-bone mb-4 text-shadow-wallpaper">The Warden's Ledger</h1>
+        <p class="max-w-md text-bone/85 leading-relaxed mb-4 text-shadow-wallpaper">
+          The tower's holding block keeps a ledger of detained applicants, and
+          the warden's booth will look up any cell by its number, but only for
+          someone already signed in at the booth. Sign in first; the ledger
+          won't so much as glance at a cell number for a stranger.
+        </p>
+        <p class="max-w-md text-bone/70 leading-relaxed text-sm text-shadow-wallpaper">
+          Objective: recover the warden's master pass, which the ledger lookup
+          was never meant to reach. The catch: the lookup only runs once you're
+          signed in, so whatever tests it has to test it as a signed-in visitor.
+        </p>
+        {% if authed %}
+        <p class="mt-4 font-mono text-[11px] text-muted">
+          signed in as warden &middot;
+          <a href="{{ url_for('phase2.p2_ledger_logout') }}" class="text-accent hover:underline">sign out</a>
+        </p>
+        {% endif %}
+      </div>
+
+      <div class="license-card glass rounded-[1.75rem] p-6">
+        <div class="exam-terminal rounded-xl p-5">
+          {% if not authed %}
+            <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+              <span class="text-accent text-glow">&gt;</span> warden booth: sign in to open the ledger
+            </p>
+            <form method="post" action="{{ url_for('phase2.p2_ledger_login') }}" class="flex flex-col gap-3">
+              <input
+                type="text"
+                name="username"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="username"
+                class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+              <input
+                type="password"
+                name="password"
+                autocomplete="off"
+                placeholder="password"
+                class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+              <button type="submit"
+                class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
+                Sign in
+              </button>
+            </form>
+          {% else %}
+            <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+              <span class="text-accent text-glow">&gt;</span> prisoner ledger: look up a cell by id
+            </p>
+
+            <form method="post" action="{{ url_for('phase2.p2_ledger') }}" class="flex flex-col gap-3 mb-4">
+              <input
+                type="text"
+                name="cell_id"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="cell id (e.g. A-1)"
+                value="{{ cell_id or '' }}"
+                class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+              <button type="submit"
+                class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
+                Look up
+              </button>
+            </form>
+
+            {% if rows is not none %}
+              {% if rows %}
+                <div class="rounded-lg border border-white/15 bg-black/20 overflow-hidden mb-4">
+                  <table class="w-full font-mono text-[12px] text-bone/90">
+                    <thead>
+                      <tr class="border-b border-white/15 text-muted text-left">
+                        <th class="px-3 py-2 font-mono font-semibold">cell_id</th>
+                        <th class="px-3 py-2 font-mono font-semibold">name</th>
+                        <th class="px-3 py-2 font-mono font-semibold">status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for row in rows %}
+                      <tr class="border-b border-white/5 last:border-b-0">
+                        <td class="px-3 py-2 break-all">{{ row.cell_id }}</td>
+                        <td class="px-3 py-2 break-all">{{ row.name }}</td>
+                        <td class="px-3 py-2 break-all">{{ row.status }}</td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% else %}
+                <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+                  <p class="font-mono text-xs text-muted">no cell found.</p>
+                </div>
+              {% endif %}
+            {% endif %}
+
+            {% if error %}
+              <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+                <p class="font-mono text-xs text-muted mb-1">the ledger stumbled over your lookup:</p>
+                <p class="font-mono text-[11px] text-accent break-all">{{ error }}</p>
+              </div>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endblock %}
+  </div>
+</main>
+{% endblock %}
