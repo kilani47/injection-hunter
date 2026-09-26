@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # solvers/p2_3.sh, Task 2.3 "The Disguised Examiner" canonical exploit.
 #
-# Unlike p2_1/p2_2, the visible surface on this floor, an examiner
-# check-in form (`badge_id`), is genuinely, fully parameterized. There is
-# no injection reachable through anything the page's own form submits.
+# Unlike earlier Phase 2 floors, the visible surface on this floor, an
+# examiner check-in form (`badge_id`), is genuinely, fully parameterized.
+# There is no injection reachable through anything the page's own form
+# submits.
 # The real, hidden injection point is the `User-Agent` HTTP header: every
 # visit is queried back by that header's value to render a "recent
 # check-ins from this device" panel, and *that* query is built with raw

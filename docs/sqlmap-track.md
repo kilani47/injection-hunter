@@ -1,7 +1,7 @@
 # Phase 2 SQLMap Track: beginner to professional
 
 Phase 2 (Trick Tower) is the lab's SQLMap and testing-methodology phase.
-Its first three floors already teach the basics; this document is the
+Its first two floors already teach the basics; this document is the
 design for five further floors that extend it into a complete
 beginner-to-professional sqlmap curriculum. Each floor is built so the
 approach that cleared the previous floor is no longer enough, which forces
@@ -15,22 +15,39 @@ CHALLENGER plus a full DEBRIEF.
 
 ## The progression
 
+### Revision note
+
+The track originally started with a separate `p2_1, Automated Floor Skip`
+floor teaching the core workflow, followed by `p2_2, A Sealed Floor`
+teaching the identical workflow again under a CVE/legacy-code narrative.
+Once both existed side by side it was obvious the second taught nothing
+the first hadn't: same sink shape, same sqlmap commands, same enumeration
+chain. Rather than ship two floors for one lesson, `p2_1` was retired and
+its foundational content (the "New to sqlmap? Read this once" flag-by-flag
+primer, the `--ignore-stdin` gotcha, the `--technique`/`--level`/`--risk`
+deep dive) was merged into `p2_2`'s own debrief, which kept its CVE
+narrative and became the track's first floor. Every later floor's debrief
+points back to A Sealed Floor's debrief for these shared explanations.
+Displayed floor numbers below reflect this: A Sealed Floor is Floor 1.
+
 ### Already built (beginner rungs)
 
-- **p2_1, Automated Floor Skip** (`/p2/floors`, key `p2_floors`): the core
-  workflow, `-r` / `-u`, `--batch`, and the `--dbs -> --tables ->
-  --columns -> --dump` chain. All four techniques auto-detected.
-- **p2_2, A Sealed Floor** (`/p2/sealed`, key `p2_sealed`): dumping a
-  hidden table sqlmap discovers for you (legacy CMS / CVE shape).
-- **p2_3, The Disguised Examiner** (`/p2/examiner`, key `p2_examiner`):
-  header injection, the `*` custom injection marker and `--level`.
+- **p2_2, A Sealed Floor** (`/p2/sealed`, key `p2_sealed`), Floor 1: the
+  core sqlmap workflow (`-r` / `-u`, `--batch`, `--dbs -> --tables ->
+  --columns -> --dump`, all four techniques auto-detected) taught
+  alongside a CVE/legacy-code recognition narrative. Holds the shared
+  "New to sqlmap" primer every later floor references.
+- **p2_3, The Disguised Examiner** (`/p2/examiner`, key `p2_examiner`),
+  Floor 2: header injection, the `*` custom injection marker and
+  `--level`.
 
 ### New floors (this design), in beginner-to-professional order
 
 Node ids continue the phase-2 sequence (`p2_4`..`p2_8`); DB keys are
-descriptive slugs, matching the existing `p2_floors`/`p2_sealed` style.
+descriptive slugs, matching the existing `p2_sealed`/`p2_examiner` style.
+Displayed floor numbers continue from Floor 2 (Disguised Examiner) above.
 
-1. **p2_4, The Warden's Ledger** (key `p2_ledger`)
+1. **p2_4, The Warden's Ledger** (key `p2_ledger`), Floor 3
    - Skill: capturing and replaying a real, authenticated request.
    - Flags taught: `-r` (saved raw request), `--data` (POST body),
      `--cookie` (session).
@@ -45,7 +62,7 @@ descriptive slugs, matching the existing `p2_floors`/`p2_sealed` style.
    - DB: `prisoners` (cell_id, name, status) injectable; hidden
      `warden_vault` (id, secret) holds the flag.
 
-2. **p2_5, The Echo Chamber** (key `p2_echo`)
+2. **p2_5, The Echo Chamber** (key `p2_echo`), Floor 4
    - Skill: defining the true/false oracle yourself when auto-detection is
      unreliable.
    - Flags taught: `--technique`, `--string` / `--not-string` / `--code`,
@@ -62,7 +79,7 @@ descriptive slugs, matching the existing `p2_floors`/`p2_sealed` style.
      is documented as the alternative when no string marker exists at all.
    - DB: `chamber` lookup table; hidden `chamber_vault` (secret) flag.
 
-3. **p2_6, The Warded Door** (key `p2_warded`)
+3. **p2_6, The Warded Door** (key `p2_warded`), Floor 5
    - Skill: getting past an input filter / WAF.
    - Flags taught: `--tamper`, `--random-agent` (and `--list-tampers`).
    - Mechanic: the route runs a small deterministic input filter that (a)
@@ -76,7 +93,7 @@ descriptive slugs, matching the existing `p2_floors`/`p2_sealed` style.
      keywords). `--random-agent --tamper=randomcase` gets through.
    - DB: `gate_log` lookup; hidden `warded_vault` (secret) flag.
 
-4. **p2_7, The Hall of Cells** (key `p2_hall`)
+4. **p2_7, The Hall of Cells** (key `p2_hall`), Floor 6
    - Skill: targeted enumeration and DBMS recon instead of dumping
      everything.
    - Flags taught: `--search`, `--count`, `-C`, `--where`, plus recon
@@ -93,7 +110,7 @@ descriptive slugs, matching the existing `p2_floors`/`p2_sealed` style.
    - DB: ~15 filler tables plus one `cell_records` table (many rows) whose
      single flagged row is found via search + filter.
 
-5. **p2_8, The Groundskeeper's Keys** (key `p2_keys`)
+5. **p2_8, The Groundskeeper's Keys** (key `p2_keys`), Floor 7
    - Skill: post-exploitation beyond reading application tables.
    - Flags taught: `--file-read`, `--file-write`, `--sql-shell` (with a
      written explanation of `--os-shell`'s real-world prerequisites, which

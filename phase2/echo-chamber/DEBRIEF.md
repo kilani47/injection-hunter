@@ -128,8 +128,8 @@ Table: echo_vault
 ```
 
 `solvers/p2_5.sh` runs exactly this tuned command end to end and asserts the
-flag. (`--ignore-stdin` is the same non-interactive gotcha covered in the
-Automated Floor Skip debrief.)
+flag. (`--ignore-stdin` is the same non-interactive gotcha covered in A
+Sealed Floor's debrief.)
 
 ## HxH analogy
 

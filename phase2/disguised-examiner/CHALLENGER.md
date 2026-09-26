@@ -1,6 +1,6 @@
 # The Disguised Examiner
 
-**Phase 2, Trick Tower** &middot; Floor 3 &middot; Transmutation
+**Phase 2, Trick Tower** &middot; Floor 2 &middot; Transmutation
 
 ## Briefing
 

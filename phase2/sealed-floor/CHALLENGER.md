@@ -1,6 +1,6 @@
 # A Sealed Floor
 
-**Phase 2, Trick Tower** &middot; Floor 2 &middot; Transmutation
+**Phase 2, Trick Tower** &middot; Floor 1 &middot; Transmutation
 
 ## Briefing
 
@@ -57,9 +57,10 @@ friendly exam.
 - If a target *looks* dated, an old-fashioned URL shape, a page that
   reads like nobody's touched it in years, that's worth treating as a
   signal, not decoration.
-- The workflow is the same one from the last floor: point sqlmap at the
-  `id` parameter, let it confirm, then enumerate downward. The table
-  worth reading is not the one this page displays by default.
+- Point `sqlmap` at the `id` parameter and let it confirm the injection,
+  then enumerate downward: which databases exist, which tables, which
+  columns, then dump. The table worth reading is not the one this page
+  displays by default.
 
 No further hints here, see `DEBRIEF.md` only once you're done, or well
 and truly stuck.

@@ -102,7 +102,7 @@ cell_id=1
 ```
 
 **3. Run the normal chain through it.** From here it's the same sqlmap
-workflow as Automated Floor Skip (p2_1), only sourced from an authenticated
+workflow as A Sealed Floor (p2_2), only sourced from an authenticated
 request:
 
 ```
@@ -124,9 +124,8 @@ Table: warden_vault
 +----+--------------------+------------------------------------+
 ```
 
-(`--ignore-stdin` is the same non-interactive gotcha covered in the
-Automated Floor Skip debrief; keep it whenever you drive sqlmap from a
-script.)
+(`--ignore-stdin` is the same non-interactive gotcha covered in A Sealed
+Floor's debrief; keep it whenever you drive sqlmap from a script.)
 
 ## HxH analogy
 

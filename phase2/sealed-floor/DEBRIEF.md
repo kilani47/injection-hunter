@@ -5,8 +5,7 @@
 ## Root cause
 
 The bulletin-board lookup builds its query with raw f-string
-concatenation, the same sink shape as every other floor in this lab,
-against a bare, unquoted numeric `id`:
+concatenation, against a bare, unquoted numeric `id`:
 
 ```python
 # challenges/phase2.py
@@ -15,60 +14,134 @@ cur.execute(q)
 rows = cur.fetchall()
 ```
 
-Nothing here is a new *technique* over the last floor (`p2_1`), it's
-the same unquoted-numeric shape, still reachable with boolean-blind,
-error-based, time-based, and UNION-based payloads all through the one
-`id` parameter. What's different is the *context*: this isn't a floor
-built to teach the sqlmap workflow from scratch. It's a stand-in for a
-whole real-world category of bug, an old, unauthenticated
-content-management module, addressed by a `page` selector plus a record
-`id` in the URL, that was written before parameterized queries were the
-obvious default and never revisited once they were.
+Every Phase 1 floor needed a closing `'` to break out of a string
+literal first. This one needs nothing at all, `id` sits directly in
+numeric context, so anything that's still valid SQL after the number
+(`AND`, `OR`, `UNION`, a subquery) rides straight into the query with no
+quote-escaping required. That single detail, a plain, unquoted numeric
+parameter, is exactly the shape every SQLi scanner's default heuristics
+are built to try first, and it happens to leave four independent
+channels open through the same parameter at once:
+
+- **boolean-blind**, `id=1 AND 1=1` renders the matching post; `id=1
+  AND 1=2` renders nothing. Two distinguishable pages, no error needed.
+- **error-based**, a malformed injection throws a raw MariaDB
+  exception, and (same house style as p1_2) that raw exception text is
+  echoed straight back to the page.
+- **UNION-based**, the query's result set is rendered directly into the
+  page, so a matching `UNION SELECT` surfaces attacker-chosen values as
+  ordinary rows, same technique as p1_3.
+- **time-based blind**, `id=1 AND SLEEP(N)` (or the stacked/subquery
+  variants sqlmap prefers) delays the response with zero visible
+  difference in the page, same technique as p1_5.
 
 `cms_admin`, the module's old admin login, carried over unrotated from
 whatever install first stood this module up, is never touched by any
 query `/p2/sealed` constructs on its own. It only surfaces by riding the
-`id` injection into a UNION SELECT / subquery against it, exactly like
-`vault_floors` in the last floor.
+`id` injection into a `UNION SELECT` / subquery against it.
 
-New to the `sqlmap` flags used below (`-r`, `-p`, `--batch`, `-v`, `--dbs`,
-`-D`, `--tables`, `-T`, `--columns`, `--dump`)? They're each explained in
-plain terms in the Automated Floor Skip debrief's "New to sqlmap? Read
-this once" section; this floor only covers what's new.
+This floor's lesson isn't a new SQL technique, it's that a single,
+boring-looking parameter like this can carry every technique from Phase
+1 at once, and that a working scanner finds all of them faster than
+picking one by hand ever could. It's also a stand-in for a whole
+real-world category of bug: this exact URL shape (a `page` selector plus
+a record `id`) is how a lot of aging, unauthenticated content-management
+modules were built before parameterized queries were the obvious
+default, and never revisited once they were, more on that below.
 
-## What a CVE actually is, and why this floor references one
+## New to sqlmap? Read this once (every flag explained)
 
-A CVE (Common Vulnerabilities and Exposures) entry is a public,
-uniquely-numbered record that says, in effect: *this specific software,
-at this version, has this class of flaw, and here's roughly how it's
-triggered.* It's an advisory, not a walkthrough, CVE records typically
-describe the vulnerable component and parameter, sometimes a proof-of-
-concept request, but rarely a fully weaponized exploit. Turning a CVE
-into a working payload against a real target is exactly the skill this
-floor is built to practice: read what the advisory says the shape of the
-bug is, then go confirm it exists and see what it actually yields.
+This is the first floor in the lab solved with `sqlmap` instead of a
+hand-crafted payload, so here's what the tool actually is and what every
+flag in this debrief does. Later Phase 2 floors assume you've read this
+and only explain the flags that are new.
 
-This floor is modeled on the real-world pattern behind
-**CVE-2015-3933** (GeniX CMS): a legacy content-management system with
-an unauthenticated, GET-parameter-driven SQL injection in one of its
-content-lookup pages, the classic "old CMS module, numeric `id` in the
-URL, never parameterized" shape. This lab doesn't reproduce GeniX CMS's
-original PHP source (this app is Python/Flask, not PHP, and the actual
-vulnerable file/parameter names differ), what it reproduces is the
-*pattern* the CVE describes: a dated, page-plus-id URL structure,
-pre-auth, string-built SQL, sitting in a module nobody has had a reason
-to open in years. Reading an advisory like this one is a skill in
-itself: recognizing "unauthenticated legacy CMS + GET id parameter +
-SQLi" as a shape you can go looking for, rather than needing the exact
-original code in front of you.
+**What sqlmap actually is.** It's a program that automates everything the
+earlier floors in this lab did by hand: given a request that might be
+vulnerable, it tries a large, systematic list of known SQL injection
+payloads against it, and if one works, it can then walk the database for
+you, list what databases and tables exist, and pull out the data inside
+them, all without you typing a single payload yourself. Nothing about
+what it *finds* is different from p1_1 through p1_5; the difference is
+that sqlmap tries every technique from those floors automatically,
+instead of you picking one and hand-writing it.
 
-## The walk: mapping the pattern to a payload
+**Pointing sqlmap at a target.** Two ways, both meaning "here is the
+request to test":
 
-Same sqlmap workflow as `p2_1`, request, confirm, enumerate, dump,
-against a target that *looks* different (an old bulletin board instead
-of a modern floor catalog) but is the identical bug underneath. This is
-deliberately the point: once you recognize the pattern, the tooling
-doesn't care that the page looks like it was last touched in 2005.
+- `-u "http://host/path?id=1"`, a bare URL. Quick, and fine for a simple
+  GET request with no login, no cookies, nothing special.
+- `-r req.txt`, replay a complete request saved to a file (method,
+  headers, cookies, POST body, all of it). This lab mostly uses `-r`
+  because several floors need something a bare URL can't carry (a
+  session cookie, a POST body); see "Saving the request" below for what
+  that file looks like.
+
+**`-p id`**: which parameter to actually test. Without `-p`, sqlmap tries
+to guess which parameters on the page look worth testing; naming one
+directly is faster and removes any ambiguity, this floor's URL has two
+parameters (`page` and `id`) so being explicit matters here more than it
+would on a single-parameter page.
+
+**`--batch`**: sqlmap normally stops and asks interactive yes/no
+questions as it works ("do you want to test for other DBMSes too?
+[Y/n]"), waiting for a human to answer. `--batch` tells it to just take
+the default answer to every question instead of stopping, which is what
+lets it run inside a script (or this lab's solvers) with nobody watching
+it.
+
+**`--ignore-stdin`**: a non-interactive-automation gotcha, covered in its
+own callout just below. Every command in this debrief includes it for
+that reason.
+
+**`-v 1`**: the verbosity level, how much sqlmap prints while it works.
+It ranges 0 (almost silent, critical messages only) to 6 (shows the
+literal HTTP requests and every payload it tries, character for
+character). `1`, the default, prints one info line per test it runs,
+enough to follow along without drowning in raw traffic; the transcript
+in "Step 1" below is exactly that level of output.
+
+**Enumeration flags**, once sqlmap has confirmed an injection, these
+walk the database the same way you'd browse a filesystem, one level at a
+time:
+
+| Flag | What it asks the database |
+|---|---|
+| `--dbs` | "What databases exist that this account can see?" |
+| `-D <name>` | "For every command from here on, work inside this database." |
+| `--tables` | "What tables are inside the database I selected?" |
+| `-T <name>` | "For every command from here on, work inside this table." |
+| `--columns` | "What columns (and their types) does the table I selected have?" |
+| `--dump` | "Pull out the actual row data from the table/columns I selected." |
+
+`--dump` is the one that actually extracts data; everything above it is
+narrowing down *where* to point that extraction. `-D`/`-T` are optional,
+if you skip them, sqlmap falls back to whatever database/table the
+request's own query already uses.
+
+**`--banner`**: a one-off recon command, "ask the database to state its
+own version string," useful early on but not required to solve anything.
+
+**`--technique`, `--level`, `--risk`** control *which* injection methods
+sqlmap tries and how aggressively; they get their own full explanation
+further down this debrief, after the walk.
+
+## The technique: driving sqlmap instead of hand-crafting payloads
+
+Every Phase 1 debrief walked a payload by hand. This floor (and every
+floor after it in Phase 2) is solved by driving a tool through its
+standard workflow instead. The shape of that workflow never changes,
+target to target:
+
+1. **Give sqlmap the request.** Either a URL (`-u "http://host/path?id=1"`)
+   or, more realistically for anything behind auth/cookies/custom
+   headers, a raw HTTP request saved to a file and replayed with `-r`.
+2. **Point it at the parameter and let it confirm the injection.**
+   `-p id` tells it which parameter to test; `--batch` answers every
+   interactive prompt with the default so it runs unattended.
+3. **Enumerate downward once it confirms.** `--dbs` -> `-D <db>
+   --tables` -> `-D <db> -T <table> --columns` -> `-D <db> -T <table>
+   --dump`. Each step narrows scope using what the previous step found.
 
 ### Saving the request
 
@@ -83,6 +156,19 @@ Connection: close
 
 (this is exactly what `solvers/p2_2.sh` writes to a temp file before
 calling sqlmap.)
+
+### A gotcha worth knowing: `--ignore-stdin`
+
+Running sqlmap non-interactively (from a script, CI, or anywhere stdin
+isn't an attached terminal) needs one extra flag that isn't obvious from
+the docs. When stdin isn't a TTY, sqlmap treats it as an *alternative*
+target-list source (so you can pipe in a list of URLs), and with `-r`
+already supplying the target, that stdin-pipe path races it, hits EOF
+immediately, and sqlmap exits having never actually scanned anything
+(no error, just a suspiciously instant "ending @ ..."). `--ignore-stdin`
+forces `-r`'s request file to be the sole target source. Every command
+below includes it for exactly this reason, worth remembering any time
+sqlmap is driven from automation instead of an interactive shell.
 
 ### Step 1, confirm the injection
 
@@ -135,10 +221,12 @@ Parameter: id (GET)
 back-end DBMS: MySQL >= 5.1 (MariaDB fork)
 ```
 
-(Real, live run against this exact seed. Note the `page=news&id=...`
-payloads in the transcript, sqlmap is injecting into `id` while
-carrying `page=news` along for the ride, since both are GET params on
-the same request.)
+(Real, live run against this exact seed. Note all four techniques from
+the root-cause section above, found by sqlmap's plain defaults, zero
+`--level`/`--risk`/`--technique` tuning, and note the `page=news&id=...`
+payloads in the transcript, sqlmap is injecting into `id` while carrying
+`page=news` along for the ride, since both are GET params on the same
+request.)
 
 ### Step 2, enumerate databases
 
@@ -221,6 +309,82 @@ Table: cms_admin
 (This is a real, live run against this exact stack, not a hypothetical
 transcript, and is exactly the command `solvers/p2_2.sh` runs.)
 
+## `--technique`, `--level`, `--risk`, and why defaults were enough here
+
+**`--technique`** picks which detection families sqlmap will try, as a
+string of letters:
+
+| Letter | Technique |
+|---|---|
+| `B` | Boolean-based blind |
+| `E` | Error-based |
+| `U` | UNION query-based |
+| `S` | Stacked queries |
+| `T` | Time-based blind |
+| `Q` | Inline queries |
+
+The default is effectively "try all of them", this floor was built so
+that default behavior alone (no `--technique` filtering at all) finds
+`B`, `E`, `U`, and `T` in one pass, which is exactly what the transcript
+above shows.
+
+**`--level`** (1-5) controls *how many payloads* sqlmap tries per
+technique, and where it looks for injectable parameters, higher levels
+add tests against cookies, the `User-Agent`/`Referer` headers, and more
+exotic payload variants, on top of GET/POST parameters. **`--risk`**
+(1-3) controls how *aggressive* those payloads are allowed to be, risk 2
+adds time-based payloads that can noticeably slow a target, risk 3 adds
+payloads that include `OR`-based conditions capable of matching (and, in
+the wrong context, updating) far more rows than intended, plus
+heavier-handed boolean tests.
+
+Both default to `1`. Nothing above required raising either, the
+injection point, all four techniques, and the full enumeration chain all
+came from sqlmap's out-of-the-box defaults.
+
+**Why `--level 5 --risk 3` against a real client is a red flag, not a
+power move:** cranking both to max multiplies the request count by
+roughly an order of magnitude (every extra header, every extra payload
+variant, every extra technique gets tried against every parameter), which
+against a production target means far more noise in logs/WAF/IDS
+alerting, a real chance of tripping rate limits or account lockouts
+(especially against login-shaped parameters), and, this is the risk-3
+part specifically, payloads deliberately chosen because they're more
+likely to affect rows beyond the one being tested. Running max
+level/risk against a system you don't have explicit, scoped authorization
+to test that aggressively is exactly the kind of thing that turns an
+authorized engagement into an incident. The professional default is the
+same one sqlmap ships with: start at `--level 1 --risk 1`, and only raise
+either deliberately, against a scope that's been explicitly cleared for
+it, once the lower setting has been given a real chance to work, which,
+as this floor demonstrates, is most of the time.
+
+## What a CVE actually is, and why this floor references one
+
+A CVE (Common Vulnerabilities and Exposures) entry is a public,
+uniquely-numbered record that says, in effect: *this specific software,
+at this version, has this class of flaw, and here's roughly how it's
+triggered.* It's an advisory, not a walkthrough, CVE records typically
+describe the vulnerable component and parameter, sometimes a proof-of-
+concept request, but rarely a fully weaponized exploit. Turning a CVE
+into a working payload against a real target is exactly the skill this
+floor is built to practice: read what the advisory says the shape of the
+bug is, then go confirm it exists and see what it actually yields.
+
+This floor is modeled on the real-world pattern behind
+**CVE-2015-3933** (GeniX CMS): a legacy content-management system with
+an unauthenticated, GET-parameter-driven SQL injection in one of its
+content-lookup pages, the classic "old CMS module, numeric `id` in the
+URL, never parameterized" shape. This lab doesn't reproduce GeniX CMS's
+original PHP source (this app is Python/Flask, not PHP, and the actual
+vulnerable file/parameter names differ), what it reproduces is the
+*pattern* the CVE describes: a dated, page-plus-id URL structure,
+pre-auth, string-built SQL, sitting in a module nobody has had a reason
+to open in years. Reading an advisory like this one is a skill in
+itself: recognizing "unauthenticated legacy CMS + GET id parameter +
+SQLi" as a shape you can go looking for, rather than needing the exact
+original code in front of you.
+
 ## Why "old, forgotten code rots"
 
 This floor's entire premise is that the vulnerability isn't new, clever,
@@ -246,6 +410,20 @@ opposite.
 
 ## HxH analogy
 
+Trick Tower's whole design leans on applicants following its rules at
+human speed, one floor, one rule, one attempt at a time. Every floor's
+rule was written by someone who tested it the same slow way it expects
+everyone else to test it. Nothing about the tower's rules changes if the
+thing testing them isn't a person at all: a tool that tries every known
+technique, every parameter, every combination, in the time it takes a
+human to read the rule board, isn't cheating the tower's own logic. It's
+just moving through the same rule set faster than the tower's author
+ever accounted for. sqlmap is that tool for SQL injection specifically:
+a systematic, exhaustive checklist of every known technique, run against
+every reachable parameter, far faster than working through them by hand
+one at a time, the way the Silent Room (p1_4) and the Medical Bay (p1_5)
+each demanded.
+
 Trick Tower's floors are usually described as puzzles built by design,
 rules laid out on purpose, for applicants to solve on purpose. This
 floor isn't one of those. It's a floor the tower's current staff didn't
@@ -268,6 +446,10 @@ danger that accumulates in anything old enough to be forgotten about.
   )
   ```
 
+  With `news_id` passed as a bound parameter, it can never be re-parsed
+  as SQL grammar, `AND`, `UNION`, `SLEEP`, `EXTRACTVALUE`, all of it
+  depend entirely on attacker text reaching the query as *code* rather
+  than *data*, which parameterization removes as a possibility outright.
 - **Patch and upgrade unmaintained dependencies, or retire them.** The
   real lesson this floor stands in for: an old CMS module (or library,
   or plugin, or vendored dependency) that nobody has updated is not
@@ -284,11 +466,22 @@ danger that accumulates in anything old enough to be forgotten about.
   against X" into "we know we're running X, and we know where."
   Without it, a public CVE against a component sitting quietly in
   production is a door nobody remembered leaving open.
-- **Least-privilege database accounts**, same principle as every other
-  floor here: a DB user scoped to only the tables a route actually
-  needs means a successful injection in one old, forgotten module still
-  can't reach a table like `cms_admin` that its own legitimate queries
-  never touch.
+- **Least-privilege database accounts.** Even a fully successful
+  injection here should never be able to reach a table like `cms_admin`
+  that this route's own legitimate queries never touch. A DB user
+  scoped to only the tables a route actually needs turns "the query can
+  technically ask this" into "the query is rejected before it ever
+  runs", the single highest-leverage mitigation in this whole lab.
+- **Defense-in-depth beyond the code fix.** Fixing the immediate query
+  is necessary but not sufficient on a real system: a WAF tuned to flag
+  the same payload shapes sqlmap generates (`UNION SELECT`,
+  `EXTRACTVALUE(`, `SLEEP(`, stacked `;`), least-privilege DB accounts
+  as above so a missed injection point still can't reach sensitive
+  tables, and monitoring/alerting on abnormal query volume or timing all
+  reduce the blast radius of the *next* bug, not just this one. A
+  scanner as capable as sqlmap being freely available to attackers is
+  exactly why "we fixed the one bug we know about" was never the finish
+  line.
 
 ## Isolation
 

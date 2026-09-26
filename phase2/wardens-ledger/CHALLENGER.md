@@ -1,6 +1,6 @@
 # The Warden's Ledger
 
-**Phase 2, Trick Tower** &middot; Floor 4 &middot; Transmutation
+**Phase 2, Trick Tower** &middot; Floor 3 &middot; Transmutation
 
 ## Briefing
 

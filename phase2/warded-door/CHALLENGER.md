@@ -1,6 +1,6 @@
 # The Warded Door
 
-**Phase 2, Trick Tower** &middot; Floor 6 &middot; Transmutation
+**Phase 2, Trick Tower** &middot; Floor 5 &middot; Transmutation
 
 ## Briefing
 
