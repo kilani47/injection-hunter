@@ -17,6 +17,7 @@ so the file stays append-only friendly, same convention as phase1.py.
 
 from __future__ import annotations
 
+import re
 import secrets
 from datetime import datetime, timezone
 
@@ -431,3 +432,92 @@ def p2_echo():
         answer=(_ECHO_TRUE if resonates else _ECHO_FALSE) if resonates is not None else None,
         noise=_resonance_noise(),
     )
+
+
+# ---------------------------------------------------------------------------
+# p2_6, The Warded Door
+# ---------------------------------------------------------------------------
+#
+# The injection itself is ordinary (string concat on `knock`, same sink
+# shape as every floor, 3-column result rendered directly, raw errors
+# echoed). What's new is a small input filter sitting in front of it, a
+# miniature WAF, that blocks two things outright, before the query ever
+# runs:
+#   1. any request whose User-Agent names sqlmap. sqlmap's own default
+#      User-Agent literally contains the string "sqlmap", so an
+#      unmodified sqlmap run is rejected on every single request it
+#      sends, including its very first connectivity/heuristic probe.
+#      --random-agent (send a random, ordinary browser UA instead) is
+#      what gets past this.
+#   2. the literal phrase "union ... select" (optionally "union all
+#      select"), case-insensitively, wherever that literal whitespace
+#      sits between the two keywords. This is deliberately a narrow,
+#      pattern-specific rule, exactly the kind many real WAFs ship, not
+#      a general SQL-keyword blocklist. --tamper=space2comment replaces
+#      every space sqlmap's payload contains with an inline /**/
+#      comment; MariaDB parses "UNION/**/SELECT" identically to "UNION
+#      SELECT" (a comment is whitespace to the parser), but the literal
+#      substring the filter is looking for, an actual space character
+#      between the two words, is gone.
+_WARD_UA_BLOCK = re.compile(r"sqlmap", re.IGNORECASE)
+_WARD_PHRASE_BLOCK = re.compile(r"union(\s+all)?\s+select", re.IGNORECASE)
+
+
+def _ward_blocks(knock: str | None) -> bool:
+    """True if the request should be refused before the query ever runs."""
+    ua = request.headers.get("User-Agent", "")
+    if _WARD_UA_BLOCK.search(ua):
+        return True
+    if knock and _WARD_PHRASE_BLOCK.search(knock):
+        return True
+    return False
+
+
+@bp.route("/p2/warded", methods=["GET"])
+def p2_warded():
+    """The warded door's knock lookup. An ordinary SQL-injection sink on
+    `knock`, sitting behind a small input filter that blocks sqlmap's
+    default User-Agent and the literal phrase "union ... select"."""
+    knock = request.args.get("knock")
+    rows = None
+    error = None
+    blocked = False
+
+    if knock is not None:
+        if _ward_blocks(knock):
+            # VULN (by design, for this floor): the filter itself is naive,
+            # a narrow pattern match, not a real WAF. It never touches the
+            # database at all when it fires, exactly like a real WAF/reverse
+            # proxy rejecting a request before it reaches the app.
+            blocked = True
+        else:
+            conn = mysql_conn("p2_warded")
+            try:
+                with conn.cursor() as cur:
+                    # VULN: string concat, `knock` spliced straight into the
+                    # SQL text with no escaping. Use a parameterized query
+                    # (cur.execute(q, (knock,))) instead; left unescaped
+                    # here on purpose, this is the challenge's sink. The
+                    # 3-column shape (id, knock, meaning) is what a UNION
+                    # SELECT has to match to reach `warded_vault`.
+                    q = (
+                        "SELECT id, knock, meaning FROM door_knocks "
+                        f"WHERE knock = '{knock}'"
+                    )
+                    cur.execute(q)
+                    rows = cur.fetchall()
+            except Exception as exc:
+                # Same house style as the other floors: the raw DBMS error
+                # is echoed back, so column-count discovery via ORDER BY is
+                # observable here too, once past the ward.
+                error = str(exc)
+            finally:
+                conn.close()
+
+    page = render_template(
+        "p2_warded.html", knock=knock, rows=rows, error=error, blocked=blocked
+    )
+    # A real reverse-proxy WAF answers a blocked request with a 403, not a
+    # normal 200, so this floor does too: a probe can tell "refused" apart
+    # from "ran the query and found nothing" without reading the page body.
+    return (page, 403) if blocked else page
