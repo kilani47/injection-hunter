@@ -501,3 +501,52 @@ def p2_hall():
     return render_template(
         "p2_hall.html", record_id=record_id, rows=rows, error=error
     )
+
+
+# ---------------------------------------------------------------------------
+# p2_8, The Groundskeeper's Keys
+# ---------------------------------------------------------------------------
+#
+# The same ordinary sink shape as every earlier floor (bare, unquoted
+# numeric `id`, raw errors echoed). There is no hidden table in this
+# floor's own database at all, nothing to --search or --dump here. What
+# makes this floor different is entirely off to the side of the schema:
+# this floor's DB user, unlike every other challenge's, also holds the
+# global FILE privilege (see seed/mariadb/19_keys.sql), so the same
+# injection point that would otherwise only ever reach this database's
+# three boring rows can instead read a file straight off the container's
+# filesystem via LOAD_FILE(), reachable through sqlmap's --file-read.
+@bp.route("/p2/keys", methods=["GET"])
+def p2_keys():
+    """The groundskeeper's task log. Deliberately vulnerable to SQL
+    injection on a bare, unquoted numeric `id`, same shape as every
+    earlier floor. The database behind it holds nothing interesting; this
+    floor's DB user is deliberately over-privileged with the global FILE
+    grant instead, so the flag lives in a file, not a table.
+    """
+    task_id = request.args.get("id", "")
+    rows = None
+    error = None
+
+    if task_id:
+        conn = mysql_conn("p2_keys")
+        try:
+            with conn.cursor() as cur:
+                # VULN: string concat, raw query param spliced directly
+                # into the SQL text as a bare, unquoted numeric slot, no
+                # escaping/parameterization whatsoever. Use a parameterized
+                # query (cur.execute(q, (task_id,))) instead; left
+                # unescaped here on purpose, this is the challenge's sink.
+                q = f"SELECT id, task, note FROM garden_tasks WHERE id={task_id}"
+                cur.execute(q)
+                rows = cur.fetchall()
+        except Exception as exc:
+            # Same house style as every other floor: the raw DBMS error is
+            # echoed back to the client.
+            error = str(exc)
+        finally:
+            conn.close()
+
+    return render_template(
+        "p2_keys.html", task_id=task_id, rows=rows, error=error
+    )

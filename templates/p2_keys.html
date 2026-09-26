@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}The Groundskeeper's Keys · The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p2{% endblock %}
+{% block phase_nav %}<a href="{{ url_for('phase', phase_id='2') }}" class="hover:text-accent transition-colors">phase 2</a>{% endblock %}
+
+{% block main %}
+<main class="relative flex-1 flex flex-col justify-center {% if has_hero('p2_keys') %}cine{% endif %}">
+  {% if has_hero('p2_keys') %}
+    <img class="cine-img" src="{{ url_for('static', filename='img/p2_keys.png') }}"
+         alt="A groundskeeper's ring of keys hanging beside an open service door"
+         loading="eager" decoding="async">
+    <div class="cine-scrim-content"></div>
+  {% endif %}
+  <div class="relative mx-auto w-full max-w-5xl px-6 py-10">
+    {% block content %}
+    <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+      <div>
+        <p class="font-mono text-xs text-muted mb-2 text-shadow-wallpaper">trick tower &middot; floor 7</p>
+        <h1 class="font-display text-3xl font-semibold text-bone mb-4 text-shadow-wallpaper">The Groundskeeper's Keys</h1>
+        <p class="max-w-md text-bone/85 leading-relaxed mb-4 text-shadow-wallpaper">
+          The groundskeeper's task log is about as dull as this tower gets,
+          hedges, gravel, a hinge waiting on parts. Nothing in it is worth
+          stealing. The groundskeeper's own ring of keys, on the other hand,
+          opens doors that have nothing to do with hedges at all.
+        </p>
+        <p class="max-w-md text-bone/70 leading-relaxed text-sm text-shadow-wallpaper">
+          Objective: there is no hidden table here worth dumping. Whatever
+          you're looking for isn't inside this database at all.
+        </p>
+      </div>
+
+      <div class="license-card glass rounded-[1.75rem] p-6">
+        <div class="exam-terminal rounded-xl p-5">
+          <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+            <span class="text-accent text-glow">&gt;</span> groundskeeper's log: look up a task by id
+          </p>
+
+          <form method="get" action="{{ url_for('phase2.p2_keys') }}" class="flex flex-col gap-3 mb-4">
+            <input
+              type="text"
+              name="id"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="task id"
+              value="{{ task_id or '' }}"
+              class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+            <button type="submit"
+              class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
+              Look up
+            </button>
+          </form>
+
+          {% if rows is not none %}
+            {% if rows %}
+              <div class="rounded-lg border border-white/15 bg-black/20 overflow-hidden mb-4">
+                <table class="w-full font-mono text-[12px] text-bone/90">
+                  <thead>
+                    <tr class="border-b border-white/15 text-muted text-left">
+                      <th class="px-3 py-2 font-mono font-semibold">id</th>
+                      <th class="px-3 py-2 font-mono font-semibold">task</th>
+                      <th class="px-3 py-2 font-mono font-semibold">note</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in rows %}
+                    <tr class="border-b border-white/5 last:border-b-0">
+                      <td class="px-3 py-2 break-all">{{ row.id }}</td>
+                      <td class="px-3 py-2 break-all">{{ row.task }}</td>
+                      <td class="px-3 py-2 break-all">{{ row.note }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+                <p class="font-mono text-xs text-muted">no task found.</p>
+              </div>
+            {% endif %}
+          {% endif %}
+
+          {% if error %}
+            <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+              <p class="font-mono text-xs text-muted mb-1">the log stumbled over your lookup:</p>
+              <p class="font-mono text-[11px] text-accent break-all">{{ error }}</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endblock %}
+  </div>
+</main>
+{% endblock %}

@@ -26,6 +26,18 @@ services:
 
   mariadb:
     image: mariadb:11
+    # p2_8 "The Groundskeeper's Keys" needs one MariaDB user to hold the
+    # global FILE privilege, which lets sqlmap's --file-read pull a file
+    # straight off this container's filesystem through that floor's SQL
+    # injection point (LOAD_FILE()), no hidden table required. This image
+    # has no secure_file_priv restriction by default (file reads/writes
+    # would be allowed anywhere MariaDB's own OS user can reach), which is
+    # both unrealistic and needlessly broad for a lab; --secure-file-priv
+    # confines it to one directory, matching how a real, reasonably
+    # hardened MySQL/MariaDB deployment is configured. That directory is
+    # bind-mounted read-only below from seed/mariadb-files/, which holds
+    # only this floor's flag file, nothing else on the host is reachable.
+    command: --secure-file-priv=/var/lib/mysql-files
     environment:
       # Root is only used to run the seed scripts on first boot. Those
       # scripts (seed/mariadb/*.sql) each create their own per-challenge
@@ -35,6 +47,7 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./seed/mariadb:/docker-entrypoint-initdb.d:ro
+      - ./seed/mariadb-files:/var/lib/mysql-files:ro
 
   mongo:
     image: mongo:7
