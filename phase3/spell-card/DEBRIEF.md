@@ -161,7 +161,7 @@ data shaped to survive a DNS label.
 
 ## The walk: hand-crafting the payload
 
-Unlike p2_1/p2_2/p2_3 (numeric parameters, sqlmap's default heuristics),
+Unlike p2_2/p2_3 (numeric parameters, sqlmap's default heuristics),
 `card` sits inside a single-quoted string context, the same shape as
 p1_1's login bypass and p1_3's UNION injection. Closing the quote and
 appending a `UNION SELECT` against the hidden table swaps the flag in as

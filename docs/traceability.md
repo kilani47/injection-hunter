@@ -15,8 +15,7 @@ against a real backend engine, nothing in this matrix is aspirational.
 | Boolean-blind SQLi (`AND 1=1`/`1=2`, bisection) | 1.4 Trick Tower Silent Room; F.1 stage 3 | MariaDB | [`phase1/silent-room/DEBRIEF.md`](../phase1/silent-room/DEBRIEF.md) |
 | Time-blind SQLi (`IF(cond,SLEEP(n),0)`) | 1.5 Zevil Island Medical Bay; F.1 stage 4 | MariaDB | [`phase1/medical-bay/DEBRIEF.md`](../phase1/medical-bay/DEBRIEF.md) |
 | The 9-step SQLi methodology, applied end-to-end | F.1 Trick Tower Final Exam | MariaDB | [`finals/trick-tower-final/DEBRIEF.md`](../finals/trick-tower-final/DEBRIEF.md) |
-| SQLMap essentials (`-r`, `-p`, `--dbs`→`--dump`) | 2.1 Automated Floor Skip | MariaDB | [`phase2/automated-floor-skip/DEBRIEF.md`](../phase2/automated-floor-skip/DEBRIEF.md) |
-| SQLMap against a known-CVE-style target | 2.2 A Sealed Floor | MariaDB | [`phase2/sealed-floor/DEBRIEF.md`](../phase2/sealed-floor/DEBRIEF.md) |
+| SQLMap essentials (`-r`, `-p`, `--dbs`→`--dump`) and a known-CVE-style target | 2.2 A Sealed Floor | MariaDB | [`phase2/sealed-floor/DEBRIEF.md`](../phase2/sealed-floor/DEBRIEF.md) |
 | SQLi via non-form inputs (`User-Agent` header, `--level 3`) | 2.3 The Disguised Examiner | MariaDB | [`phase2/disguised-examiner/DEBRIEF.md`](../phase2/disguised-examiner/DEBRIEF.md) |
 | Out-of-band SQLi (DNS/HTTP exfil channel) | 3.1 The Spell Card | MariaDB + collaborator | [`phase3/spell-card/DEBRIEF.md`](../phase3/spell-card/DEBRIEF.md) |
 | Second-order / stored SQLi | 3.2 The Cursed Card | MariaDB | [`phase3/cursed-card/DEBRIEF.md`](../phase3/cursed-card/DEBRIEF.md) |

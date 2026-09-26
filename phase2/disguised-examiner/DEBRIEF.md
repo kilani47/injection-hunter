@@ -47,9 +47,8 @@ form submits. Every single request carries a `User-Agent` header (or
 lets the client set one to whatever it likes), and this floor trusts
 that value completely when it builds its "recent check-ins from this
 device" query. The result set (`id, ua, seen_at`) is rendered straight
-into the page's table, the same reflected-UNION shape as `p2_1`'s
-`floors` table and `p2_2`'s `cms_news` table, just fed by a header
-instead of a query parameter.
+into the page's table, the same reflected-UNION shape as `p2_2`'s
+`cms_news` table, just fed by a header instead of a query parameter.
 
 `examiner_vault`, the table actually holding this floor's flag, is
 never touched by any query `/p2/examiner`'s own code constructs on its
@@ -57,8 +56,8 @@ own. It only becomes reachable by riding the `User-Agent` header
 injection into a `UNION SELECT` against it.
 
 New to the shared `sqlmap` flags below (`-r`, `--batch`, `--ignore-stdin`,
-`--level`, `--risk`)? They're explained in plain terms in the Automated
-Floor Skip debrief's "New to sqlmap? Read this once" section. `--dbms` and
+`--level`, `--risk`)? They're explained in plain terms in A Sealed
+Floor's debrief's "New to sqlmap? Read this once" section. `--dbms` and
 `--sql-query`, both new on this floor, are explained where they're first
 used below.
 
@@ -199,7 +198,7 @@ real, live run against this exact stack, not a hypothetical transcript.
 1542 requests at `--level 3` versus a much smaller count at `--level 1`
 is the direct, visible cost of that broader header/cookie coverage,
 worth knowing before reaching for a higher `--level` against a real
-target purely out of habit (see `p2_1`'s DEBRIEF for the same
+target purely out of habit (see `p2_2`'s DEBRIEF for the same
 proportionality point about `--level`/`--risk` against production
 systems).
 

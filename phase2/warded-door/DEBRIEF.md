@@ -4,8 +4,8 @@
 
 New to the shared `sqlmap` flags below (`-u`, `-p`, `--batch`,
 `--ignore-stdin`, `-v`, `--dbs`/`-D`/`--tables`/`-T`/`--columns`/`--dump`,
-`--technique`)? They're explained in plain terms in the Automated Floor
-Skip debrief's "New to sqlmap? Read this once" section and the
+`--technique`)? They're explained in plain terms in A Sealed Floor's
+debrief's "New to sqlmap? Read this once" section and the
 `--technique`/`--level`/`--risk` section further down that same debrief.
 `--random-agent` and `--tamper`, both new here, are explained below.
 

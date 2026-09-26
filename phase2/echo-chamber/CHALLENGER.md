@@ -1,6 +1,6 @@
 # The Echo Chamber
 
-**Phase 2, Trick Tower** &middot; Floor 5 &middot; Transmutation
+**Phase 2, Trick Tower** &middot; Floor 4 &middot; Transmutation
 
 ## Briefing
 

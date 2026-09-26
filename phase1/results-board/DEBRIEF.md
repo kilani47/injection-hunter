@@ -119,8 +119,8 @@ which prints `username` and `password` as rows. So the target is
 `staff.password`, discovered with nothing but the board's own output and
 no access to the app's source. (Every query above needs only a DB account
 that can read `information_schema`, which every account can by default.
-This is exactly the enumeration sqlmap automates for you; see the
-Automated Floor Skip debrief in Phase 2 for driving it with a tool.)
+This is exactly the enumeration sqlmap automates for you; see A Sealed
+Floor's debrief in Phase 2 for driving it with a tool.)
 
 **4. Extract.** With the table and column names in hand, replace the
 `NULL` placeholders with real columns from `staff`, keeping the same

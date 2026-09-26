@@ -27,7 +27,6 @@ declare -A URLS=(
   # [p1_3]="https://REPLACE-ME.example/results-board.gif"
   # [p1_4]="https://REPLACE-ME.example/silent-room.gif"
   # [p1_5]="https://REPLACE-ME.example/medical-bay.gif"
-  # [p2_1]="https://REPLACE-ME.example/floor-skip.gif"
   # [p2_2]="https://REPLACE-ME.example/sealed-floor.gif"
   # [p2_3]="https://REPLACE-ME.example/disguised-examiner.gif"
   # [p3_1]="https://REPLACE-ME.example/spell-card.gif"

