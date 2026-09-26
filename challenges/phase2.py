@@ -17,6 +17,7 @@ so the file stays append-only friendly, same convention as phase1.py.
 
 from __future__ import annotations
 
+import secrets
 from datetime import datetime, timezone
 
 from flask import Blueprint, redirect, render_template, request, session, url_for
@@ -363,3 +364,70 @@ def p2_ledger():
 
     return render_template("p2_ledger.html", authed=True, rows=rows,
                            error=error, cell_id=cell_id)
+
+
+# ---------------------------------------------------------------------------
+# p2_5, The Echo Chamber
+# ---------------------------------------------------------------------------
+#
+# A boolean-blind injection whose page is deliberately NOISY. Every response
+# carries a fresh random "resonance reading" (a variable number of random
+# hex lines), so no two responses are byte-similar even for the same input.
+# That defeats sqlmap's default true/false auto-detection, which leans on
+# comparing response similarity: the random content swamps the signal.
+#
+# The only stable difference is a fixed phrase: a matched row renders "the
+# chamber resonates", no match renders "only silence". That is the oracle,
+# but sqlmap won't find it on its own here; you have to hand it to sqlmap
+# with --string="the chamber resonates" (or --code), and steer method with
+# --technique=B. There is no error text and no result set rendered, so
+# boolean (and the slower time-based) are the only channels; error-based and
+# UNION have nothing to read.
+
+_ECHO_TRUE = "the chamber resonates"
+_ECHO_FALSE = "only silence"
+
+
+def _resonance_noise() -> list[str]:
+    """A fresh, variable random reading for every response. This is the
+    dynamic content that makes sqlmap's default response-similarity
+    comparison unreliable, so the oracle has to be defined explicitly."""
+    return [secrets.token_hex(24) for _ in range(secrets.randbelow(24) + 16)]
+
+
+@bp.route("/p2/echo", methods=["GET"])
+def p2_echo():
+    """The chamber's word-check, deliberately vulnerable to boolean-blind
+    SQL injection on `whisper`, wrapped in deliberately noisy output."""
+    whisper = request.args.get("whisper")
+    resonates = None  # None: nothing whispered yet. True/False: the one bit.
+
+    if whisper is not None:
+        conn = mysql_conn("p2_echo")
+        try:
+            with conn.cursor() as cur:
+                # VULN: string concat, `whisper` spliced straight into the
+                # SQL text with no escaping. Use a parameterized query
+                # (cur.execute(q, (whisper,))) instead; left unescaped here
+                # on purpose, this is the challenge's sink. Only the truth of
+                # the match ever leaves the server (resonates vs silence),
+                # never a row, never an error, so this is a pure boolean
+                # oracle, and a deliberately noisy one.
+                q = f"SELECT 1 FROM echo_words WHERE word = '{whisper}'"
+                cur.execute(q)
+                resonates = cur.fetchone() is not None
+        except Exception:
+            # Deliberately silent: a broken query folds into the same "only
+            # silence" as a clean non-match, so a malformed probe leaks no
+            # third state. Same house style as the Silent Room.
+            resonates = False
+        finally:
+            conn.close()
+
+    return render_template(
+        "p2_echo.html",
+        whisper=whisper,
+        resonates=resonates,
+        answer=(_ECHO_TRUE if resonates else _ECHO_FALSE) if resonates is not None else None,
+        noise=_resonance_noise(),
+    )

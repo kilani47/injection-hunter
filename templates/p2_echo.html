@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}The Echo Chamber · The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p2{% endblock %}
+{% block phase_nav %}<a href="{{ url_for('phase', phase_id='2') }}" class="hover:text-accent transition-colors">phase 2</a>{% endblock %}
+
+{% block main %}
+<main class="relative flex-1 flex flex-col justify-center {% if has_hero('p2_echo') %}cine{% endif %}">
+  {% if has_hero('p2_echo') %}
+    <img class="cine-img" src="{{ url_for('static', filename='img/p2_echo.png') }}"
+         alt="A resonant stone chamber that answers only in echoes"
+         loading="eager" decoding="async">
+    <div class="cine-scrim-content"></div>
+  {% endif %}
+  <div class="relative mx-auto w-full max-w-5xl px-6 py-10">
+    {% block content %}
+    <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+      <div>
+        <p class="font-mono text-xs text-muted mb-2 text-shadow-wallpaper">trick tower &middot; floor 5</p>
+        <h1 class="font-display text-3xl font-semibold text-bone mb-4 text-shadow-wallpaper">The Echo Chamber</h1>
+        <p class="max-w-md text-bone/85 leading-relaxed mb-4 text-shadow-wallpaper">
+          Whisper a word into the chamber and it answers, but never plainly. A
+          word it holds makes the stone ring; a word it doesn't leaves the air
+          dead. Either way the walls throw back a fresh wash of random
+          resonance every single time, so no two answers ever look alike.
+        </p>
+        <p class="max-w-md text-bone/70 leading-relaxed text-sm text-shadow-wallpaper">
+          Objective: recover the one true word the chamber keeps sealed away,
+          using only its two-way answer. The noise means a tool can't guess
+          what "yes" looks like on its own; you'll have to tell it.
+        </p>
+      </div>
+
+      <div class="license-card glass rounded-[1.75rem] p-6">
+        <div class="exam-terminal rounded-xl p-5">
+          <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+            <span class="text-accent text-glow">&gt;</span> echo chamber: whisper a word
+          </p>
+
+          <form method="get" action="{{ url_for('phase2.p2_echo') }}" class="flex flex-col gap-3 mb-4">
+            <input
+              type="text"
+              name="whisper"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="a word to whisper"
+              value="{{ whisper or '' }}"
+              class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+            <button type="submit"
+              class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
+              Whisper
+            </button>
+          </form>
+
+          {% if answer is not none %}
+            <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+              <p class="font-mono text-sm text-bone">{{ answer }}</p>
+            </div>
+          {% endif %}
+
+          <p class="font-mono text-[11px] text-muted mb-2 border-t border-white/10 pt-4">
+            resonance reading
+          </p>
+          <div class="rounded-lg border border-white/10 bg-black/20 px-3 py-2 max-h-40 overflow-y-auto">
+            {% for line in noise %}
+            <p class="font-mono text-[10px] leading-snug text-muted/50 break-all">{{ line }}</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endblock %}
+  </div>
+</main>
+{% endblock %}
