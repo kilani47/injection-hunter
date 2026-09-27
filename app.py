@@ -12,20 +12,35 @@ from __future__ import annotations
 
 import os
 
-from flask import Flask, redirect, render_template, request, session, url_for
+from flask import Flask, redirect, render_template, request, url_for
 
 from core import unlock
+from core.store import ProgressStore
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
 
 # Lab constant secret key. This is a deliberately-vulnerable, local-only CTF
-# lab (see NOTICE / README ethics banner): session integrity here only
-# needs to survive a container restart, not resist a determined attacker,
-# so a hardcoded key (vs. a per-deploy secret) is an intentional simplicity
-# choice, not an oversight.
+# lab (see NOTICE / README ethics banner): a hardcoded key (vs. a per-deploy
+# secret) is an intentional simplicity choice, not an oversight. Only
+# per-challenge uses of Flask's own session (e.g. challenges/phase2.py's
+# Warden's Ledger login) depend on this now; overall lab progress does not,
+# see ProgressStore below.
 app.secret_key = "seiyaku-arc-hunter-license-nen-000001"
+
+# Which floors have been cleared is tracked here, in a JSON file on disk,
+# not in the visitor's browser session. This is a single-operator local
+# lab, not a multi-tenant service, so there's no real notion of "someone
+# else's progress" to keep separate, and a browser-session cookie was never
+# a good fit for "remember what I've solved": a non-permanent Flask session
+# cookie (the default) is gone the moment the browser itself closes,
+# restarting the container or not. PROGRESS_PATH defaults to a path this
+# repo's docker-compose.yml bind-mounts from the host (./data on the host),
+# a host bind-mount rather than a named Docker volume specifically so it
+# survives even `docker compose down -v`, not just a plain restart.
+PROGRESS_PATH = os.environ.get("PROGRESS_PATH", "/app/data/progress.json")
+progress_store = ProgressStore(PROGRESS_PATH)
 
 
 def _gif_path(node_id: str) -> str:
@@ -50,7 +65,7 @@ def render_victory(node: dict) -> str:
     the original CSS Nen-burst animation (templates/victory.html) when
     absent, per the legal pack's no-gif-by-default policy.
     """
-    prog = unlock.progress(session)
+    prog = unlock.progress(progress_store)
     next_node = next(
         (n for n in prog["nodes"] if n["unlocked"] and not n["cleared"]), None
     )
@@ -71,14 +86,14 @@ def index():
 
 @app.route("/hub")
 def hub():
-    prog = unlock.progress(session)
-    phases = unlock.phase_progress(session)
+    prog = unlock.progress(progress_store)
+    phases = unlock.phase_progress(progress_store)
     return render_template("hub.html", progress=prog, phases=phases)
 
 
 @app.route("/phase/<phase_id>")
 def phase(phase_id):
-    view = unlock.phase_view(session, phase_id)
+    view = unlock.phase_view(progress_store, phase_id)
     if view is None:
         return redirect(url_for("hub"))
     return render_template("phase.html", phase=view)
@@ -87,9 +102,9 @@ def phase(phase_id):
 @app.route("/flag", methods=["POST"])
 def flag():
     submitted = request.form.get("flag", "")
-    node = unlock.submit_flag(session, submitted)
+    node = unlock.submit_flag(progress_store, submitted)
     if node is None:
-        prog = unlock.progress(session)
+        prog = unlock.progress(progress_store)
         return render_template(
             "hub.html",
             progress=prog,
@@ -100,7 +115,7 @@ def flag():
 
 @app.route("/reset")
 def reset():
-    unlock.reset(session)
+    unlock.reset(progress_store)
     return redirect(url_for("hub"))
 
 

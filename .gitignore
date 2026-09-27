@@ -19,6 +19,14 @@ static/img/f1_*.png
 static/img/f2_*.png
 static/img/favicon.png
 
+# Operator's own lab progress (core/store.py), bind-mounted from here into
+# the flask container so it survives container restarts. This is runtime
+# save state, not something to ship or commit; keep the directory itself
+# (see data/.gitkeep) so a fresh clone has somewhere for docker-compose's
+# bind mount to land.
+data/*
+!data/.gitkeep
+
 # python
 .venv/
 
