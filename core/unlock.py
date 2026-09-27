@@ -2,14 +2,19 @@
 core/unlock.py: single source of truth for challenge ordering, flags, and
 progressive unlock state.
 
-The Seiyaku Arc is one linear chain of 18 nodes (5 phases + finals). Clearing
-node N unlocks node N+1. Progress lives in the Flask session under the
-"cleared" key: a list of node ids the player has solved, in the order they
-were solved.
+The Seiyaku Arc is one linear chain of nodes (5 phases + finals; Phase 2
+alone has grown into its own 7-floor SQLMap track, see
+docs/sqlmap-track.md). Clearing node N unlocks node N+1. Progress is kept
+under the "cleared" key of whatever mapping this module is handed: a list
+of node ids the player has solved, in the order they were solved.
 
-This module has zero Flask import dependency beyond the `session`-like
-mapping it is handed: any dict-like object with __getitem__/get/__setitem__
-works, which keeps it trivially unit-testable outside a request context.
+This module has zero Flask import dependency: any dict-like object with
+__getitem__/get/__setitem__ works, which keeps it trivially unit-testable
+outside a request context. app.py hands it a core.store.ProgressStore, a
+small JSON-file-backed dict, not Flask's own session, specifically so
+progress is one persistent, whole-lab save file instead of something tied
+to a browser's session cookie (which, being non-permanent by default,
+would otherwise vanish the moment the browser itself closed).
 """
 
 from __future__ import annotations
@@ -162,11 +167,11 @@ _ORDER: list[str] = [n["id"] for n in NODES]
 _BY_ID: dict[str, dict[str, Any]] = {n["id"]: n for n in NODES}
 
 
-def _cleared(session: MutableMapping[str, Any]) -> list[str]:
-    return list(session.get("cleared", []))
+def _cleared(store: MutableMapping[str, Any]) -> list[str]:
+    return list(store.get("cleared", []))
 
 
-def is_unlocked(session: MutableMapping[str, Any], node_id: str) -> bool:
+def is_unlocked(store: MutableMapping[str, Any], node_id: str) -> bool:
     """A node is unlocked if it's the very first node in the chain, or the
     node immediately before it in NODES order has been cleared."""
     if node_id not in _BY_ID:
@@ -174,15 +179,15 @@ def is_unlocked(session: MutableMapping[str, Any], node_id: str) -> bool:
     idx = _ORDER.index(node_id)
     if idx == 0:
         return True
-    cleared = _cleared(session)
+    cleared = _cleared(store)
     return _ORDER[idx - 1] in cleared
 
 
-def submit_flag(session: MutableMapping[str, Any], flag: str) -> Optional[dict[str, Any]]:
+def submit_flag(store: MutableMapping[str, Any], flag: str) -> Optional[dict[str, Any]]:
     """Validate a submitted flag against the currently-unlocked node.
 
     Returns the node dict on success (and records it as cleared in the
-    session), or None if the flag doesn't match any unlocked, not-yet-cleared
+    store), or None if the flag doesn't match any unlocked, not-yet-cleared
     node. Matching is restricted to unlocked nodes so a flag can't be used to
     skip ahead out of order.
     """
@@ -190,27 +195,27 @@ def submit_flag(session: MutableMapping[str, Any], flag: str) -> Optional[dict[s
     if not flag:
         return None
 
-    cleared = _cleared(session)
+    cleared = _cleared(store)
     for node in NODES:
         if node["id"] in cleared:
             continue
-        if not is_unlocked(session, node["id"]):
+        if not is_unlocked(store, node["id"]):
             continue
         if node["flag"] == flag:
             cleared.append(node["id"])
-            session["cleared"] = cleared
+            store["cleared"] = cleared
             return node
     return None
 
 
-def progress(session: MutableMapping[str, Any]) -> dict[str, Any]:
+def progress(store: MutableMapping[str, Any]) -> dict[str, Any]:
     """Full progress snapshot for rendering the hub."""
-    cleared = _cleared(session)
+    cleared = _cleared(store)
     cleared_set = set(cleared)
     nodes = []
     next_node_id = None
     for node in NODES:
-        unlocked = is_unlocked(session, node["id"])
+        unlocked = is_unlocked(store, node["id"])
         is_cleared = node["id"] in cleared_set
         if unlocked and not is_cleared and next_node_id is None:
             next_node_id = node["id"]
@@ -231,12 +236,12 @@ def progress(session: MutableMapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def phase_progress(session: MutableMapping[str, Any]) -> list[dict[str, Any]]:
+def phase_progress(store: MutableMapping[str, Any]) -> list[dict[str, Any]]:
     """Per-phase aggregate for the hub overview, in phase order. Each entry
     carries the phase's meta, its cleared/total counts, whether the phase is
     unlocked (its first node is reachable) or fully cleared, and the id of
     the first not-yet-cleared node in it (for a 'continue here' link)."""
-    snapshot = progress(session)
+    snapshot = progress(store)
     by_phase: dict[str, list[dict[str, Any]]] = {}
     for node in snapshot["nodes"]:
         by_phase.setdefault(node["phase"], []).append(node)
@@ -259,12 +264,12 @@ def phase_progress(session: MutableMapping[str, Any]) -> list[dict[str, Any]]:
     return phases
 
 
-def phase_view(session: MutableMapping[str, Any], phase_id: str) -> Optional[dict[str, Any]]:
+def phase_view(store: MutableMapping[str, Any], phase_id: str) -> Optional[dict[str, Any]]:
     """Everything a single phase page needs: the phase meta plus its nodes
     with unlock/clear state. Returns None for an unknown phase id."""
     if phase_id not in PHASE_META:
         return None
-    snapshot = progress(session)
+    snapshot = progress(store)
     nodes = [n for n in snapshot["nodes"] if n["phase"] == phase_id]
     cleared = sum(1 for n in nodes if n["cleared"])
     return {
@@ -278,6 +283,6 @@ def phase_view(session: MutableMapping[str, Any], phase_id: str) -> Optional[dic
     }
 
 
-def reset(session: MutableMapping[str, Any]) -> None:
+def reset(store: MutableMapping[str, Any]) -> None:
     """Wipe progress back to a fresh start."""
-    session["cleared"] = []
+    store["cleared"] = []

@@ -9,6 +9,13 @@ services:
       - mongo
       - openldap
       - collaborator
+    volumes:
+      # Which floors are cleared lives in this one JSON file (see
+      # core/store.py), bind-mounted from the host rather than kept in a
+      # named Docker volume specifically so it survives *every* restart,
+      # `docker compose down`, `down -v`, a full rebuild, all of it, the
+      # file just sits in ./data on the host either way.
+      - ./data:/app/data
     environment:
       # Only host/port are shared. Each MariaDB-backed challenge connects
       # as its own restricted per-challenge user (svc_<challenge>) to its
