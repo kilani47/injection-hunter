@@ -61,10 +61,20 @@ lessons, not quirks of this floor:
    and the oracle would be useless.
 2. **The base request must already be true.** An `AND`-based payload
    (`... AND '1'='1'` vs `... AND '1'='2'`) can only flip a request that is
-   already true. Point sqlmap at `whisper=resonance` (a word the chamber
-   actually holds, so the base page rings), not `whisper=x` (which never
-   matches, so both AND-true and AND-false stay "silence" and there is
-   nothing to compare).
+   already true. `... AND 1=1` or `... AND 1=2` tacked onto a base value that
+   never matches stays false either way, so there is nothing to compare.
+
+   `resonance` gets used below because it is a real word (see
+   `seed/mariadb/16_echo.sql`: `resonance`, `reverberation`, `overtone`,
+   `harmonic`) and an easy one to guess from the floor's own name, but
+   knowing a real word was never actually required. Step 1 already shows
+   the hint-free alternative: `whisper=' OR '1'='1` is just as true as a
+   real word, because it forges its own true condition instead of relying on
+   one already sitting in the table. Handing sqlmap that exact string as
+   `whisper`'s value (in place of `resonance`) dumps the identical flag,
+   verified live: no wordlist, no guessing, no schema knowledge needed, only
+   the generic boolean-blind reasoning from the Silent Room (p1_4) applied
+   again here.
 
 ## The walk (verified live against this exact seed)
 
