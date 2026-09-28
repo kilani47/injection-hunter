@@ -68,6 +68,18 @@ Table: cell_records
 One command, one clear answer: `cell_records.secret`, out of sixteen
 tables, without opening any of the other fifteen at all.
 
+That command doesn't actually stop there under `--batch`, though. Right
+after reporting the location, sqlmap asks `do you want to dump found
+column(s) entries? [Y/n]`, and `--batch` answers every prompt with its
+default, "Y" here, so it goes on to dump `cell_records.secret` in full:
+401 rows, all but one `NULL`, flag included. That makes `--search -C
+secret` alone a complete one-shot solve, no `-T`/`--where` needed at all,
+and it needs even less prior knowledge than the fully narrowed command
+below: not even the table's name. `-C`/`--where` are still worth knowing
+for the case a floor's `--batch` default happens to be "n" on that
+prompt, or the matched column holds more than one real row worth reading
+past.
+
 **`--count`** answers "how many rows does this table actually have?"
 before you commit to reading them:
 
