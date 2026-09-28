@@ -54,6 +54,51 @@ script, a report export) needs it hands that account something no
 per-database `GRANT` can undo, regardless of how carefully every table
 grant elsewhere is scoped.
 
+## Finding the file: what's discoverable here, and what genuinely isn't
+
+Every earlier floor's debrief can show exactly how the table, column, or
+word actually got found, the injection itself made that discoverable.
+Be honest about where that stops on this one.
+
+**The confined directory is a clean, no-guessing recon step.**
+`SELECT @@secure_file_priv` through `--sql-shell` (or folded into a
+UNION subquery, same as any other value) directly reports the one
+directory this account's `FILE` privilege is allowed to touch:
+
+```
+SELECT @@secure_file_priv;
+'/var/lib/mysql-files/'
+```
+
+**The filename inside that directory is not discoverable at all.**
+Verified live, three different `LOAD_FILE()` calls, the real flag path,
+`/etc/passwd` (outside the confined directory), and a made-up filename
+*inside* the right directory, all come back identically empty:
+
+```
+LOAD_FILE('/etc/passwd')                          -> ' '
+LOAD_FILE('/var/lib/mysql-files/')                -> ' '   (no directory listing either)
+LOAD_FILE('/var/lib/mysql-files/nonexistent.txt') -> ' '
+```
+
+There is no signal anywhere in that to tell "wrong directory" apart from
+"right directory, wrong filename" apart from "that's a directory, not a
+file". `LOAD_FILE()` is a yes/no oracle on one exact path at a time; it
+never lists what a directory actually contains. That is a genuine limit
+of this technique in general, not an artifact of this lab's seed.
+
+On a real engagement, closing that gap means one of: a filename you
+already have from other recon (source disclosure, a backup script's
+naming convention, an error message elsewhere), or brute-forcing a
+wordlist of likely names against `LOAD_FILE()`, slow and noisy, but the
+honest fallback when you have nothing better. This floor hands you
+`groundskeeper.flag` directly, in the briefing and here, on purpose: the
+lesson is what an uncontainable global `FILE` grant lets an
+already-confirmed injection reach, not the separate, much harder skill
+of blind file enumeration. Read the clean `--file-read` command below as
+"here is what that access lets you do once you have a target path", not
+as "here is how you'd have found that path with nothing else to go on".
+
 ## The technique: reading (and writing) files through the injection
 
 **`--file-read=<path>`** asks sqlmap to fetch a specific file off the
