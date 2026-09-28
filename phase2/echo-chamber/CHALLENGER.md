@@ -51,7 +51,8 @@ true/false detection.
   "ring". Then tell your tool that exactly that is what "true" looks like.
   In `sqlmap` that is `--string`; `--technique` lets you force which method
   it uses, and `--time-sec` tunes the slow fallback.
-- An `AND`-based test needs a request that is already "true" to flip. Point
-  your tool at a word the chamber actually holds, not a nonsense one.
+- An `AND`-based test needs a request that is already "true" to flip. That
+  "true" doesn't have to come from a real word you happened to guess, forging
+  your own true condition works just as well.
 
 See `DEBRIEF.md` only once you're done, or well and truly stuck.
