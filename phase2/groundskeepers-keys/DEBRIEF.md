@@ -91,8 +91,17 @@ On a real engagement, closing that gap means one of: a filename you
 already have from other recon (source disclosure, a backup script's
 naming convention, an error message elsewhere), or brute-forcing a
 wordlist of likely names against `LOAD_FILE()`, slow and noisy, but the
-honest fallback when you have nothing better. This floor hands you
-`groundskeeper.flag` directly, in the briefing and here, on purpose: the
+honest fallback when you have nothing better. A wordlist seeded from the
+target's own theme (here, "groundskeeper" is straight out of this
+floor's own name and flavor text) is a real, legitimate way to narrow
+that search, the same instinct that finds `resonance` in the Echo
+Chamber's wordlist. It only gets you half of this filename, though:
+`groundskeeper.flag` is the only `.flag`-extension file anywhere in this
+lab, every other floor's flag lives in a table, so nothing here
+establishes that extension as a pattern worth guessing. The word is a
+fair theme-based guess; the exact filename, word plus extension, still
+isn't. This floor hands you `groundskeeper.flag` directly, in the
+briefing and here, on purpose: the
 lesson is what an uncontainable global `FILE` grant lets an
 already-confirmed injection reach, not the separate, much harder skill
 of blind file enumeration. Read the clean `--file-read` command below as
