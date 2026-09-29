@@ -3,12 +3,21 @@
 {% block body_class %}nen-p3{% endblock %}
 {% block phase_nav %}<a href="{{ url_for('phase', phase_id='3') }}" class="hover:text-accent transition-colors">phase 3</a>{% endblock %}
 
-{% block content %}
+{% block main %}
+<main class="relative flex-1 flex flex-col justify-center {% if has_hero('p3_spellcard') %}cine{% endif %}">
+  {% if has_hero('p3_spellcard') %}
+    <img class="cine-img" src="{{ url_for('static', filename='img/p3_spellcard.png') }}"
+         alt="Gon and Killua facing a bomber across a floating Greed Island card field, a glowing sealed card rising between them"
+         loading="eager" decoding="async">
+    <div class="cine-scrim-content"></div>
+  {% endif %}
+  <div class="relative mx-auto w-full max-w-5xl px-6 py-10">
+    {% block content %}
 <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
   <div>
-    <p class="font-mono text-xs text-muted mb-2">greed island &middot; the spell card</p>
-    <h1 class="font-display text-3xl font-semibold text-bone mb-4">The Spell Card</h1>
-    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+    <p class="font-mono text-xs text-muted mb-2 text-shadow-wallpaper">greed island &middot; the spell card</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4 text-shadow-wallpaper">The Spell Card</h1>
+    <p class="max-w-md text-bone/85 leading-relaxed mb-4 text-shadow-wallpaper">
       Every card on Greed Island is cast into the field the same way, win
       or lose: the game master reads the card, resolves its effect, and
       tells you nothing back except that it happened. This reader is no
@@ -16,7 +25,7 @@
       this page's own response: not the effect, not an error, not even a
       hint that something went wrong.
     </p>
-    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+    <p class="max-w-md text-bone/70 leading-relaxed text-sm text-shadow-wallpaper">
       Objective: the game master isn't the only one watching the field.
       Something else is listening on a channel the visible response never
       touches. Find a way to make the card's true effect travel there
@@ -135,4 +144,7 @@
   setInterval(poll, 2000);
 })();
 </script>
+    {% endblock %}
+  </div>
+</main>
 {% endblock %}
