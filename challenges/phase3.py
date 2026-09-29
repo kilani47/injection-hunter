@@ -18,6 +18,7 @@ append-only-friendly convention as phase1.py / phase2.py.
 
 from __future__ import annotations
 
+import threading
 from urllib.parse import quote
 
 import requests
@@ -43,6 +44,59 @@ COLLABORATOR_BASE = "http://collaborator"
 # ---------------------------------------------------------------------------
 # p3_1, The Spell Card
 # ---------------------------------------------------------------------------
+
+def _cast_and_relay(card: str) -> None:
+    """Run the (vulnerable) card lookup and relay its result out-of-band.
+
+    Deliberately runs in a background thread (see p3_spellcard), so the
+    HTTP response the caster gets back is returned *before* this even
+    starts, and its timing is completely independent of how long the query
+    takes. That independence is load-bearing, not incidental: without it,
+    an injected `SLEEP()` would stall the response and hand the tester an
+    in-band time-based oracle, exactly the signal this fully-blind floor is
+    built to deny. The query's duration stays trapped inside this detached
+    thread where the caster can't observe it; the only channel that ever
+    reveals anything is the out-of-band relay to `collaborator` below.
+    """
+    value = None
+    conn = mysql_conn("p3_spellcard")
+    try:
+        with conn.cursor() as cur:
+            # VULN: string concat, raw query param spliced directly into
+            # the SQL text inside a single-quoted string literal, no
+            # escaping/parameterization whatsoever. Use a parameterized
+            # query (cur.execute(q, (card,))) instead; left unescaped here
+            # on purpose, this is the challenge's sink.
+            q = f"SELECT effect FROM cards WHERE id='{card}'"
+            cur.execute(q)
+            row = cur.fetchone()
+            if row:
+                value = row.get("effect")
+    except Exception:
+        # Fully blind by design: every DB error is swallowed silently. No
+        # exception text, type, or timing-adjacent detail is ever allowed
+        # to reach the HTTP response, that's what forces a genuinely
+        # out-of-band technique instead of the error-based / boolean-blind
+        # channels every earlier floor offered in-band.
+        value = None
+    finally:
+        conn.close()
+
+    # The app-layer relay (docs/oob-spike.md's "Decision"): a real,
+    # separate outbound HTTP call to collaborator carrying whatever the
+    # query returned. This is the only place the value ever becomes
+    # observable, never in this route's own response. Best-effort: a
+    # collaborator hiccup (network blip, timeout) must never surface in, or
+    # crash, the relay either.
+    relay_value = value if value else "no-effect"
+    try:
+        requests.get(
+            f"{COLLABORATOR_BASE}/spellcard-cast/{quote(str(relay_value), safe='')}",
+            timeout=2,
+        )
+    except Exception:
+        pass
+
 
 @bp.route("/p3/spellcard", methods=["GET"])
 def p3_spellcard():
@@ -72,6 +126,14 @@ def p3_spellcard():
     collaborator's capture feed instead (proxied at
     /p3/spellcard/captures below).
 
+    The vulnerable lookup and its relay run in a detached background thread
+    (_cast_and_relay), so this handler returns the blind response
+    immediately and its timing never depends on the query. That's what
+    makes the "no timing signal in-band" claim actually true: an injected
+    `SLEEP()` delays only the throwaway background thread, not the response
+    the caster is timing, closing the time-based channel that would
+    otherwise be an unintended in-band solve.
+
     The hidden `sealed_cards` table, holding this floor's flag, is never
     touched by any query this route's own code constructs on its own. It
     only surfaces by riding the `card` injection into a UNION SELECT
@@ -81,49 +143,17 @@ def p3_spellcard():
     card = request.args.get("card", "")
 
     if card:
-        value = None
-        conn = mysql_conn("p3_spellcard")
-        try:
-            with conn.cursor() as cur:
-                # VULN: string concat, raw query param spliced directly
-                # into the SQL text inside a single-quoted string literal,
-                # no escaping/parameterization whatsoever. Use a
-                # parameterized query (cur.execute(q, (card,))) instead;
-                # left unescaped here on purpose, this is the challenge's
-                # sink.
-                q = f"SELECT effect FROM cards WHERE id='{card}'"
-                cur.execute(q)
-                row = cur.fetchone()
-                if row:
-                    value = row.get("effect")
-        except Exception:
-            # Fully blind by design: every DB error is swallowed silently.
-            # No exception text, type, or timing-adjacent detail is ever
-            # allowed to reach the HTTP response, that's what forces a
-            # genuinely out-of-band technique instead of the error-based /
-            # boolean-blind channels every earlier floor offered in-band.
-            value = None
-        finally:
-            conn.close()
-
-        # The app-layer relay (docs/oob-spike.md's "Decision"): a real,
-        # separate outbound HTTP call to collaborator carrying whatever the
-        # query returned. This is the only place the value ever becomes
-        # observable, never in this route's own response. Best-effort: a
-        # collaborator hiccup (network blip, timeout) must never surface
-        # in, or crash, the challenge's response either.
-        relay_value = value if value else "no-effect"
-        try:
-            requests.get(
-                f"{COLLABORATOR_BASE}/spellcard-cast/{quote(str(relay_value), safe='')}",
-                timeout=2,
-            )
-        except Exception:
-            pass
+        # Fire-and-forget: the query + OOB relay happen off the request
+        # path entirely, so nothing about how long they take can leak back
+        # into this response's timing. daemon=True so a slow/hung query
+        # (an injected SLEEP, say) never blocks process shutdown.
+        threading.Thread(
+            target=_cast_and_relay, args=(card,), daemon=True
+        ).start()
 
     # Fully blind response: identical regardless of `card`, of whether the
-    # query matched anything, and of whether it raised. No data-dependent
-    # content ever reaches the browser.
+    # query matched anything, of whether it raised, and now of how long it
+    # took. No data-dependent content ever reaches the browser.
     return render_template("p3_spellcard.html", card=card)
 
 
