@@ -38,6 +38,23 @@ available in-band, not because those techniques were patched, but
 because the response was built specifically to give none of them
 anywhere to surface.
 
+The time-based channel takes one extra piece of machinery to close, and
+it's worth calling out because leaving it open is a genuine, easy
+mistake. Swallowing errors and returning a constant page kills the
+boolean/error/UNION signals, but it does *not* kill timing: if the
+vulnerable query runs on the request path, an injected `SLEEP(5)` still
+stalls the response by five seconds, and that delay is a perfectly good
+in-band oracle, sqlmap finds it immediately and dumps the whole database
+through it, never touching the OOB channel this floor is supposed to
+teach. This floor closes that hole by running the query and its relay in
+a **detached background thread** (`_cast_and_relay`), so the handler
+returns the blind response *before* the query even starts. The query's
+duration is trapped in a thread the caster can't observe; an injected
+`SLEEP` delays only that throwaway thread, and the response's timing
+stays flat. Verified live: at `--level=3 --risk=3` sqlmap now reports
+"all tested parameters do not appear to be injectable", precisely
+because every in-band channel, timing included, is genuinely closed.
+
 ## The confirmation channel: out-of-band (OOB) testing
 
 **What it is.** Out-of-band confirmation is the standard technique for
