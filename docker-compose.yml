@@ -32,7 +32,9 @@ services:
       LDAP_BIND_PASSWORD: seiyaku_pw
 
   mariadb:
-    image: mariadb:11
+    build:
+      context: .
+      dockerfile: mariadb/Dockerfile
     # p2_8 "The Groundskeeper's Keys" needs one MariaDB user to hold the
     # global FILE privilege, which lets sqlmap's --file-read pull a file
     # straight off this container's filesystem through that floor's SQL

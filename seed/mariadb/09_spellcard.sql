@@ -26,6 +26,14 @@
 -- just unreferenced but invisible (information_schema is filtered by
 -- the connecting user's privileges) and cross-database reads are
 -- denied. core/db.py's mysql_conn('p3_spellcard') connects as this user.
+-- The http_get UDF lets any SQL session cause MariaDB's own process to
+-- originate an outbound HTTP call.  It must be registered globally (as root,
+-- in the mysql database) before any user can invoke it.  The .so was compiled
+-- into the image by mariadb/Dockerfile; this just wires it up as a callable
+-- function.  UDFs are global -- no per-user EXECUTE grant is needed.
+DROP FUNCTION IF EXISTS http_get;
+CREATE FUNCTION http_get RETURNS STRING SONAME 'http_get.so';
+
 CREATE DATABASE IF NOT EXISTS seiyaku_p3_spellcard;
 CREATE USER IF NOT EXISTS 'svc_p3_spellcard'@'%' IDENTIFIED BY 'p3_spellcard_pw';
 GRANT SELECT ON seiyaku_p3_spellcard.* TO 'svc_p3_spellcard'@'%';

