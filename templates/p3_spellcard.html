@@ -33,6 +33,15 @@
       there carrying the secret — without relying on anything this page's
       response ever says back to you.
     </p>
+    <p class="max-w-md text-bone/50 leading-relaxed text-xs mt-3 text-shadow-wallpaper">
+      Lab note: this database build includes a custom SQL function
+      <code class="text-accent font-mono">http_get(url)</code> that fires
+      a real outbound HTTP GET from inside MariaDB's own process and returns
+      the HTTP status code. It stands in for the platform-native OOB
+      primitives (Oracle's <code class="text-accent font-mono">UTL_HTTP</code>,
+      SQL Server's <code class="text-accent font-mono">xp_dirtree</code>) that
+      don't exist on stock Linux MariaDB.
+    </p>
   </div>
 
   <div class="license-card glass rounded-[1.75rem] p-6">
