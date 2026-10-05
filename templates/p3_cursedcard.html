@@ -3,19 +3,28 @@
 {% block body_class %}nen-p3{% endblock %}
 {% block phase_nav %}<a href="{{ url_for('phase', phase_id='3') }}" class="hover:text-accent transition-colors">phase 3</a>{% endblock %}
 
-{% block content %}
+{% block main %}
+<main class="relative flex-1 flex flex-col justify-center {% if has_hero('p3_cursedcard') %}cine{% endif %}">
+  {% if has_hero('p3_cursedcard') %}
+    <img class="cine-img" src="{{ url_for('static', filename='img/p3_cursedcard.png') }}"
+         alt="Gon, Killua and the Greed Island cast surrounding a cracked, glowing spell card"
+         loading="eager" decoding="async">
+    <div class="cine-scrim-content"></div>
+  {% endif %}
+  <div class="relative mx-auto w-full max-w-5xl px-6 py-10">
+    {% block content %}
 <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
   <div>
-    <p class="font-mono text-xs text-muted mb-2">greed island &middot; the cursed card</p>
-    <h1 class="font-display text-3xl font-semibold text-bone mb-4">The Cursed Card</h1>
-    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+    <p class="font-mono text-xs text-muted mb-2 text-shadow-wallpaper">greed island &middot; the cursed card</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4 text-shadow-wallpaper">The Cursed Card</h1>
+    <p class="max-w-md text-bone/85 leading-relaxed mb-4 text-shadow-wallpaper">
       Not every card on Greed Island does something the moment it's drawn.
       Some sit quietly in the deck, inscribed, filed, entirely inert,
       until a later round, played by someone who never touched the round
       it was written in, wakes them up. The card you inscribe here today
       does nothing today. That's not a bug in the card.
     </p>
-    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+    <p class="max-w-md text-bone/70 leading-relaxed text-sm text-shadow-wallpaper">
       Objective: get something you store now to have an effect later, in
       a different round, read by a different process, on a query you never
       typed a single character of yourself. The inscribing table below is
@@ -131,4 +140,7 @@
     </div>
   </div>
 </div>
+    {% endblock %}
+  </div>
+</main>
 {% endblock %}
