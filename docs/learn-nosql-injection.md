@@ -1,10 +1,13 @@
 # Learning notes: NoSQL injection (MongoDB)
 
-> Read this before Phase 4, floors 1-2 (`records-room`, `archive-guardian`).
-> It's a from-scratch primer: the mental model, the operators, the two
-> core attack patterns, the defenses, and where each idea shows up in the
-> lab. Grounded in MongoDB's own operator docs and the OWASP Testing Guide
-> (see **References** at the end).
+> Read this before Phase 4's NoSQL floors (`archive-guardian`,
+> `diagnostic-desk`, `records-room`, `loophole-clause`). It's a
+> from-scratch primer: the mental model, the operators, and all four core
+> attack patterns PortSwigger's own NoSQLi methodology names — operator
+> injection, error-based, boolean-blind, and time-based — plus the
+> defenses and where each idea shows up in the lab. Grounded in MongoDB's
+> own operator/aggregation docs and the OWASP Testing Guide (see
+> **References** at the end).
 
 ---
 
@@ -100,12 +103,12 @@ that matter for injection:
 | `$regex` | regex match | prefix-walk a hidden value **one character at a time** |
 | `$exists` | field present? | discover which fields a document even has |
 | `$in` | value in list | test many candidates in one query |
-| `$where` | run **JavaScript** | arbitrary JS predicate — see §6 (not in lab) |
-| `$or` | logical OR of clauses | inject extra clauses — see §6 (not in lab) |
+| `$where` | run **JavaScript** | arbitrary JS predicate, time-based blind — see §7 |
+| `$or` | logical OR of clauses | inject extra clauses — see §8 (not in lab) |
 
 ---
 
-## 4. Pattern A — Authentication bypass (lab floor p4_2)
+## 4. Pattern A — Authentication bypass (lab floor p4_1)
 
 The sink is a two-field equality login:
 
@@ -147,7 +150,7 @@ form:   username[$ne]=1&password[$ne]=1
 
 ---
 
-## 5. Pattern B — Blind extraction (lab floor p4_1)
+## 5. Pattern B — Blind extraction (lab floor p4_3)
 
 Here the endpoint is an **oracle**: it tells you only *match / no-match*,
 never the data. You still extract a full hidden string, one bit at a time,
@@ -212,31 +215,135 @@ Same oracle, fewer requests.
         └─────────────────────────────────────────┘
 ```
 
-> `field` is also unvalidated in p4_1, which lets you aim the oracle at
+> `field` is also unvalidated in p4_3, which lets you aim the oracle at
 > *any* field on any document — including fields a normal search result
 > never shows. Combine "which fields exist" (`$exists`) with the
 > extraction loop to pull a value out of a field the UI never displays.
 
 ---
 
-## 6. The gaps (what the lab does NOT drill — know they exist)
+## 6. Pattern C — Error-based detection and exfiltration (lab floor p4_2)
 
-### `$where` — server-side JavaScript injection
+PortSwigger's own NoSQLi methodology leads with this, *before* committing
+to a slow blind campaign: fuzz the target with something deliberately
+malformed and see what the database says about it.
 
-If an app passes attacker input into a `$where` clause, you're no longer
-limited to operators — you're injecting **JavaScript** that MongoDB runs
-per-document:
+### Detection: fuzz for an error
+
+Submit an operator that doesn't exist:
+
+```
+value[$regexx]=x        -> OperationFailure: unknown operator: $regexx
+```
+
+A real application that swallows every exception (p4_1/p4_3's pattern)
+hides this. One that doesn't (p4_2's pattern — a realistic "verbose
+errors left on for debugging" antipattern) confirms the injection exists
+in a single request, no inference from match/no-match behavior required.
+
+### Weaponization: `$expr` + `$convert` one-shot leak
+
+MongoDB's `$expr` operator evaluates an aggregation expression as the
+query predicate; nested inside it, `$toInt`/`$toDate`/`$convert` try to
+cast a value to another type. Asked to convert a value that can't parse,
+with no `onError` fallback supplied, the raised error **embeds the real
+field value verbatim**:
+
+```python
+db.collection.find({
+    "$expr": {"$eq": ["$secretField", {"$toInt": "$secretField"}]}
+})
+# OperationFailure: Failed to parse number 'SEIYAKU{...}' in $convert
+# with no onError value: Did not consume whole string.
+```
+
+This is MongoDB's closest analogue to SQL's classic
+`extractvalue()`/`updatexml()` error-based exfiltration trick: one
+request, the whole value, no bit-at-a-time walking.
+
+```
+   fuzz a malformed operator
+        │
+        ▼
+   error text distinct from "no match"?  ──no──►  errors are swallowed,
+        │ yes                                     fall back to Pattern B
+        ▼
+   injection confirmed in ONE request
+        │
+        ▼
+   target a string field with $expr + $toInt (or $toDate, …)
+        │
+        ▼
+   conversion fails ──► error message contains the real value  ──► DONE
+```
+
+> `$expr` normally sits at the query's top level
+> (`find({"$expr": {...}})`), not nested under a field name. If the
+> *field name itself* is unvalidated (the same `field` the app folds
+> into `{field: value}`, see §1), setting `field="$expr"` turns the
+> entire query into a top-level `$expr` clause — exactly how p4_2's sink
+> reaches this technique through the same unvalidated-field bug p4_1/p4_3
+> already have.
+
+---
+
+## 7. Pattern D — `$where` injection and time-based blind (lab floor p4_4)
+
+`$where` is MongoDB's one operator that doesn't take a literal or another
+operator as its value — it takes a string of **JavaScript**, evaluated by
+the server once per document. That reopens a *string* context, so the
+bug reverts to a classic quote-breakout, closer to Phases 1-3's SQLi than
+to Patterns A-C's pure type confusion:
 
 ```python
 db.users.find({"$where": f"this.name == '{input}'"})   # VULN
-#   input = "' || true || '"   ->  this.name == '' || true || ''  (all docs)
+#   input = "x' || '1'=='1"   ->  this.name == 'x' || '1'=='1'  (all docs)
 ```
 
-This is a *string* context again (JS inside a string), so it behaves more
-like classic injection, and it can even give blind timing oracles via
-`sleep()`. Modern MongoDB disables `$where`/JS by default
-(`--noscripting`), but legacy deployments enable it. **Not in the lab**,
-but it's the classic "intermediate" NoSQLi escalation.
+### Why this needs its own technique
+
+If the response is blind in-band (no boolean, no error — the deliberate
+design choice p4_4 makes, since p4_2/p4_3 already cover those channels),
+the one thing left to read is **how long the query took**. `$where`'s
+JS context exposes a real `sleep(ms)` function:
+
+```
+codename = x' || (REAL_CONDITION && sleep(400)) || '
+```
+
+A true `REAL_CONDITION` stalls the response by ~400ms; a false one
+returns immediately. Binary-search a hidden value's length via
+`.length`, then each character's code via `.charCodeAt(i)`, exactly the
+same bisection shape as Pattern B's `$gt` walk, just read off a clock
+instead of a response body:
+
+```
+   COND = this.secret.length>=15        -> slow (true)   -> length ≥ 15
+   COND = this.secret.length>=29        -> slow (true)   -> length ≥ 29
+   COND = this.secret.length>=30        -> fast (false)  -> length == 29
+
+   COND = this.secret.charCodeAt(0)>=83 -> slow (true)   -> code ≥ 83
+   COND = this.secret.charCodeAt(0)>=84 -> fast (false)  -> code == 83 ('S')
+```
+
+> **A real gotcha, worth knowing beyond the lab:** `count_documents()` is
+> built on MongoDB's aggregation framework, which *rejects* `$where`
+> inside a `$match` stage outright (`$where is not allowed in this
+> context`). `find()` has no such restriction. The exact same `$where`
+> clause behaves differently depending on which query method wraps it —
+> not obvious from `$where`'s own documentation, confirmed by testing
+> against a live server.
+
+> **A quoting trap:** closing an injected JS string with `|| 'x'` (a
+> non-empty string literal) looks like a closed quote but is a silent
+> bug — JavaScript treats any non-empty string as truthy, so
+> `(false) || (cond) || ('x')` is *always* true regardless of `cond`.
+> Close with a single trailing `'` instead, so the template's own closing
+> quote completes it into `''` (empty string, falsy, harmless).
+
+---
+
+## 8. The remaining gaps (not in the lab — know they exist)
 
 ### `$or` / logical-clause injection
 
@@ -247,14 +354,15 @@ always-true clause:
 {"filter": {"$or": [ {"realField": "x"}, {"1": {"$ne": 2}} ]}}
 ```
 
-### Aggregation-pipeline injection
+### Aggregation-pipeline injection beyond `$expr`
 
-If request data reaches `$match`/`$lookup` stages of an aggregation, the
-same type-confusion applies in a richer surface. Rare but high-impact.
+If request data reaches other `$match`/`$lookup` stages of an
+aggregation pipeline, the same type-confusion applies in a richer
+surface. Rare but high-impact.
 
 ---
 
-## 7. Defense (the actual fix — same spirit as every phase)
+## 9. Defense (the actual fix — same spirit as every phase)
 
 The root cause is **unvalidated type**, so the fix is at the boundary:
 
@@ -275,38 +383,62 @@ The root cause is **unvalidated type**, so the fix is at the boundary:
    declare "username is a string", and the framework rejects a nested
    object before your code ever sees it.
 
-4. **Disable server-side JS** (`$where`, `mapReduce`) unless genuinely
-   needed — `--noscripting` / `security.javascriptEnabled: false`.
+4. **Avoid `$where`/server-side JS entirely wherever a native operator can
+   express the same check**, and disable it at the deployment level when
+   nothing legitimately needs it — `--noscripting` /
+   `security.javascriptEnabled: false`. There is no safe parameterization
+   for `$where`: the string *is* the code, so the only real fix for an
+   existing `$where` sink is not building it from untrusted input, full
+   stop.
 
-5. **Least privilege** on the DB user, as always: a read-only app role
+5. **Never return raw driver exception text in an HTTP response.** This
+   is what makes Pattern C's one-shot leak possible — log the real
+   exception server-side, return a generic failure to the caller.
+
+6. **Least privilege** on the DB user, as always: a read-only app role
    can't be turned into a write/drop even after a successful read
    injection.
 
-> Note what is *not* the fix: "escaping." There's no quote to escape.
-> Sanitizing `$` out of strings is a brittle band-aid; the correct fix is
-> enforcing the *type*.
+> Note what is *not* the fix: "escaping." There's no quote to escape in
+> Patterns A-C. Sanitizing `$` out of strings is a brittle band-aid; the
+> correct fix is enforcing the *type*. Pattern D (`$where`) is the one
+> exception — there, you're back in string-escaping territory, except the
+> only safe answer is "don't build the string from untrusted input," not
+> "escape it correctly."
 
 ---
 
-## 8. Map to the lab
+## 10. Map to the lab
 
-| Floor | Route | Sink | What you practice |
-|---|---|---|---|
-| p4_1 Records Room | `GET/POST /p4/records` | `count_documents({field: value})` | blind extraction (`$regex`, `$gt`, `$exists`), both delivery channels |
-| p4_2 Archive Guardian | `POST /p4/guardian` | `find_one({"username":…,"password":…})` | auth bypass (`$ne: null`), land on the privileged doc |
+| Floor | Route | Sink | Pattern | What you practice |
+|---|---|---|---|---|
+| p4_1 Archive Guardian | `POST /p4/guardian` | `find_one({"username":…,"password":…})` | A | auth bypass (`$ne: null`), land on the privileged doc |
+| p4_2 Diagnostic Desk | `GET/POST /p4/diagnostics` | `count_documents({field: value})`, errors not swallowed | C | detect via unknown-operator error, one-shot leak via `$expr`+`$toInt` |
+| p4_3 Records Room | `GET/POST /p4/records` | `count_documents({field: value})` | B | blind extraction (`$regex`, `$gt`, `$exists`), both delivery channels |
+| p4_4 Loophole Clause | `GET/POST /p4/loophole` | `find({"$where": js})`, JS built by concatenation | D | quote-breakout into JS, time-based blind via `sleep()` |
 
-Both sinks are *identical in shape* to the code in §1 — a dict built from
-unchecked request values. Read `challenges/phase4.py` (whitebox is
-allowed) and find the `# VULN` comment on each; then the `DEBRIEF.md` in
-each floor's directory walks the exact payloads.
+All four sinks in p4_1-p4_3 are *identical in shape* to the code in §1 —
+a dict built from unchecked request values. p4_4's sink is the one
+exception, a string built by concatenation (see §7). Read
+`challenges/phase4.py` (whitebox is allowed) and find the `# VULN`
+comment on each; then the `DEBRIEF.md` in each floor's directory walks
+the exact payloads.
 
 ---
 
-## 9. References (official / primary)
+## 11. References (official / primary)
 
+- **PortSwigger Web Security Academy — NoSQL injection** —
+  https://portswigger.net/web-security/nosql-injection (the four-pattern
+  taxonomy — operator/syntax injection, boolean-based, time-based,
+  error-based — this doc follows)
 - **MongoDB query operators** — https://www.mongodb.com/docs/manual/reference/operator/query/
-  (`$ne`, `$gt`, `$regex`, `$exists`, `$where`, …)
+  (`$ne`, `$gt`, `$regex`, `$exists`, `$where`, `$expr`, …)
 - **MongoDB `$where`** — https://www.mongodb.com/docs/manual/reference/operator/query/where/
+- **MongoDB `$convert` / `$toInt` / `onError`** —
+  https://www.mongodb.com/docs/manual/reference/operator/aggregation/convert/
+  (the `onError` parameter's documented purpose is suppressing the
+  default conversion-failure behavior Pattern C exploits)
 - **OWASP Testing Guide — Testing for NoSQL Injection** (WSTG-INPV-05) —
   https://owasp.org/www-project-web-security-testing-guide/
 - **OWASP Cheat Sheet — Injection Prevention / Input Validation** —

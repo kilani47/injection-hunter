@@ -1,10 +1,11 @@
 # Learning notes: LDAP injection
 
-> Read this before Phase 4, floor 3 (`zodiac-breach`). From-scratch primer:
-> what LDAP is, how a search filter is built, the special characters, the
-> two attack patterns (auth bypass + directory dump), the blind variant the
-> lab doesn't drill, and the escaping fix. Grounded in RFC 4515/4514 and the
-> OWASP Testing Guide (see **References**).
+> Read this before Phase 4's LDAP floors (`zodiac-breach`,
+> `silent-directory`). From-scratch primer: what LDAP is, how a search
+> filter is built, the special characters, all three attack patterns
+> (auth bypass, directory dump, and blind substring extraction), a real
+> case-sensitivity nuance, and the escaping fix. Grounded in RFC 4515/4514
+> and the OWASP Testing Guide (see **References**).
 
 ---
 
@@ -121,7 +122,7 @@ filter is exactly what was intended. The moment you include `(`, `)`, or
 
 ---
 
-## 5. Pattern A — Authentication bypass (lab floor p4_3, login shape)
+## 5. Pattern A — Authentication bypass (lab floor p4_5, login shape)
 
 Template:
 
@@ -174,7 +175,7 @@ the directory simply rejects it — that rejection is itself feedback.)
 
 ---
 
-## 6. Pattern B — Directory dump (lab floor p4_3, search shape)
+## 6. Pattern B — Directory dump (lab floor p4_5, search shape)
 
 Template:
 
@@ -211,22 +212,45 @@ and let the template's own trailing clause stay valid:
 
 ---
 
-## 7. The gap — blind LDAP extraction (not in the lab)
+## 7. Pattern C — Blind extraction (lab floor p4_6, `silent-directory`)
 
-When a search gives only a *boolean* (match / no-match) instead of dumping
-entries, you extract a hidden attribute char-by-char with substring
-filters, exactly like the NoSQL `$regex` walk:
+`p4_5`'s dump shortcut (Pattern B) only exists because that floor's
+response *has* a richer mode to widen into. Not every endpoint offers
+that. `p4_6`'s verification desk returns **exactly one boolean field**,
+`verified: true/false`, no matter how many entries a widened filter
+actually matches or what they contain — there is no dump mode to unlock.
+The only channel left is the yes/no answer itself, walked one substring
+at a time, exactly like the NoSQL `$regex` walk in the sibling notes doc:
 
 ```
-   (&(uid=chairman)(userPassword=S*))    match?  yes  -> starts with S
-   (&(uid=chairman)(userPassword=SE*))   match?  yes
-   (&(uid=chairman)(userPassword=SEA*))  match?  no
-   (&(uid=chairman)(userPassword=SEI*))  match?  yes ... grow the prefix
+   note=*          -> presence assertion: true if ANY description exists
+   note=SEIY*       -> prefix assertion: true only if it REALLY starts with SEIY
 ```
 
-Same blind loop diagram as the NoSQL notes §5 — only the oracle grammar
-differs. Worth knowing because real directories often expose exactly this
-boolean shape (a login that just says yes/no).
+```
+   (&(uid=keeper)(description=S*))    match?  yes  -> starts with S
+   (&(uid=keeper)(description=SE*))   match?  yes
+   (&(uid=keeper)(description=SEA*))  match?  no
+   (&(uid=keeper)(description=SEI*))  match?  yes ... grow the prefix
+```
+
+Same blind loop diagram as the NoSQL notes' Pattern B section — only the
+oracle grammar differs. Worth knowing because real directories often
+expose exactly this boolean shape (a login, or a privacy-preserving
+"does this match?" check, that just says yes/no).
+
+### A real nuance: case-insensitive matching
+
+Many LDAP attribute syntaxes (RFC 4517's `DirectoryString`, which
+`description` uses) default to **case-insensitive** matching
+(`caseIgnoreMatch`/`caseIgnoreSubstringsMatch`). Verified live against
+this lab's own OpenLDAP: `note=seiyaku{s*` and `note=SEIYAKU{S*` both
+verify true against the same entry. **The oracle genuinely cannot
+distinguish 'S' from 's'.** A real blind extraction needs some other
+signal (external knowledge of a format convention, a case-sensitive
+attribute to cross-check against, or just reporting the limitation
+honestly) to resolve exact case — this is a real, worth-knowing gap in
+what boolean-oracle extraction alone can recover, not a tooling bug.
 
 ### DN injection (a different context)
 
@@ -269,19 +293,30 @@ injection; just know DN injection is its own thing.
    should be able to read only the attributes/subtree it needs, never
    `userPassword` if it doesn't need it.
 
+5. **A strictly boolean response is not, on its own, a sufficient
+   mitigation** (Pattern C's headline lesson). "Reveal nothing but
+   yes/no" reduces the *speed* of an attack, not whether one is
+   possible — the fix has to be at the query-construction boundary
+   (escaping), not the response shape.
+
 ---
 
 ## 9. Map to the lab
 
-| Shape | Request | Filter built | What you practice |
-|---|---|---|---|
-| Directory search | `GET /p4/zodiac?uid=…` | `(&(uid=…)(objectClass=inetOrgPerson))` | dump via `*)(objectClass=*` → `description` leak |
-| Login | `POST /p4/zodiac` | `(&(uid=…)(userPassword=…))` | auth bypass via `*` / clause injection |
+| Floor | Shape | Request | Filter built | Pattern | What you practice |
+|---|---|---|---|---|---|
+| p4_5 zodiac-breach | Directory search | `GET /p4/zodiac?uid=…` | `(&(uid=…)(objectClass=inetOrgPerson))` | B | dump via `*)(objectClass=*` → `description` leak |
+| p4_5 zodiac-breach | Login | `POST /p4/zodiac` | `(&(uid=…)(userPassword=…))` | A | auth bypass via `*` / clause injection |
+| p4_6 silent-directory | Verify | `POST /p4/registrar/verify` | `(&(uid=…)(description=…))` | C | blind substring walk, no dump mode available |
 
-One underlying bug (unescaped concatenation into `search_s()`), reachable
-two ways. Read `challenges/phase4.py` — the two `# VULN` lines are the
-`login_filter` / `search_filter` f-strings — then `zodiac-breach/DEBRIEF.md`
-walks the exact payloads and shows the escaped fix.
+`p4_5` is one underlying bug (unescaped concatenation into `search_s()`),
+reachable two ways. `p4_6` is the same bug class again, a different
+route, a deliberately isolated subtree (`ou=registrar`, never reachable
+through `p4_5`'s own `ou=zodiac` filter no matter how widened), and a
+response shape that forces Pattern C specifically. Read
+`challenges/phase4.py` — the `# VULN` lines mark each `f"(&(...)...)"`
+filter — then each floor's own `DEBRIEF.md` walks the exact payloads and
+shows the escaped fix.
 
 ---
 
@@ -292,6 +327,10 @@ walks the exact payloads and shows the escaped fix.
   rules)
 - **RFC 4514 — LDAP: String Representation of Distinguished Names** —
   https://www.rfc-editor.org/rfc/rfc4514  (DN injection context)
+- **RFC 4517 — LDAP: Syntaxes and Matching Rules** —
+  https://www.rfc-editor.org/rfc/rfc4517  (`DirectoryString`'s
+  `caseIgnoreMatch`/`caseIgnoreSubstringsMatch` — why Pattern C's oracle
+  can't distinguish letter case)
 - **OWASP Testing Guide — Testing for LDAP Injection** (WSTG-INPV-06) —
   https://owasp.org/www-project-web-security-testing-guide/
 - **OWASP Cheat Sheet — LDAP Injection Prevention** —

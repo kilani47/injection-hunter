@@ -1,0 +1,34 @@
+# seed/ldap/registrar.ldif: Task 4.6 "The Silent Directory" seed.
+#
+# Loaded once, on first boot of an EMPTY openldap data volume, by
+# osixia/openldap's internal-seed mechanism, same mechanism and directory
+# as seed/ldap/zodiac.ldif (see that file's header for the full mechanism
+# explanation). This adds a SEPARATE sub-tree, ou=registrar, deliberately
+# isolated from ou=zodiac so this floor's flag can never be reached
+# through zodiac-breach's own dump-mode path (that floor's filter only
+# ever searches under ou=zodiac; an entry here is structurally outside
+# its reach regardless of how widened its filter gets).
+#
+# Structure:
+#   ou=registrar,dc=hunterassoc,dc=org      : organizational unit
+#     uid=keeper,ou=registrar,...            : one entry whose
+#                                              `description` holds the
+#                                              flag, reachable only via
+#                                              blind substring-filter
+#                                              extraction against a
+#                                              strictly boolean oracle
+#                                              (challenges/phase4.py, p4_6)
+
+dn: ou=registrar,dc=hunterassoc,dc=org
+objectClass: organizationalUnit
+ou: registrar
+description: Hunter Association Records Registrar
+
+dn: uid=keeper,ou=registrar,dc=hunterassoc,dc=org
+objectClass: inetOrgPerson
+uid: keeper
+cn: Keeper
+sn: Keeper
+title: Registrar, Verification Desk
+mail: keeper@hunterassoc.org
+description: SEIYAKU{silence_still_answers}

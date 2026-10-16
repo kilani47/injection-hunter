@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}The Loophole Clause · The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p4{% endblock %}
+{% block phase_nav %}<a href="{{ url_for('phase', phase_id='4') }}" class="hover:text-accent transition-colors">phase 4</a>{% endblock %}
+
+{% block content %}
+<div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+  <div>
+    <p class="font-mono text-xs text-muted mb-2">hunter association hq &middot; the loophole clause</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4">The Loophole Clause</h1>
+    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+      A vetting console that logs every applicant lookup "for review."
+      It never tells you whether a codename actually matched anything,
+      not a count, not a flag, not an error. Submit, and the same
+      three words come back every time.
+    </p>
+    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+      Objective: every operator has a name you could learn to
+      recognize. This clerk's rulebook is still written in whole
+      sentences underneath, and a sentence can be rewritten by whoever
+      gets to finish it.
+    </p>
+  </div>
+
+  <div class="license-card glass rounded-[1.75rem] p-6">
+    <div class="exam-terminal rounded-xl p-5">
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent text-glow">&gt;</span> applicant vetting: codename
+      </p>
+
+      <form method="get" action="{{ url_for('phase4.p4_loophole') }}" class="flex flex-col gap-3 mb-4">
+        <input
+          type="text"
+          name="codename"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="codename (e.g. rookie)"
+          value="{{ codename or '' }}"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-sm text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+        <button type="submit"
+          class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
+          Submit for review
+        </button>
+      </form>
+
+      {% if submitted %}
+        <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+          <p class="font-mono text-xs text-muted">the lookup was logged for review.</p>
+        </div>
+      {% endif %}
+
+      <p class="font-mono text-[11px] text-muted mb-2 mt-6 border-t border-white/10 pt-4">
+        request shape
+      </p>
+      <p class="font-mono text-[11px] text-bone/60 mb-3">
+        The underlying endpoint, <code class="text-accent">GET/POST
+        /p4/loophole</code>, takes <code class="text-accent">codename</code>
+        as a plain string, no bracket notation, no nested JSON needed
+        here. The response is identical regardless of what happens
+        server-side, except for exactly one thing it never hides.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,23 +1,44 @@
 """
 challenges/phase4.py, Phase 4, "Hunter Association HQ" (Manipulation).
 
-Task 4.1 lands the first floor: p4_1 "Basic Records Room", a blind NoSQL
-query-operator injection against real MongoDB (core/db.mongo_db). Unlike
-Phases 1-3 (all classic *string*-context SQL injection against MariaDB),
-this phase's bug class is different in kind, not just target engine: the
-query itself is built as a native Python dict handed straight to pymongo,
-never as a string that gets parsed. There is no quote to escape here:
-the vulnerability is a *type* confusion. MongoDB's query language treats
-a dict value as a set of operators (`$regex`, `$gt`, `$ne`, ...), not a
-literal to compare against equal, so a route that never checks
-`isinstance(value, str)` before folding request-supplied `value` into a
-query lets a caller who sends a nested structure instead of a flat string
-hand real operators straight to `find()`/`count_documents()`.
+Six floors, two engines, ordered beginner -> intermediate, NoSQL first
+(p4_1-p4_4, real MongoDB via core/db.mongo_db) then LDAP (p4_5-p4_6, real
+OpenLDAP via core/db.ldap_conn):
 
-Later Phase-4 tasks (p4_2 auth bypass, p4_3 LDAP directory) append their
-routes to this same blueprint, keep each challenge's route + helpers
-scoped to its own block, same append-only-friendly convention as
-phase1.py / phase2.py / phase3.py.
+  p4_1  Bypassing the Archive Guardian  - operator injection, auth bypass
+  p4_2  The Diagnostic Desk             - operator injection, error-based
+  p4_3  Basic Records Room              - operator injection, boolean-blind
+  p4_4  The Loophole Clause             - $where (JS) injection, time-based blind
+  p4_5  Zodiac Twelve Directory Breach  - LDAP filter injection, bypass + dump
+  p4_6  The Silent Directory            - LDAP filter injection, blind extraction
+
+p4_1-p4_4 share one root cause (notes §8): every MongoDB query here is
+built as a native Python dict handed straight to pymongo, never a string
+that gets parsed, so there is no quote to escape. The vulnerability is a
+*type* confusion: MongoDB's query language treats a dict value as a set
+of operators (`$regex`, `$gt`, `$ne`, `$where`, ...), not a literal to
+compare against equal, so a route that never checks `isinstance(value,
+str)` before folding request-supplied `value` into a query lets a caller
+who sends a nested structure instead of a flat string hand real operators
+straight to `find()`/`count_documents()`. p4_4's `$where` sink is the one
+exception worth flagging up front: once JavaScript is in play, the bug
+reverts to a classic *string*-context break, closer in spirit to Phases
+1-3's SQLi than to p4_1-p4_3's pure type confusion.
+
+p4_5-p4_6 move to a completely different backend and bug *shape* (notes
+§9): OpenLDAP's search-filter language (RFC 4515) is a string grammar
+with its own metacharacters (`( ) & | ! *`), and a filter built by raw
+string concatenation with none of them escaped lets a caller rewrite the
+filter's own logic, structurally the same "attacker text becomes
+attacker-controlled logic" idea as every earlier phase, just against a
+different grammar.
+
+Each floor's route + helpers are scoped to its own block below, kept in
+roughly historical build order (not floor-number order, Flask routing
+doesn't care about declaration order) per this file's append-only-
+friendly convention, same as phase1.py / phase2.py / phase3.py. The
+floor-number table above is the one source of truth for teaching order;
+core/unlock.py's NODES list order is what actually drives progression.
 """
 
 from __future__ import annotations
@@ -38,7 +59,7 @@ phase4_bp = bp
 
 
 # ---------------------------------------------------------------------------
-# p4_1, Basic Records Room
+# p4_3, Basic Records Room
 # ---------------------------------------------------------------------------
 
 def _bracket_value(args) -> dict | None:
@@ -158,17 +179,17 @@ def p4_records():
 
 
 # ---------------------------------------------------------------------------
-# p4_2, Bypassing the Archive Guardian
+# p4_1, Bypassing the Archive Guardian
 # ---------------------------------------------------------------------------
 
 def _bracket_login_value(form, param: str) -> dict | None:
     """Reconstruct a nested operator dict out of bracket-notation form keys
     for a single login field, e.g. `username[$ne]=1` on the wire ->
-    {"$ne": "1"} in Python. Same idea as p4_1's `_bracket_value` above, but
+    {"$ne": "1"} in Python. Same idea as p4_3's `_bracket_value` above, but
     parameterized on the field name (`param`) instead of hardcoded to a
     single `value` key, since a login form has two independent fields
     (`username`, `password`) that can each separately arrive as an
-    operator dict rather than the single search `value` p4_1 deals with.
+    operator dict rather than the single search `value` p4_3 deals with.
 
     Werkzeug's `request.form` is flat key/value pairs, same as
     `request.args`, a form field literally named `username[$ne]` never
@@ -242,7 +263,7 @@ def p4_guardian():
 
     The bug (notes §8): neither `username` nor `password` is validated to
     actually be a string before reaching that query. MongoDB's query
-    language treats a *dict* value specially, exactly like the p4_1 sink
+    language treats a *dict* value specially, exactly like the p4_3 sink
     above, `{"password": {"$ne": null}}` isn't "does password equal this
     dict", it's "does password not-equal null", which is true for every
     agent that *has* a password field at all. A caller who gets both
@@ -290,13 +311,13 @@ def p4_guardian():
                 # there) is honored by MongoDB as real query operators
                 # instead, {"$ne": null}/{"$ne": 1} matches any document
                 # where that field exists and isn't literally that value,
-                # i.e. every seeded agent. The fix is the same as p4_1's:
+                # i.e. every seeded agent. The fix is the same as p4_3's:
                 # reject any username/password that isn't the expected
                 # string type before it ever reaches find_one().
                 query = {"username": username, "password": password}
                 agent = db.agents.find_one(query)
             except Exception:
-                # Swallowed on purpose, same convention as p4_1: a
+                # Swallowed on purpose, same convention as p4_3: a
                 # malformed operator MongoDB itself rejects just reads as
                 # "login failed", not as a distinguishable error channel.
                 agent = None
@@ -326,10 +347,10 @@ def p4_guardian():
 
 
 # ---------------------------------------------------------------------------
-# p4_3, Zodiac Twelve Directory Breach
+# p4_5, Zodiac Twelve Directory Breach
 # ---------------------------------------------------------------------------
 #
-# Both p4_1 and p4_2 above are the *same* bug class (notes §8): MongoDB's
+# Both p4_3 and p4_1 above are the *same* bug class (notes §8): MongoDB's
 # query language has no string context to escape at all, so the vulnerability
 # is a type confusion, a dict reaches find()/count_documents() where a
 # string was expected. This floor moves to a completely different backend
@@ -357,7 +378,7 @@ def p4_guardian():
 # into an LDAP filter, then a real ldap_conn().search_s() call): a POST
 # login (username/password -> auth bypass) and a GET directory lookup
 # (uid -> full-roster enumeration). They're kept on one route/template,
-# same as p4_1 and p4_2 each are, since it's genuinely one bug reachable
+# same as p4_3 and p4_1 each are, since it's genuinely one bug reachable
 # two ways rather than two unrelated bugs.
 
 _ZODIAC_BASE_DN = "ou=zodiac," + os.environ.get("LDAP_BASE_DN", "dc=hunterassoc,dc=org")
@@ -435,7 +456,7 @@ def _zodiac_search(ldap_filter: str) -> tuple[list[tuple[str, dict]], str | None
 
 def _zodiac_credentials():
     """Pull username/password out of the login POST, from either a JSON
-    body or a form-encoded body. Unlike p4_1/p4_2, there's no bracket-
+    body or a form-encoded body. Unlike p4_3/p4_1, there's no bracket-
     notation reconstruction here, this floor's bug isn't about *type*
     confusion (a dict arriving where a string was expected), it's about
     *content*: a plain string containing LDAP filter metacharacters is
@@ -461,7 +482,7 @@ def p4_zodiac():
        only ever match zero or one entry.
     2. `POST /p4/zodiac` (username/password), a sign-in form. Give it a
        real member's uid and password, and it logs you in as that member
-       the same way p4_2's guardian console does: on a real match, you
+       the same way p4_1's guardian console does: on a real match, you
        get their identity back (still never description or
        userPassword).
 
@@ -576,4 +597,285 @@ def p4_zodiac():
         login_member=login_member,
         login_error=login_error,
         submitted_username=submitted_username,
+    )
+
+
+# ---------------------------------------------------------------------------
+# p4_2, The Diagnostic Desk
+# ---------------------------------------------------------------------------
+#
+# Same {field: value} -> MongoDB sink shape as p4_3's Records Room (reuses
+# _resolve_field_and_value/_bracket_value above, same collection-of-
+# unvalidated-request-data pattern), but with ONE deliberate difference:
+# this route does not swallow driver exceptions. Records Room treats a
+# malformed operator or type-incompatible query exactly like a real
+# non-match (matched: false), by design, to teach a pure boolean-blind
+# oracle. This floor is the opposite choice, a realistic "verbose errors
+# left on for internal debugging convenience" console, a genuine real-
+# world antipattern, and it teaches two things Records Room's swallowed-
+# exception design deliberately withholds:
+#
+#   1. Detection: a genuinely malformed/unknown operator (a typo, or a
+#      deliberate probe) throws a distinct, informative OperationFailure,
+#      instantly confirming the injection exists, no inference from
+#      match/no-match behavior required. PortSwigger's own NoSQLi
+#      methodology leads with exactly this: fuzz for a DB error first.
+#   2. Weaponization: MongoDB's $expr + $convert/$toInt aggregation
+#      operators, asked to convert a value that can't parse as the target
+#      type with no onError supplied, raise an error whose message embeds
+#      the ACTUAL FIELD VALUE verbatim (verified live against this exact
+#      seed, see DEBRIEF.md). Since `field` here is exactly as
+#      unvalidated as `value` (same point p4_3's own docstring makes), a
+#      caller who sets field="$expr" turns the entire top-level query
+#      into a $expr clause, and a JSON-body value shaped
+#      {"$eq": ["$archive_key", {"$toInt": "$archive_key"}]} forces that
+#      conversion to fail and leaks archive_key's real value in ONE
+#      request, no blind walking required at all. This is MongoDB's
+#      closest real analogue to SQL's classic extractvalue()/updatexml()
+#      error-based exfiltration trick.
+
+@bp.route("/p4/diagnostics", methods=["GET", "POST"])
+def p4_diagnostics():
+    """The Diagnostic Desk, a staff debugging console over `incident_reports`.
+
+    Same request shape as p4_3's Records Room (`field`/`value`, JSON body
+    or bracket-notation query string), same underlying sink
+    (`{field: value}` handed straight to a MongoDB query with no type
+    check on `value` beforehand). The one difference: this route does NOT
+    swallow whatever `pymongo` raises. An ordinary malformed query (say, a
+    typo'd field name) still just returns `matched: false`, exactly like
+    any search console. A query MongoDB itself rejects outright, an
+    unknown operator, a failed type conversion, returns the real driver
+    exception text instead of a generic failure. That's the whole bug:
+    verbose errors turn a channel that would otherwise require hundreds
+    of blind requests (see p4_3) into a methodology that confirms itself
+    in one request and, against the right operator, exfiltrates an entire
+    value in one more.
+    """
+    field, value = _resolve_field_and_value()
+
+    matched = None
+    count = None
+    error = None
+
+    if field and value is not None:
+        db = mongo_db()
+        try:
+            # VULN: `field` and `value` reach MongoDB's query language
+            # completely unvalidated, identical sink shape to p4_3's
+            # Records Room. The difference is entirely in what happens
+            # when MongoDB itself rejects the resulting query (see below).
+            query = {field: value}
+            count = db.incident_reports.count_documents(query)
+            matched = count > 0
+        except Exception as exc:
+            # VULN (the actual difference from p4_3): the exception is
+            # NOT swallowed into a generic "no match". str(exc) on a
+            # PyMongo OperationFailure carries the server's real errmsg
+            # verbatim, including, for a failed $convert/$toInt, the
+            # value that failed to parse. That string reaching the HTTP
+            # response is this floor's entire data-exfiltration channel.
+            error = str(exc)
+            matched = False
+            count = 0
+
+    if request.method == "POST" or request.headers.get("Accept") == "application/json":
+        return jsonify(field=field, matched=matched, count=count, error=error)
+
+    return render_template(
+        "p4_diagnostics.html",
+        field=field,
+        value=value if isinstance(value, str) else None,
+        raw_value=value,
+        matched=matched,
+        count=count,
+        error=error,
+        searched=value is not None,
+    )
+
+
+# ---------------------------------------------------------------------------
+# p4_4, The Loophole Clause
+# ---------------------------------------------------------------------------
+#
+# A different bug *shape* from p4_1-p4_3's pure operator-dict type
+# confusion: this route's sink is MongoDB's $where operator, which hands
+# the server a JavaScript expression to evaluate against every document,
+# built here by raw Python string concatenation. That reopens a STRING
+# context, so the bug reverts to a classic quote-breakout, the same family
+# as Phases 1-3's SQLi, just against a JS grammar instead of SQL's. This
+# route's response is deliberately constant (notes §8's blind-response
+# pattern, same choice p3_1's Spell Card makes for SQL OOB): whether
+# `codename` matches, fails to match, or throws a JS error, the caller
+# always sees the same generic confirmation. p4_2 already teaches error-
+# based exfiltration and p4_3 already teaches boolean-blind, so this floor
+# closes both of those channels on purpose to teach the one technique
+# neither of them covers: TIME-BASED blind, via $where's sleep().
+
+def _resolve_codename() -> str:
+    """Pull `codename` out of the request, JSON body, form body, or query
+    string, whichever the caller used. No bracket-notation reconstruction
+    here (unlike p4_1/p4_3/p4_2): this floor's bug isn't a type confusion,
+    it's a string broken out of, so a plain string already carries the
+    whole payload."""
+    if request.method == "POST" and request.is_json:
+        payload = request.get_json(silent=True) or {}
+        return payload.get("codename", "") or ""
+    if request.method == "POST":
+        return request.form.get("codename", "")
+    return request.args.get("codename", "")
+
+
+@bp.route("/p4/loophole", methods=["GET", "POST"])
+def p4_loophole():
+    """The Loophole Clause, an applicant vetting console over `applicants`.
+
+    Give it a `codename`, and it logs the lookup "for review", the same
+    generic confirmation every time, regardless of whether anything
+    matched, whether the underlying query raised, or how long it took to
+    run... except the timing part is a lie by omission: this route does
+    NOT run the query in a background thread the way p3_1's Spell Card
+    does, so an injected $where payload that calls sleep() really does
+    stall this response by exactly that long. That omission is the
+    floor's actual teaching point, not a mistake: Phase 3 already taught
+    that closing the timing channel takes deliberate extra work
+    (detached-thread execution); this floor is what the *same* bug looks
+    like the one time that extra step never happened, and timing is left
+    sitting there as a perfectly good oracle.
+    """
+    codename = _resolve_codename()
+
+    if codename:
+        db = mongo_db()
+        try:
+            # VULN: `codename` is spliced directly into a JavaScript
+            # string literal inside a $where clause via raw string
+            # concatenation, completely unescaped. This executes on the
+            # request path, deliberately (see docstring above): nothing
+            # here moves it to a background thread, so the query's real
+            # execution time, including any injected sleep(), reaches the
+            # HTTP response's own timing directly.
+            # find() (not count_documents()): MongoDB's aggregation
+            # framework, which count_documents() is implemented on top
+            # of, rejects $where inside a $match stage outright
+            # ("$where is not allowed in this context"), verified live.
+            # find() has no such restriction, this route only cares
+            # about the query's side effects (its execution time), the
+            # result itself is never read.
+            js = "this.codename == '" + codename + "'"
+            list(db.applicants.find({"$where": js}))
+        except Exception:
+            # Swallowed on purpose: this floor's intended channel is
+            # TIMING, not errors (p4_2's Diagnostic Desk already teaches
+            # the error-based technique). A malformed/syntactically
+            # broken JS payload just reads as an ordinary, silent no-op.
+            pass
+
+    submitted = bool(codename)
+
+    if request.method == "POST" or request.headers.get("Accept") == "application/json":
+        return jsonify(codename=codename, submitted=submitted)
+
+    return render_template("p4_loophole.html", codename=codename, submitted=submitted)
+
+
+# ---------------------------------------------------------------------------
+# p4_6, The Silent Directory
+# ---------------------------------------------------------------------------
+#
+# Same bug class as p4_5's Zodiac Breach (raw string concatenation into a
+# real LDAP search filter, zero RFC 4515 escaping), a different route and
+# a different, deliberately isolated subtree (ou=registrar, never touched
+# by p4_5's own ou=zodiac filter, so this floor's flag can never leak
+# through that floor's dump-mode path no matter how widened its filter
+# gets). The response here is strictly boolean, `verified: true/false`,
+# never the matched entry's attributes, not even on a perfect one-entry
+# match. That rules out p4_5's "widen the filter until more than one
+# entry matches, then read the dump" shortcut entirely: the only channel
+# left is the yes/no answer itself, walked one substring at a time.
+
+_REGISTRAR_BASE_DN = "ou=registrar," + os.environ.get("LDAP_BASE_DN", "dc=hunterassoc,dc=org")
+
+
+def _registrar_search(ldap_filter: str) -> tuple[list[tuple[str, dict]], str | None]:
+    """Run one real search_s() against the real seeded ou=registrar
+    subtree. Same shape as p4_5's _zodiac_search: returns (entries,
+    error), a malformed filter is real OpenLDAP rejecting the search,
+    surfaced as an error string, never a crash."""
+    conn = None
+    try:
+        conn = ldap_conn()
+        raw_results = conn.search_s(_REGISTRAR_BASE_DN, ldap.SCOPE_SUBTREE, ldap_filter)
+        entries = [(dn, attrs) for dn, attrs in raw_results if dn]
+        return entries, None
+    except ldap.LDAPError:
+        return [], "the registrar rejected that filter"
+    finally:
+        if conn is not None:
+            try:
+                conn.unbind_s()
+            except ldap.LDAPError:
+                pass
+
+
+@bp.route("/p4/registrar", methods=["GET"])
+def p4_registrar():
+    """The Silent Directory console: a form only, no query on page load."""
+    return render_template("p4_registrar.html", verified=None, error=None, submitted=False)
+
+
+@bp.route("/p4/registrar/verify", methods=["POST"])
+def p4_registrar_verify():
+    """The registrar's verification desk.
+
+    A duplicate/record-verification pattern real apps use all the time: a
+    privacy-preserving "does this uid's note match the one on file?"
+    check that's designed from the start to reveal nothing beyond
+    yes/no, nothing else about the record is ever in the response. The
+    design intent is genuinely reasonable; the bug is that `uid` and
+    `note` both reach a real LDAP filter via raw string concatenation
+    first, with none of RFC 4515's metacharacters escaped. A bare `*` as
+    `note`'s entire value turns the description clause into a presence
+    assertion ("this uid has a description, any value at all"), true for
+    the one seeded entry regardless of what its real description is. A
+    partial value with a trailing `*` (`note=SEIYAKU{*`) turns it into a
+    prefix assertion instead, true only if the real description actually
+    starts with that text, the substep that makes blind, char-by-char
+    extraction possible against a channel that was built to reveal
+    nothing at all.
+    """
+    if request.is_json:
+        payload = request.get_json(silent=True) or {}
+        uid = payload.get("uid") or ""
+        note = payload.get("note") or ""
+    else:
+        uid = request.form.get("uid", "")
+        note = request.form.get("note", "")
+
+    verified = False
+    error = None
+
+    if uid or note:
+        # VULN: `uid` and `note` are spliced directly into this filter via
+        # an f-string, completely unescaped, no escape_filter_chars()
+        # call anywhere before this line. An ordinary uid/note pair with
+        # no filter metacharacters produces an ordinary two-clause AND
+        # that can only ever match the one real registrar entry if both
+        # values are exactly right. `*` (whole value) or a `prefix*`
+        # value rewrites what that clause actually asserts, see docstring
+        # above.
+        ldap_filter = f"(&(uid={uid})(description={note}))"
+        entries, error = _registrar_search(ldap_filter)
+        verified = len(entries) == 1
+
+    wants_json = request.headers.get("Accept") == "application/json" or request.is_json
+
+    if wants_json:
+        return jsonify(verified=verified, error=error)
+
+    return render_template(
+        "p4_registrar.html",
+        verified=verified,
+        error=error,
+        submitted=bool(uid or note),
     )

