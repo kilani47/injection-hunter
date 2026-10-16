@@ -1,7 +1,6 @@
 # Learning notes: LDAP injection
 
-> Read this before Phase 4's LDAP floors (`zodiac-breach`,
-> `silent-directory`). From-scratch primer: what LDAP is, how a search
+> A from-scratch primer on LDAP injection: what LDAP is, how a search
 > filter is built, the special characters, all three attack patterns
 > (auth bypass, directory dump, and blind substring extraction), a real
 > case-sensitivity nuance, and the escaping fix. Grounded in RFC 4515/4514
@@ -16,24 +15,24 @@ LDAP is a protocol for querying a **directory** — a tree of entries
 filesystem of records."
 
 ```
-            dc=hunterassoc,dc=org              <- the root (base DN)
+            dc=example,dc=com                  <- the root (base DN)
                      │
-                 ou=zodiac                      <- an organizational unit
+                 ou=people                      <- an organizational unit
                      │
         ┌────────────┼────────────┐
-   uid=rat      uid=ox      uid=chairman        <- entries (one per member)
+   uid=alice     uid=bob     uid=admin          <- entries (one per person)
         │
    each entry has ATTRIBUTES:
-      uid: rat
-      cn:  Rat Member
+      uid: alice
+      cn:  Alice Example
       userPassword: ...
-      description: ...        <- the lab hides the flag here on uid=chairman
+      description: ...        <- free-text, often where sensitive notes end up
 ```
 
 Key vocabulary:
 
 - **DN (Distinguished Name):** the full path to an entry, e.g.
-  `uid=chairman,ou=zodiac,dc=hunterassoc,dc=org`. (RFC 4514.)
+  `uid=alice,ou=people,dc=example,dc=com`. (RFC 4514.)
 - **Attribute:** a `name: value` pair on an entry (`uid`, `cn`, `mail`,
   `userPassword`, `description`).
 - **Search filter:** the query — "find entries matching this predicate".
@@ -47,7 +46,7 @@ Filters are **prefix/Polish notation**, fully parenthesized. A single
 comparison:
 
 ```
-   (uid=rat)          attribute = value
+   (uid=alice)        attribute = value
 ```
 
 Logical operators sit **in front** of their parenthesized operands:
@@ -61,9 +60,9 @@ Logical operators sit **in front** of their parenthesized operands:
 So a normal two-field login filter looks like:
 
 ```
-   (&(uid=rat)(userPassword=secret))
-    │ │        │
-    │ │        └─ clause 2
+   (&(uid=alice)(userPassword=secret))
+    │ │          │
+    │ │          └─ clause 2
     │ └─ clause 1
     └─ AND: both clauses must match
 ```
@@ -106,7 +105,8 @@ change the filter's structure instead of just its values:
 
 ## 4. Why string concatenation is the bug
 
-The lab's sink builds the filter by raw f-string concatenation, escaping
+A typical vulnerable sink builds the filter by raw string concatenation
+(f-string, `+`, `.format()` — the mechanism doesn't matter), escaping
 nothing:
 
 ```python
@@ -116,13 +116,13 @@ login_filter = f"(&(uid={username})(userPassword={password}))"   # VULN
 search_filter = f"(&(uid={search_uid})(objectClass=inetOrgPerson))"  # VULN
 ```
 
-With an ordinary `username=rat` there are no special characters, so the
+With an ordinary `username=alice` there are no special characters, so the
 filter is exactly what was intended. The moment you include `(`, `)`, or
 `*`, you are writing filter *syntax*, not just a value.
 
 ---
 
-## 5. Pattern A — Authentication bypass (lab floor p4_5, login shape)
+## 5. Pattern A — Authentication bypass
 
 Template:
 
@@ -137,12 +137,12 @@ a **presence** assertion — "userPassword exists, with any value at all" —
 which is true for every entry that has a password:
 
 ```
-   username = rat
+   username = alice
    password = *
 
-   (&(uid=rat)(userPassword=*))
-                           ^^^
-            "rat has a password" -> true -> logged in as rat, no password known
+   (&(uid=alice)(userPassword=*))
+                             ^^^
+          "alice has a password" -> true -> logged in as alice, no password known
 ```
 
 ### The clause-injection trick
@@ -164,10 +164,10 @@ that is trivially true. An unbalanced `(`/`)` is a malformed filter and
 the directory simply rejects it — that rejection is itself feedback.)
 
 ```
-   intended:   (&(uid=RAT)(userPassword=PW))
-                     │                 │
-   inject uid = *    │                 │
-                     ▼                 ▼
+   intended:   (&(uid=ALICE)(userPassword=PW))
+                     │                   │
+   inject uid = *    │                   │
+                     ▼                   ▼
    result:     (&(uid=*)(userPassword=PW))   -> "any uid AND pw=PW"
    inject both:
    result:     (&(uid=*)(userPassword=*))    -> matches EVERY entry
@@ -175,7 +175,7 @@ the directory simply rejects it — that rejection is itself feedback.)
 
 ---
 
-## 6. Pattern B — Directory dump (lab floor p4_5, search shape)
+## 6. Pattern B — Directory dump
 
 Template:
 
@@ -183,11 +183,13 @@ Template:
    (&(uid=<search_uid>)(objectClass=inetOrgPerson))
 ```
 
-A normal `uid=rat` can match **at most one** entry, because `uid` is the
-unique naming attribute. So if you can make the filter match *more than
-one* entry, you've provably widened it beyond any legitimate lookup — and
-the lab treats a multi-match result as a **raw dump** that reveals the
-hidden `description` field (the flag on `uid=chairman`).
+A normal `uid=alice` can match **at most one** entry, because `uid` is
+the unique naming attribute. So if you can make the filter match *more
+than one* entry, you've provably widened it beyond any legitimate
+lookup — and an application that reacts to a multi-match result by
+switching into a richer "dump" view (more fields, a full listing) ends
+up handing over exactly the sensitive attributes a single, well-formed
+lookup was never meant to reveal.
 
 Breakout: close the `uid` clause, add a trivially-true presence clause,
 and let the template's own trailing clause stay valid:
@@ -200,38 +202,39 @@ and let the template's own trailing clause stay valid:
        │        │                  └─ template's own clause, still valid
        │        └─ presence: every entry has objectClass
        └─ presence: every entry has uid
-   => matches ALL twelve members + chairman => dump mode => description leaks
+   => matches EVERY entry in the subtree => dump mode => sensitive fields leak
 ```
 
 ```
    one entry matched  ──►  "curated view"  (uid/cn/title/mail only)
-   many entries matched ─► "raw dump view" (adds description = FLAG)
+   many entries matched ─► "raw dump view" (adds hidden attributes too)
                      ▲
           only reachable by a widened (injected) filter
 ```
 
 ---
 
-## 7. Pattern C — Blind extraction (lab floor p4_6, `silent-directory`)
+## 7. Pattern C — Blind extraction
 
-`p4_5`'s dump shortcut (Pattern B) only exists because that floor's
-response *has* a richer mode to widen into. Not every endpoint offers
-that. `p4_6`'s verification desk returns **exactly one boolean field**,
-`verified: true/false`, no matter how many entries a widened filter
-actually matches or what they contain — there is no dump mode to unlock.
-The only channel left is the yes/no answer itself, walked one substring
-at a time, exactly like the NoSQL `$regex` walk in the sibling notes doc:
-
-```
-   note=*          -> presence assertion: true if ANY description exists
-   note=SEIY*       -> prefix assertion: true only if it REALLY starts with SEIY
-```
+Pattern B's dump shortcut only works when the application's response
+*has* a richer mode to widen into (a multi-match result that switches to
+a fuller listing). Not every endpoint offers that. A strictly boolean
+endpoint — a verification or "does this match?" check that returns only
+`true`/`false`, no matter how many entries a widened filter actually
+matches or what they contain — has no dump mode to unlock. The only
+channel left is the yes/no answer itself, walked one substring at a
+time, exactly like the NoSQL `$regex` walk in the sibling notes doc:
 
 ```
-   (&(uid=keeper)(description=S*))    match?  yes  -> starts with S
-   (&(uid=keeper)(description=SE*))   match?  yes
-   (&(uid=keeper)(description=SEA*))  match?  no
-   (&(uid=keeper)(description=SEI*))  match?  yes ... grow the prefix
+   value=*          -> presence assertion: true if ANY value exists at all
+   value=SEC*        -> prefix assertion: true only if it REALLY starts with SEC
+```
+
+```
+   (&(uid=alice)(description=S*))    match?  yes  -> starts with S
+   (&(uid=alice)(description=SE*))   match?  yes
+   (&(uid=alice)(description=SEA*))  match?  no
+   (&(uid=alice)(description=SEC*))  match?  yes ... grow the prefix
 ```
 
 Same blind loop diagram as the NoSQL notes' Pattern B section — only the
@@ -243,8 +246,8 @@ expose exactly this boolean shape (a login, or a privacy-preserving
 
 Many LDAP attribute syntaxes (RFC 4517's `DirectoryString`, which
 `description` uses) default to **case-insensitive** matching
-(`caseIgnoreMatch`/`caseIgnoreSubstringsMatch`). Verified live against
-this lab's own OpenLDAP: `note=seiyaku{s*` and `note=SEIYAKU{S*` both
+(`caseIgnoreMatch`/`caseIgnoreSubstringsMatch`). Confirmed against a
+live OpenLDAP server: `value=secret{s*` and `value=SECRET{S*` both
 verify true against the same entry. **The oracle genuinely cannot
 distinguish 'S' from 's'.** A real blind extraction needs some other
 signal (external knowledge of a format convention, a case-sensitive
@@ -258,8 +261,8 @@ Filter injection is the common case. Separately, if user input is
 concatenated into a **DN** (e.g. a bind DN or a base DN) rather than a
 filter, the dangerous characters and escaping rules are different — those
 are **RFC 4514** rules (`, + " \ < > ;` and leading/trailing spaces), not
-RFC 4515. Different context, different escape set. The lab is filter
-injection; just know DN injection is its own thing.
+RFC 4515. Different context, different escape set — just know DN
+injection is its own thing, distinct from everything above.
 
 ---
 
@@ -301,26 +304,7 @@ injection; just know DN injection is its own thing.
 
 ---
 
-## 9. Map to the lab
-
-| Floor | Shape | Request | Filter built | Pattern | What you practice |
-|---|---|---|---|---|---|
-| p4_5 zodiac-breach | Directory search | `GET /p4/zodiac?uid=…` | `(&(uid=…)(objectClass=inetOrgPerson))` | B | dump via `*)(objectClass=*` → `description` leak |
-| p4_5 zodiac-breach | Login | `POST /p4/zodiac` | `(&(uid=…)(userPassword=…))` | A | auth bypass via `*` / clause injection |
-| p4_6 silent-directory | Verify | `POST /p4/registrar/verify` | `(&(uid=…)(description=…))` | C | blind substring walk, no dump mode available |
-
-`p4_5` is one underlying bug (unescaped concatenation into `search_s()`),
-reachable two ways. `p4_6` is the same bug class again, a different
-route, a deliberately isolated subtree (`ou=registrar`, never reachable
-through `p4_5`'s own `ou=zodiac` filter no matter how widened), and a
-response shape that forces Pattern C specifically. Read
-`challenges/phase4.py` — the `# VULN` lines mark each `f"(&(...)...)"`
-filter — then each floor's own `DEBRIEF.md` walks the exact payloads and
-shows the escaped fix.
-
----
-
-## 10. References (official / primary)
+## 9. References (official / primary)
 
 - **RFC 4515 — LDAP: String Representation of Search Filters** —
   https://www.rfc-editor.org/rfc/rfc4515  (the filter grammar + the escape
