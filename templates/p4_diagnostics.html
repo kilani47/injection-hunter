@@ -3,18 +3,27 @@
 {% block body_class %}nen-p4{% endblock %}
 {% block phase_nav %}<a href="{{ url_for('phase', phase_id='4') }}" class="hover:text-accent transition-colors">phase 4</a>{% endblock %}
 
-{% block content %}
+{% block main %}
+<main class="relative flex-1 flex flex-col justify-center {% if has_hero('p4_diagnostics') %}cine{% endif %}">
+  {% if has_hero('p4_diagnostics') %}
+    <img class="cine-img" src="{{ url_for('static', filename='img/p4_diagnostics.png') }}"
+         alt="Hunter Association staff examining fractured, error-streaked diagnostic data crystals"
+         loading="eager" decoding="async">
+    <div class="cine-scrim-content"></div>
+  {% endif %}
+  <div class="relative mx-auto w-full max-w-5xl px-6 py-10">
+    {% block content %}
 <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
   <div>
-    <p class="font-mono text-xs text-muted mb-2">hunter association hq &middot; the diagnostic desk</p>
-    <h1 class="font-display text-3xl font-semibold text-bone mb-4">The Diagnostic Desk</h1>
-    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+    <p class="font-mono text-xs text-muted mb-2 text-shadow-wallpaper">hunter association hq &middot; the diagnostic desk</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4 text-shadow-wallpaper">The Diagnostic Desk</h1>
+    <p class="max-w-md text-bone/85 leading-relaxed mb-4 text-shadow-wallpaper">
       A staff-only console for debugging failed incident-report
       searches. Unlike the front desk, this one doesn't hide its
       mistakes: whatever the database actually says when a query goes
       wrong, this console repeats back word for word.
     </p>
-    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+    <p class="max-w-md text-bone/70 leading-relaxed text-sm text-shadow-wallpaper">
       Objective: a clerk who never swallows an error is still a clerk
       who was never supposed to answer the question you're about to
       ask. Find out what the archive says when it can't parse what
@@ -81,4 +90,7 @@
     </div>
   </div>
 </div>
+    {% endblock %}
+  </div>
+</main>
 {% endblock %}

@@ -69,6 +69,47 @@ Phase 3 taught that closing a timing channel takes deliberate extra work
 underlying bug looks like the one time that extra step never happened,
 and timing is left sitting there, open, as a perfectly good oracle.
 
+### A related technique that does NOT work here, and why
+
+`$where` grants real JavaScript execution, and JS's `throw` statement
+can throw any value, including a document's own field, directly:
+
+```js
+function() { if (this.codename == 'ghost') { throw this.clearance_note; } return false; }
+```
+
+Against an application that echoes raw query exceptions back to the
+caller (p4_2's Diagnostic Desk antipattern), this is a devastating
+one-shot technique: the thrown value lands verbatim in the error
+message, no blind walking of any kind required. It's worth knowing this
+exists, it's a real, well-documented `$where` trick, distinct from both
+the boolean quote-breakout above and the timing technique below.
+
+It does **not** work against this specific route. Verified live:
+
+```bash
+curl -s -G "http://localhost:8000/p4/loophole" -H "Accept: application/json" \
+    --data-urlencode "codename=x' || (this.codename=='ghost' && (function(){throw this.clearance_note})()) || '"
+```
+
+```json
+{"codename":"x' || (this.codename=='ghost' && (function(){throw this.clearance_note})()) || '","submitted":true}
+```
+
+Same generic response, every time, flag absent. The reason is the
+`except Exception: pass` in `_run_card_query`'s MongoDB-adjacent
+sibling here (see the route's own code, same pattern): every exception
+this query can raise, deliberately thrown or not, is caught and
+discarded at the Python level, *before* it has any chance to reach the
+HTTP response. `throw` still fires inside MongoDB's JS engine exactly as
+shown in the standalone proof above, the failure never gets a chance to
+travel any further than that one `except` block. This is the same
+"never return raw driver exception text" remediation p4_2's debrief
+recommends, applied here as a design choice from the start rather than
+a fix bolted on afterward, closing off error-based entirely (both the
+accidental kind and this deliberate kind) and leaving timing as the
+only road through.
+
 ## The technique: `sleep()` inside `$where`
 
 MongoDB's JavaScript evaluation context for `$where` exposes a real

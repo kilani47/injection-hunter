@@ -340,6 +340,47 @@ instead of a response body:
 > Close with a single trailing `'` instead, so the template's own closing
 > quote completes it into `''` (empty string, falsy, harmless).
 
+### A third `$where` technique: direct leak via `throw`
+
+Boolean breakout and time-based blind both treat `$where` as a yes/no
+oracle, the same shape as every other blind technique in this doc. But
+`$where` grants *arbitrary JavaScript execution*, not just a boolean
+predicate, and JavaScript's `throw` statement can throw **any value**,
+not just trigger a generic failure. If an application ever echoes a
+query's raw exception text back to the caller (the same "verbose errors
+left on" antipattern Pattern C is built around), a caller doesn't have to
+ask yes/no questions at all. They can write JS that, on a match,
+deliberately throws the exact field they want:
+
+```js
+function() { if (this.username == 'admin') { throw this.password; } return false; }
+```
+
+Confirmed live against a real MongoDB server:
+
+```
+db.credtest.find({"$where": "function(){ if(this.username=='admin'){throw this.password} return false }"})
+->
+OperationFailure: Executor error during find command :: caused by ::
+uncaught exception: sup3r_s3cr3t_pw
+```
+
+The real password, verbatim, inside the error message, in **one
+request**. This is meaningfully different from a type-conversion error
+accidentally leaking a value (Pattern C's `$expr`/`$convert` trick): here
+the thrown value is chosen on purpose, there's no guessing about whether
+some unrelated conversion happens to fail.
+
+The lesson this exposes: "the response is only ever a boolean" is a
+property of the queries a *developer* imagined running, not a property
+of what `$where` actually allows. A caller isn't limited to answering the
+intended yes/no question; they can write completely different code that
+does something the developer never pictured, like crashing on purpose
+with the secret embedded in the crash. Closing this requires the same
+fix as Pattern C: never let a `$where` (or any) query's raw exception
+text reach the HTTP response, full stop, independent of how carefully
+the *query itself* gets fixed.
+
 ---
 
 ## 8. Further techniques, beyond the four core patterns

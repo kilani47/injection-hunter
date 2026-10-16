@@ -3,19 +3,28 @@
 {% block body_class %}nen-p4{% endblock %}
 {% block phase_nav %}<a href="{{ url_for('phase', phase_id='4') }}" class="hover:text-accent transition-colors">phase 4</a>{% endblock %}
 
-{% block content %}
+{% block main %}
+<main class="relative flex-1 flex flex-col justify-center {% if has_hero('p4_records') %}cine{% endif %}">
+  {% if has_hero('p4_records') %}
+    <img class="cine-img" src="{{ url_for('static', filename='img/p4_records.png') }}"
+         alt="Hunter Association staff gathered around a glowing match/no-match terminal in the records archive"
+         loading="eager" decoding="async">
+    <div class="cine-scrim-content"></div>
+  {% endif %}
+  <div class="relative mx-auto w-full max-w-5xl px-6 py-10">
+    {% block content %}
 <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
   <div>
-    <p class="font-mono text-xs text-muted mb-2">hunter association hq &middot; basic records room</p>
-    <h1 class="font-display text-3xl font-semibold text-bone mb-4">Basic Records Room</h1>
-    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+    <p class="font-mono text-xs text-muted mb-2 text-shadow-wallpaper">hunter association hq &middot; basic records room</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4 text-shadow-wallpaper">Basic Records Room</h1>
+    <p class="max-w-md text-bone/85 leading-relaxed mb-4 text-shadow-wallpaper">
       The front desk of the Association's records archive. Give it a
       field and a value, and it searches, but it was never built to
       hand a caller anything back except whether something matched.
       No document, no field contents, no listing. One bit: matched, or
       it didn't.
     </p>
-    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+    <p class="max-w-md text-bone/70 leading-relaxed text-sm text-shadow-wallpaper">
       Objective: the desk clerk answers exactly one question, over and
       over. That's still enough to walk a value out of the archive one
       character at a time, if you can get the clerk to compare
@@ -77,4 +86,7 @@
     </div>
   </div>
 </div>
+    {% endblock %}
+  </div>
+</main>
 {% endblock %}
