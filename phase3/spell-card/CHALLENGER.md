@@ -74,12 +74,12 @@ here it plays that role. Its capture feed is proxied at
 - The `card` field takes a plain string with nothing suggesting it's
   sanitized. If you've broken out of a quoted string context before
   (earlier floors in this exam), the shape will feel familiar.
-- The response never changes, no matter what you send it — not a row,
+- The response never changes, no matter what you send it, not a row,
   not an error, not a delay. That's not you missing a signal; there
   genuinely isn't one to find in the page's own HTTP response.
 - You have a function that makes the database phone home, and a listener
   to receive the call. The flag lives in a table the reader's own catalog
   never touches. Put those three facts together.
 
-No further hints here — see `DEBRIEF.md` only once you're done, or well
+No further hints here, see `DEBRIEF.md` only once you're done, or well
 and truly stuck.

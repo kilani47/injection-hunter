@@ -47,7 +47,7 @@ COLLABORATOR_BASE = "http://collaborator"
 def _run_card_query(card: str) -> None:
     """Run the vulnerable card lookup in a detached background thread.
 
-    The result is intentionally discarded — this application never relays
+    The result is intentionally discarded: this application never relays
     it anywhere.  Running in a background thread keeps the HTTP response's
     timing completely independent of query execution time, which closes the
     time-based in-band channel (an injected SLEEP delays only this thread,
@@ -69,7 +69,7 @@ def _run_card_query(card: str) -> None:
             # on purpose, this is the challenge's sink.
             q = f"SELECT effect FROM cards WHERE id='{card}'"
             cur.execute(q)
-            cur.fetchone()  # result discarded — Flask never sees it
+            cur.fetchone()  # result discarded, Flask never sees it
     except Exception:
         # Fully blind by design: every DB error is swallowed silently.
         pass
@@ -91,7 +91,7 @@ def p3_spellcard():
     thrown away by the application.  There is no boolean, error, UNION, or
     timing signal anywhere in the response.  The only way to extract data
     is to make the *database engine itself* originate an outbound network
-    call carrying the result — out-of-band, on a channel this application
+    call carrying the result, out-of-band, on a channel this application
     never touches.
 
     The http_get() UDF (compiled into the MariaDB image, registered in the

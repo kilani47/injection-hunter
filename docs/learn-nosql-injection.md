@@ -1,11 +1,11 @@
 # Learning notes: NoSQL injection (MongoDB)
 
 > A from-scratch primer on NoSQL injection against MongoDB: the mental
-> model, the operators, and all four core attack patterns PortSwigger's
-> own NoSQLi methodology names — operator injection, error-based,
-> boolean-blind, and time-based — plus the defenses. Grounded in
-> MongoDB's own operator/aggregation docs and the OWASP Testing Guide
-> (see **References** at the end).
+> model, the operators, all four core attack patterns PortSwigger's own
+> NoSQLi methodology names (operator injection, error-based, boolean-blind,
+> and time-based), and the defenses. Grounded in MongoDB's own
+> operator/aggregation docs and the OWASP Testing Guide (see
+> **References** at the end).
 
 ---
 
@@ -27,7 +27,7 @@ structure** (a dict/JSON object) from the moment it's built:
 ```python
 db.users.find_one({"name": user_input})
 #                  ^^^^^^^^^^^^^^^^^^^^^^
-#              already a dict — nothing to "escape"
+#              already a dict, nothing to "escape"
 ```
 
 So the bug is not a syntax break. It is a **type confusion**:
@@ -40,7 +40,7 @@ So the bug is not a syntax break. It is a **type confusion**:
 MongoDB looks at the *value*. If the value is a plain scalar, it's an
 equality test. If the value is a dict whose keys start with `$`, MongoDB
 honors those keys as **query operators**. The application never meant to
-let you pick the operator — it only meant to let you pick the value — but
+let you pick the operator, it only meant to let you pick the value, but
 it never checked the *type* of what you sent.
 
 > **The whole bug class in one sentence:** if an app folds a
@@ -55,7 +55,7 @@ it never checked the *type* of what you sent.
 
 Two delivery channels, both common in real applications.
 
-### (a) JSON body — the natural one
+### (a) JSON body: the natural one
 
 If the endpoint accepts JSON, nesting is free. `json.loads` builds real
 nested dicts for you:
@@ -68,9 +68,9 @@ POST /login              Content-Type: application/json
                      already a Python dict after json.loads
 ```
 
-### (b) Bracket notation — for form/query-string endpoints
+### (b) Bracket notation: for form/query-string endpoints
 
-A query string or form body is *flat* key/value pairs — most web
+A query string or form body is *flat* key/value pairs. Most web
 frameworks do **not** auto-nest them. So some apps reconstruct nesting
 from a bracket convention, letting a plain GET request carry the same
 shape a JSON body would:
@@ -81,7 +81,7 @@ GET /records?value[$regex]=^SEIYAKU&value[$options]=i
    rebuilt by the app into:  {"value": {"$regex": "^SEIYAKU", "$options": "i"}}
 ```
 
-> Not every app rebuilds bracket notation — but many frameworks and
+> Not every app rebuilds bracket notation, but many frameworks and
 > body-parsers (Express's `qs`, PHP, etc.) do it *by default*, which is
 > why `param[$ne]=1` is a standard thing to try blind against any GET
 > endpoint that takes a search/filter parameter.
@@ -101,12 +101,12 @@ that matter for injection:
 | `$regex` | regex match | prefix-walk a hidden value **one character at a time** |
 | `$exists` | field present? | discover which fields a document even has |
 | `$in` | value in list | test many candidates in one query |
-| `$where` | run **JavaScript** | arbitrary JS predicate, time-based blind — see §7 |
-| `$or` | logical OR of clauses | inject extra clauses — see §8 |
+| `$where` | run **JavaScript** | arbitrary JS predicate, time-based blind, see §7 |
+| `$or` | logical OR of clauses | inject extra clauses, see §8 |
 
 ---
 
-## 4. Pattern A — Authentication bypass
+## 4. Pattern A: Authentication bypass
 
 The sink is a two-field equality login:
 
@@ -122,10 +122,10 @@ knowing the real value**:
 {"username": {"$ne": null}, "password": {"$ne": null}}
 ```
 
-`$ne: null` is "not equal to null" — true for *every* document that has
+`$ne: null` is "not equal to null", true for *every* document that has
 that field at all. The filter now matches every agent. `find_one` returns
 the **first** document in natural order, and you're logged in as whoever
-that is — in a real deployment, often whichever account was created
+that is, in a real deployment, often whichever account was created
 first, sometimes a seed/admin account inserted before any ordinary user.
 
 ```
@@ -143,13 +143,13 @@ JSON:   {"username":{"$ne":null},"password":{"$ne":null}}
 form:   username[$ne]=1&password[$ne]=1
 ```
 
-> Variants worth knowing: `{"$gt": ""}` (greater than empty string — true
+> Variants worth knowing: `{"$gt": ""}` (greater than empty string: true
 > for any non-empty string), `{"$ne": "x"}`, `{"$exists": true}`. If
 > `$ne: null` is filtered, these often still work.
 
 ---
 
-## 5. Pattern B — Blind extraction
+## 5. Pattern B: Blind extraction
 
 Here the endpoint is an **oracle**: it tells you only *match / no-match*,
 never the data. You still extract a full hidden string, one bit at a time,
@@ -215,14 +215,14 @@ Same oracle, fewer requests.
 ```
 
 > If the *field name* itself is also unvalidated (not just its value),
-> that lets you aim the oracle at *any* field on any document —
+> that lets you aim the oracle at *any* field on any document,
 > including fields a normal search result never shows. Combine "which
 > fields exist" (`$exists`) with the extraction loop to pull a value out
 > of a field the UI never displays.
 
 ---
 
-## 6. Pattern C — Error-based detection and exfiltration
+## 6. Pattern C: Error-based detection and exfiltration
 
 PortSwigger's own NoSQLi methodology leads with this, *before* committing
 to a slow blind campaign: fuzz the target with something deliberately
@@ -237,8 +237,8 @@ value[$regexx]=x        -> OperationFailure: unknown operator: $regexx
 ```
 
 A real application that swallows every exception into a generic
-"no match" hides this entirely. One that doesn't — a realistic "verbose
-errors left on for debugging" antipattern — confirms the injection exists
+"no match" hides this entirely. One that doesn't (a realistic "verbose
+errors left on for debugging" antipattern) confirms the injection exists
 in a single request, no inference from match/no-match behavior required.
 
 ### Weaponization: `$expr` + `$convert` one-shot leak
@@ -281,15 +281,15 @@ request, the whole value, no bit-at-a-time walking.
 > (`find({"$expr": {...}})`), not nested under a field name. If the
 > *field name itself* is unvalidated (the same `field` an app folds into
 > `{field: value}`, see §1), setting `field="$expr"` turns the entire
-> query into a top-level `$expr` clause — reaching this technique through
+> query into a top-level `$expr` clause, reaching this technique through
 > the same unvalidated-field bug Patterns A/B already rely on.
 
 ---
 
-## 7. Pattern D — `$where` injection and time-based blind
+## 7. Pattern D: `$where` injection and time-based blind
 
 `$where` is MongoDB's one operator that doesn't take a literal or another
-operator as its value — it takes a string of **JavaScript**, evaluated by
+operator as its value: it takes a string of **JavaScript**, evaluated by
 the server once per document. That reopens a *string* context, so the
 bug reverts to a classic quote-breakout, closer to traditional SQL
 injection than to Patterns A-C's pure type confusion:
@@ -301,7 +301,7 @@ db.users.find({"$where": f"this.name == '{input}'"})   # VULN
 
 ### Why this needs its own technique
 
-If the response is blind in-band (no boolean, no error — sometimes a
+If the response is blind in-band (no boolean, no error, sometimes a
 deliberate design choice, sometimes just incomplete error handling), the
 one thing left to read is **how long the query took**. `$where`'s JS
 context exposes a real `sleep(ms)` function:
@@ -329,13 +329,13 @@ instead of a response body:
 > built on MongoDB's aggregation framework, which *rejects* `$where`
 > inside a `$match` stage outright (`$where is not allowed in this
 > context`). `find()` has no such restriction. The exact same `$where`
-> clause behaves differently depending on which query method wraps it —
+> clause behaves differently depending on which query method wraps it,
 > not obvious from `$where`'s own documentation, confirmed by testing
 > against a live server.
 
 > **A quoting trap:** closing an injected JS string with `|| 'x'` (a
 > non-empty string literal) looks like a closed quote but is a silent
-> bug — JavaScript treats any non-empty string as truthy, so
+> bug: JavaScript treats any non-empty string as truthy, so
 > `(false) || (cond) || ('x')` is *always* true regardless of `cond`.
 > Close with a single trailing `'` instead, so the template's own closing
 > quote completes it into `''` (empty string, falsy, harmless).
@@ -375,7 +375,7 @@ The root cause is **unvalidated type**, so the fix is at the boundary:
    This single check kills every operator-injection payload at once,
    because a dict can never reach the query.
 
-2. **Validate `field` against an allow-list** too — never let the caller
+2. **Validate `field` against an allow-list** too, never let the caller
    name an arbitrary field.
 
 3. **Schema validation at the edge** (pydantic / JSON-schema / cerberus):
@@ -384,14 +384,14 @@ The root cause is **unvalidated type**, so the fix is at the boundary:
 
 4. **Avoid `$where`/server-side JS entirely wherever a native operator can
    express the same check**, and disable it at the deployment level when
-   nothing legitimately needs it — `--noscripting` /
-   `security.javascriptEnabled: false`. There is no safe parameterization
+   nothing legitimately needs it (`--noscripting` /
+   `security.javascriptEnabled: false`). There is no safe parameterization
    for `$where`: the string *is* the code, so the only real fix for an
    existing `$where` sink is not building it from untrusted input, full
    stop.
 
 5. **Never return raw driver exception text in an HTTP response.** This
-   is what makes Pattern C's one-shot leak possible — log the real
+   is what makes Pattern C's one-shot leak possible: log the real
    exception server-side, return a generic failure to the caller.
 
 6. **Least privilege** on the DB user, as always: a read-only app role
@@ -401,7 +401,7 @@ The root cause is **unvalidated type**, so the fix is at the boundary:
 > Note what is *not* the fix: "escaping." There's no quote to escape in
 > Patterns A-C. Sanitizing `$` out of strings is a brittle band-aid; the
 > correct fix is enforcing the *type*. Pattern D (`$where`) is the one
-> exception — there, you're back in string-escaping territory, except the
+> exception: there, you're back in string-escaping territory, except the
 > only safe answer is "don't build the string from untrusted input," not
 > "escape it correctly."
 
@@ -409,19 +409,19 @@ The root cause is **unvalidated type**, so the fix is at the boundary:
 
 ## 10. References (official / primary)
 
-- **PortSwigger Web Security Academy — NoSQL injection** —
+- **PortSwigger Web Security Academy, NoSQL injection:**
   https://portswigger.net/web-security/nosql-injection (the four-pattern
-  taxonomy — operator/syntax injection, boolean-based, time-based,
-  error-based — this doc follows)
-- **MongoDB query operators** — https://www.mongodb.com/docs/manual/reference/operator/query/
+  taxonomy, operator/syntax injection, boolean-based, time-based, and
+  error-based, that this doc follows)
+- **MongoDB query operators:** https://www.mongodb.com/docs/manual/reference/operator/query/
   (`$ne`, `$gt`, `$regex`, `$exists`, `$where`, `$expr`, …)
-- **MongoDB `$where`** — https://www.mongodb.com/docs/manual/reference/operator/query/where/
-- **MongoDB `$convert` / `$toInt` / `onError`** —
+- **MongoDB `$where`:** https://www.mongodb.com/docs/manual/reference/operator/query/where/
+- **MongoDB `$convert` / `$toInt` / `onError`:**
   https://www.mongodb.com/docs/manual/reference/operator/aggregation/convert/
   (the `onError` parameter's documented purpose is suppressing the
   default conversion-failure behavior Pattern C exploits)
-- **OWASP Testing Guide — Testing for NoSQL Injection** (WSTG-INPV-05) —
+- **OWASP Testing Guide, Testing for NoSQL Injection** (WSTG-INPV-05):
   https://owasp.org/www-project-web-security-testing-guide/
-- **OWASP Cheat Sheet — Injection Prevention / Input Validation** —
+- **OWASP Cheat Sheet, Injection Prevention / Input Validation:**
   https://cheatsheetseries.owasp.org/
-- **PyMongo type behavior** — https://pymongo.readthedocs.io/
+- **PyMongo type behavior:** https://pymongo.readthedocs.io/

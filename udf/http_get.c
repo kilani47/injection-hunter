@@ -1,12 +1,12 @@
 /*
- * udf/http_get.c — MariaDB UDF: fire an HTTP GET from inside the database.
+ * udf/http_get.c, MariaDB UDF: fire an HTTP GET from inside the database.
  *
  * Teaching purpose: once installed, any SQL session that can SELECT may call
  *
  *   http_get('http://listener-host/some/path')
  *
  * and MariaDB's own server process originates a real outbound HTTP request
- * to that URL — with zero involvement from the application layer.  That is
+ * to that URL, with zero involvement from the application layer.  That is
  * the canonical out-of-band SQL-injection primitive: the *database engine*
  * phones home, independent of whatever the application does (or does not do)
  * with the query result.

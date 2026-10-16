@@ -1,4 +1,4 @@
-# mariadb/Dockerfile — custom MariaDB image with the http_get UDF compiled in.
+# mariadb/Dockerfile, custom MariaDB image with the http_get UDF compiled in.
 #
 # Build context: repository root (docker-compose.yml sets context: .).
 # That lets COPY reach udf/http_get.c without any ../.. gymnastics.
