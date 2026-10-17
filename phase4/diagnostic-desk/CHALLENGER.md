@@ -55,6 +55,11 @@ hints, or tooling are off-limits.
   expression hold", and that operator has its own family of type-
   conversion helpers, ones that are not shy about explaining exactly
   why a conversion failed.
+- This route never hands you a field name for the sealed entry, you'll
+  need to find one yourself. `matched` is still in every response, even
+  here, which makes `$exists` a usable yes/no test for "does a field by
+  this name exist at all." A short wordlist of plausible secret-field
+  names gets you there faster than you'd think.
 
 No further hints here, see `DEBRIEF.md` only once you're done, or well
 and truly stuck.

@@ -59,6 +59,54 @@ just read off a clock instead of a response body). Error-based, when it
 works, isn't a bit-at-a-time oracle at all, it's a channel that can
 carry an entire value in a single response.
 
+## Stage 0: finding the field name in the first place
+
+Every example below uses `field=archive_key`, and it's worth being
+honest about where that name actually comes from: **not from the
+injection itself.** MongoDB has no `information_schema` equivalent
+reachable through this route, there is no query that lists "every field
+name on every document in this collection." Unlike the SQL floors in
+this lab, where a hidden table or column can be enumerated directly
+(`SELECT table_name FROM information_schema.tables ...`), a MongoDB
+document's own field names are not something a caller can ask the
+server to just hand over.
+
+It's also worth ruling out an easy but wrong assumption: this field
+name is the *same* one `p4_3`'s Records Room uses, but that floor is
+solved *after* this one in this lab's actual unlock order (`p4_2` before
+`p4_3`). A player reaching this floor hasn't seen that convention yet,
+it can't be where the name comes from on a first playthrough.
+
+What *is* real and usable: this floor's own response carries a
+`matched` boolean, which makes `$exists` a working field-name oracle.
+Probe a candidate field name with `value[$exists]=true`, a hit means a
+document somewhere in the collection has that field; a miss means it
+doesn't:
+
+```bash
+curl -s -G "http://localhost:8000/p4/diagnostics" -H "Accept: application/json" \
+    --data-urlencode "field=<candidate>" --data-urlencode "value[\$exists]=true"
+```
+
+Verified live, a realistic wordlist walk against this exact seed
+(common CTF/application secret-field names, tried in order):
+
+```
+field=secret         -> {"matched":false,...}
+field=flag           -> {"matched":false,...}
+field=hidden_value   -> {"matched":false,...}
+field=classified     -> {"matched":false,...}
+field=archive_key    -> {"matched":true,"count":1,...}
+```
+
+The hit confirms a field named `archive_key` exists on at least one
+document, nothing more, not its value, not which document, not whether
+it's the field this floor's flag actually lives in. That's still
+genuinely useful: it turns "guess a field name" from pure luck into a
+bounded, automatable search over a wordlist, same shape as directory or
+parameter fuzzing in ordinary web testing, and it's the honest
+prerequisite every example after this one depends on.
+
 ## Stage 1: detection via a malformed operator
 
 The simplest possible probe: ask for an operator that doesn't exist.
