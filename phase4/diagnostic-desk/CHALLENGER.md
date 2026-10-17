@@ -11,12 +11,17 @@ when a query goes wrong, this console doesn't hide it. Whatever the
 database itself says about a broken or malformed question, this
 console repeats back, word for word.
 
+Every incident report filed here, sealed ones included, carries an
+internal tag under the field `archive_key`, the same convention this
+archive uses everywhere. Nobody expected a debugging tool to be the
+place that tag got read back out loud.
+
 ## Objective
 
-Find out what the archive actually says when it can't parse what
-you've handed it. A console that explains its own mistakes in enough
-detail is a console that was never supposed to answer the question
-you're about to ask it.
+Find out what the archive actually says about `archive_key` when it
+can't parse what you've handed it. A console that explains its own
+mistakes in enough detail is a console that was never supposed to
+answer the question you're about to ask it.
 
 ## Target
 
@@ -55,11 +60,6 @@ hints, or tooling are off-limits.
   expression hold", and that operator has its own family of type-
   conversion helpers, ones that are not shy about explaining exactly
   why a conversion failed.
-- This route never hands you a field name for the sealed entry, you'll
-  need to find one yourself. `matched` is still in every response, even
-  here, which makes `$exists` a usable yes/no test for "does a field by
-  this name exist at all." A short wordlist of plausible secret-field
-  names gets you there faster than you'd think.
 
 No further hints here, see `DEBRIEF.md` only once you're done, or well
 and truly stuck.

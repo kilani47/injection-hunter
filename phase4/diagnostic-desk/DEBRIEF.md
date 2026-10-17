@@ -59,29 +59,34 @@ just read off a clock instead of a response body). Error-based, when it
 works, isn't a bit-at-a-time oracle at all, it's a channel that can
 carry an entire value in a single response.
 
-## Stage 0: finding the field name in the first place
+## Stage 0: where the field name comes from
 
-Every example below uses `field=archive_key`, and it's worth being
-honest about where that name actually comes from: **not from the
-injection itself.** MongoDB has no `information_schema` equivalent
-reachable through this route, there is no query that lists "every field
-name on every document in this collection." Unlike the SQL floors in
-this lab, where a hidden table or column can be enumerated directly
-(`SELECT table_name FROM information_schema.tables ...`), a MongoDB
-document's own field names are not something a caller can ask the
-server to just hand over.
+Every example below uses `field=archive_key`. `CHALLENGER.md` states
+that name directly, the same way `p4_3`'s Records Room states it for
+its own hidden entry. That's deliberate, and worth being explicit
+about: this floor's lesson is error-based exfiltration (detection via
+a malformed operator, then a one-shot leak), not blind schema
+discovery, that's a different lesson entirely, and MongoDB genuinely
+has no `information_schema` equivalent reachable through this route to
+make it a fair one here. Handing the field name over in the brief lets
+the floor focus on the technique it's actually built to teach, instead
+of gatekeeping on a guessing problem the injection itself can't solve.
 
-It's also worth ruling out an easy but wrong assumption: this field
-name is the *same* one `p4_3`'s Records Room uses, but that floor is
-solved *after* this one in this lab's actual unlock order (`p4_2` before
-`p4_3`). A player reaching this floor hasn't seen that convention yet,
-it can't be where the name comes from on a first playthrough.
+It's worth naming an assumption that *doesn't* hold, though: this field
+name is the same one Records Room uses, but Records Room is solved
+*after* this floor in the lab's own unlock order (`p4_2` before `p4_3`).
+A player reaching this floor hasn't seen that convention yet, so "it's
+the same name as the other floor" was never a safe thing to rely on,
+the brief has to state it on its own, same as Records Room's own brief
+does for itself.
 
-What *is* real and usable: this floor's own response carries a
-`matched` boolean, which makes `$exists` a working field-name oracle.
-Probe a candidate field name with `value[$exists]=true`, a hit means a
-document somewhere in the collection has that field; a miss means it
-doesn't:
+### A verified bonus: this field name *is* also independently discoverable
+
+Suppose the name hadn't been given. This floor's own response carries a
+`matched` boolean, which makes `$exists` a working field-name oracle
+anyway: probe a candidate name with `value[$exists]=true`, a hit means
+a document somewhere in the collection has that field, a miss means it
+doesn't.
 
 ```bash
 curl -s -G "http://localhost:8000/p4/diagnostics" -H "Accept: application/json" \
@@ -99,13 +104,12 @@ field=classified     -> {"matched":false,...}
 field=archive_key    -> {"matched":true,"count":1,...}
 ```
 
-The hit confirms a field named `archive_key` exists on at least one
-document, nothing more, not its value, not which document, not whether
-it's the field this floor's flag actually lives in. That's still
-genuinely useful: it turns "guess a field name" from pure luck into a
-bounded, automatable search over a wordlist, same shape as directory or
-parameter fuzzing in ordinary web testing, and it's the honest
-prerequisite every example after this one depends on.
+Worth knowing as a general technique, blind field-name enumeration via
+`$exists` against any boolean-ish MongoDB endpoint, same shape as
+directory or parameter fuzzing in ordinary web testing, but it is not
+the path this floor actually expects. `solvers/p4_2.sh` runs this walk
+anyway, as a live demonstration that the technique holds up, before
+moving on to the floor's real lesson in Stages 1-2.
 
 ## Stage 1: detection via a malformed operator
 
