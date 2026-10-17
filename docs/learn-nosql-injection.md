@@ -1,9 +1,10 @@
 # Learning notes: NoSQL injection (MongoDB)
 
 > A from-scratch primer on NoSQL injection against MongoDB: the mental
-> model, the operators, all four core attack patterns PortSwigger's own
-> NoSQLi methodology names (operator injection, error-based, boolean-blind,
-> and time-based), and the defenses. Grounded in MongoDB's own
+> model, how to first tell you're even looking at NoSQL rather than SQL,
+> the operators, all four core attack patterns PortSwigger's own NoSQLi
+> methodology names (operator injection, error-based, boolean-blind, and
+> time-based), and the defenses. Grounded in MongoDB's own
 > operator/aggregation docs and the OWASP Testing Guide (see
 > **References** at the end).
 
@@ -51,7 +52,76 @@ it never checked the *type* of what you sent.
 
 ---
 
-## 2. How does a dict "arrive" instead of a string?
+## 2. How to tell you're dealing with NoSQL injection at all
+
+Everything above assumes you already know the backend is MongoDB. In a
+real blackbox test, you don't, and figuring that out comes *before* any
+of the exploitation patterns below. Two kinds of signal get you there:
+passive observation (no payloads needed yet) and one active differential
+test that settles it directly.
+
+### Passive signals
+
+- **Document ID shape, if any ID is ever visible.** MongoDB's default
+  `_id` is a 24-character hex string (an `ObjectId`, e.g.
+  `507f1f77bcf86cd799439011`). Seeing that exact shape in a URL, a JSON
+  response, or a cookie is close to a direct tell. SQL backends
+  typically show small auto-increment integers (`id=42`) or standard
+  dashed UUIDs (`550e8400-e29b-...`), visually nothing like it.
+- **Tech-stack fingerprinting.** Response headers (`X-Powered-By:
+  Express` correlates strongly with a MEAN/MERN stack, which usually
+  means MongoDB), cookie naming conventions, an exposed
+  `package.json`/webpack source map referencing `mongoose` or
+  `mongodb`, public docs or job postings about the target's stack. None
+  of this is certain alone, but it narrows your prior before you spend
+  time testing.
+- **Infra-level discovery**, when you have network visibility at all:
+  MongoDB's default port `27017` open, or an exposed Mongo
+  Express/Compass admin panel.
+- **Verbose errors, if the app leaks any.** The strongest passive
+  signal when you get it. A MongoDB/PyMongo error looks nothing like a
+  SQL error:
+  ```
+  MongoDB:  OperationFailure, BSON, pymongo.errors..., MongoServerError, uncaught exception
+  MySQL:    You have an error in your SQL syntax
+  Oracle:   ORA-xxxxx
+  Postgres: pg_query() ...
+  ```
+  This is the same methodology Pattern C below is built around: fuzz
+  with something malformed and read what comes back, before you even
+  know what you're attacking.
+
+### The active signal: differential testing
+
+This is what actually settles it when passive signals are inconclusive,
+and it's the step worth doing before committing to any single
+exploitation technique. Throw **both families of injection probes** at
+the same input and compare the results:
+
+```
+Probe A (classic SQL):      ' OR '1'='1
+Probe B (classic NoSQL):    username[$ne]=1   (or {"username":{"$ne":null}} as JSON)
+```
+
+- Probe A changes behavior (error, bypass, timing shift), Probe B does
+  nothing → SQL.
+- Probe B changes behavior, Probe A does nothing → NoSQL/MongoDB
+  specifically. The `$ne`/`$gt`/`$regex` operator vocabulary is
+  MongoDB's own query language; nothing else recognizes it.
+- Neither does anything → either the target is well-defended, a
+  different engine entirely (LDAP, or a different NoSQL store like
+  CouchDB/DynamoDB with its own operator syntax), or there's no
+  injection here at all.
+
+The differential itself is the confirmation, not just the payload
+"working." A `$ne` payload succeeding where a quote-breakout payload
+fails tells you two things at once: there's a type-confusion-shaped
+bug, and the engine behind it understands MongoDB's specific operator
+vocabulary, which nothing else does.
+
+---
+
+## 3. How does a dict "arrive" instead of a string?
 
 Two delivery channels, both common in real applications.
 
@@ -88,7 +158,7 @@ GET /records?value[$regex]=^SEIYAKU&value[$options]=i
 
 ---
 
-## 3. The operator toolbox
+## 4. The operator toolbox
 
 These are standard, officially documented MongoDB query operators. The ones
 that matter for injection:
@@ -101,12 +171,12 @@ that matter for injection:
 | `$regex` | regex match | prefix-walk a hidden value **one character at a time** |
 | `$exists` | field present? | discover which fields a document even has |
 | `$in` | value in list | test many candidates in one query |
-| `$where` | run **JavaScript** | arbitrary JS predicate, time-based blind, see §7 |
-| `$or` | logical OR of clauses | inject extra clauses, see §8 |
+| `$where` | run **JavaScript** | arbitrary JS predicate, time-based blind, see §8 |
+| `$or` | logical OR of clauses | inject extra clauses, see §9 |
 
 ---
 
-## 4. Pattern A: Authentication bypass
+## 5. Pattern A: Authentication bypass
 
 The sink is a two-field equality login:
 
@@ -149,7 +219,7 @@ form:   username[$ne]=1&password[$ne]=1
 
 ---
 
-## 5. Pattern B: Blind extraction
+## 6. Pattern B: Blind extraction
 
 Here the endpoint is an **oracle**: it tells you only *match / no-match*,
 never the data. You still extract a full hidden string, one bit at a time,
@@ -222,7 +292,7 @@ Same oracle, fewer requests.
 
 ---
 
-## 6. Pattern C: Error-based detection and exfiltration
+## 7. Pattern C: Error-based detection and exfiltration
 
 PortSwigger's own NoSQLi methodology leads with this, *before* committing
 to a slow blind campaign: fuzz the target with something deliberately
@@ -286,7 +356,7 @@ request, the whole value, no bit-at-a-time walking.
 
 ---
 
-## 7. Pattern D: `$where` injection and time-based blind
+## 8. Pattern D: `$where` injection and time-based blind
 
 `$where` is MongoDB's one operator that doesn't take a literal or another
 operator as its value: it takes a string of **JavaScript**, evaluated by
@@ -383,7 +453,7 @@ the *query itself* gets fixed.
 
 ---
 
-## 8. Further techniques, beyond the four core patterns
+## 9. Further techniques, beyond the four core patterns
 
 ### `$or` / logical-clause injection
 
@@ -402,7 +472,7 @@ surface. Rare but high-impact.
 
 ---
 
-## 9. Defense (the actual fix)
+## 10. Defense (the actual fix)
 
 The root cause is **unvalidated type**, so the fix is at the boundary:
 
@@ -448,7 +518,7 @@ The root cause is **unvalidated type**, so the fix is at the boundary:
 
 ---
 
-## 10. References (official / primary)
+## 11. References (official / primary)
 
 - **PortSwigger Web Security Academy, NoSQL injection:**
   https://portswigger.net/web-security/nosql-injection (the four-pattern
@@ -466,3 +536,5 @@ The root cause is **unvalidated type**, so the fix is at the boundary:
 - **OWASP Cheat Sheet, Injection Prevention / Input Validation:**
   https://cheatsheetseries.owasp.org/
 - **PyMongo type behavior:** https://pymongo.readthedocs.io/
+- **MongoDB ObjectId format:** https://www.mongodb.com/docs/manual/reference/method/ObjectId/
+  (the 24-hex-character `_id` shape §2's detection section fingerprints)
