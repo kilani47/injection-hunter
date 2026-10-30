@@ -12,6 +12,11 @@ that a dict in the wrong place can smuggle one in. This desk's
 rulebook runs deeper than that: underneath the operators, there's
 still a sentence, written in a language with its own quotes to break.
 
+One applicant was never meant to clear vetting at all, filed under the
+codename `ghost`. Whatever note earned them that filing sits in a
+field called `clearance_note`, a field this console's own lookups
+never print, never list, and never explain.
+
 ## Objective
 
 Something is logged here, every time, whether or not it was ever

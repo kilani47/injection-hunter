@@ -185,6 +185,16 @@ obvious from the operator's own documentation alone.
 
 ## The walk: recovering the flag via timing
 
+Both names below, the target codename `ghost` and the field
+`clearance_note`, come from `CHALLENGER.md`'s own briefing, the same
+way Records Room states `archive_key` directly. Discovering either one
+blind would mean wordlist-guessing two independent, compounding
+unknowns (which applicant, which field) purely off a timing oracle,
+a meaningfully harder problem than Diagnostic Desk's single-unknown
+case, and not the actual lesson this floor teaches. The lesson is the
+`$where` quote-breakout and the timing extraction itself; both names
+are given so that's what gets tested.
+
 Gate every payload behind `this.codename=='ghost'` so `sleep()` only
 ever fires for the one hidden document being probed, not once per
 document `$where` happens to scan (the same row-count-multiplication
