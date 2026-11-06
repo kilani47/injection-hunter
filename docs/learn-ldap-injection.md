@@ -212,6 +212,110 @@ and let the template's own trailing clause stay valid:
           only reachable by a widened (injected) filter
 ```
 
+### Honest caveat: sometimes a bare `*` is already enough
+
+Confirmed against a live OpenLDAP server: for the template above, a
+bare `search_uid = *` (no clause-injection, no `)(` breakout at all)
+produces **the exact same match count** as the full `*)(objectClass=*`
+payload:
+
+```
+(&(uid=*)(objectClass=inetOrgPerson))                  -> matches everyone
+(&(uid=*)(objectClass=*)(objectClass=inetOrgPerson))   -> matches everyone, identically
+```
+
+Why: `*` only widens the one clause it sits inside. Here that's enough,
+because the template's only *other* clause (`objectClass=inetOrgPerson`)
+is already true for every real entry, it was never excluding anyone to
+begin with. Once `uid=*` makes the first clause universally true, there
+was nothing left for the second clause to filter out. The extra
+clause-injection in the payload above is genuine, well-formed LDAP
+syntax, but for *this specific template* it's redundant, not required.
+
+### Why clause-injection is still the technique worth learning
+
+The simple `*` trick's power is strictly local: it can only ever make
+*the one clause it's inside* universally true. It has no reach into
+any other clause sitting next to it. The moment a template has a
+second condition that's genuinely restrictive, not already true for
+everyone, the simple trick stops working and only real clause-injection
+can get past it.
+
+Imagine a stricter template, with a real, discriminating condition in
+the middle:
+
+```
+(&(uid=<input>)(status=active)(objectClass=inetOrgPerson))
+```
+
+Two entries exist: `alice` (`status=active`) and `bob`
+(`status=suspended`). You want both, including the one the app was
+never supposed to show.
+
+**The `*` trick alone fails here:**
+
+```
+input = *
+(&(uid=*)(status=active)(objectClass=inetOrgPerson))
+            ^^^^^^^^^^^^^^
+   still a REAL, untouched restriction. bob (suspended) stays excluded.
+```
+
+`*` made `uid=*` universally true, but `status=active` is a completely
+separate clause it has no power to reach into. Bob is still filtered
+out.
+
+**Clause-injection restructures the logic itself instead:**
+
+```
+input = *)(|(uid=*
+```
+
+Substituting into the template (`(&(uid=` + input + `)(status=active)
+(objectClass=inetOrgPerson))`) gives:
+
+```
+(&(uid=*)(|(uid=*)(status=active)(objectClass=inetOrgPerson)))
+```
+
+Reading the parenthesis structure as a tree makes it clear what actually
+changed:
+
+```
+AND(
+  uid=*                             <- presence, true for everyone
+  OR(
+    uid=*                           <- presence, true for everyone
+    status=active                   <- the template's own clause...
+    objectClass=inetOrgPerson       <- ...both now trapped INSIDE an OR
+  )
+)
+```
+
+`status=active` is still syntactically present, untouched, word for
+word, but it's been *relocated* from "a mandatory AND condition" into
+"one option inside an OR that's already satisfied by something else."
+Since `uid=*` sits inside that OR too and is true for everyone, the
+whole OR-group is true for every entry regardless of what `status`
+actually says. Bob matches now too.
+
+**The general lesson:** a presence wildcard (`attr=*`) can only ever
+widen the single clause it occupies. Clause-injection (`)(` breakout)
+can rewrite the filter's entire boolean structure, turn an AND into an
+OR, relocate an existing restrictive clause into a branch that no
+longer matters, or add a brand-new always-true branch anywhere in the
+tree. That's a fundamentally more powerful capability, and it's why
+real-world LDAP injection testing reaches for clause-injection by
+default rather than relying on the `*` trick alone: you can't always
+tell in advance whether a target template has a "harmless" extra
+clause (safely widened by `*`) or a genuinely restrictive one (which
+only clause-injection defeats).
+
+A malformed injection (unbalanced parentheses) doesn't fail silently,
+the directory rejects the whole filter outright, surfaced as an error
+rather than a wrong answer, which is itself useful feedback while
+you're getting the parenthesis-balancing right.
+
 ---
 
 ## 7. Pattern C: Blind extraction
