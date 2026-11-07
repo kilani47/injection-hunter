@@ -45,6 +45,11 @@
               </p>
             {% endif %}
           </div>
+          {% if user.secret %}
+            <img src="{{ url_for('static', filename='img/victory/p5_1.gif') }}"
+                 alt="the firewall falls"
+                 class="w-full rounded-xl mt-4 opacity-90">
+          {% endif %}
         {% else %}
           <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
             <p class="font-mono text-xs text-muted mb-1">the firewall did not recognize that sign-in:</p>
