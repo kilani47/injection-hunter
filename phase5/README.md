@@ -37,6 +37,7 @@ raw queries were.
 | 1 | Manipulator's Firewall | [`manipulators-firewall/`](manipulators-firewall/) | built |
 | 2 | Palace Blueprint Tampering | [`blueprint-tampering/`](blueprint-tampering/) | built |
 | 3 | The King's Sealed Archives | [`sealed-archives/`](sealed-archives/) | built |
+| 4 | The Royal Guard Rankings | [`royal-guard-rankings/`](royal-guard-rankings/) | built |
 
 "Manipulator's Firewall" shows that an ORM is not automatically a fix
 for injection: SQLAlchemy parameterizes everything that goes through
@@ -66,7 +67,18 @@ filesystem-read primitive, recovering a flag file that exists only
 inside the container image, outside the app's own source tree, and is
 never served by any other route.
 
-Phase 5 is complete across all three floors: every route in
-`challenges/phase5.py` runs against a real backend (MariaDB via a real
-SQLAlchemy ORM for the first floor, a real `lxml` parser for the other
-two) with no simulated or hardcoded responses anywhere in the chain.
+"The Royal Guard Rankings" reopens the ORM track with a genuinely
+distinct bug from "Manipulator's Firewall": the injection is in an
+*identifier* position (`ORDER BY`) rather than a value position. Because
+SQL has no bound-parameter slot for identifiers, the p5_1 fix (use
+bound parameters) does not exist here; the only correct fix is an
+allow-list checked in application code before the query runs. The floor's
+oracle is a `CASE` expression that makes which Royal Guard sorts first
+depend on a yes/no question about a flag the route never selects,
+turning the harmless sort feature into a one-bit channel for
+blind-extracting the contents of a sealed table.
+
+Floors 1-4 are built. Every route in `challenges/phase5.py` runs against
+a real backend (MariaDB via a real SQLAlchemy ORM for floors 1 and 4, a
+real `lxml` parser for floors 2 and 3) with no simulated or hardcoded
+responses anywhere in the chain.

@@ -367,3 +367,101 @@ def p5_archives():
         raw_xml=raw_xml,
         error=error,
     )
+
+
+# ---------------------------------------------------------------------------
+# p5_4, The Royal Guard Rankings
+# ---------------------------------------------------------------------------
+#
+# p5_1 showed ORM injection in a *value* position: a quote closing a string
+# literal the ORM's escape hatch spliced untrusted text into. This floor
+# shows the second, genuinely distinct ORM-injection shape
+# (learn-orm-injection.md §4): an *identifier* position. A bound parameter
+# can only ever stand in for a value (`'alice'`), never for an identifier
+# (a bare column name, an ORDER BY target). That position in SQL's own
+# grammar has no placeholder syntax at all, so there is no parameterized
+# form of "ORDER BY <whatever column the caller chose>"; the only correct
+# defense is an allow-list of permitted columns checked in application
+# code. This route doesn't allow-list: it splices the caller's `sort`
+# straight into the ORDER BY clause via SQLAlchemy's text() escape hatch,
+# so a caller can supply an entire ORDER BY *expression* (a CASE boolean
+# oracle) instead of a column name, and read a value it was never shown by
+# watching which roster row that expression sorts first.
+#
+# The flag lives in `royal_seal`, a table this route never SELECTs into any
+# response. The only way to read it is to make the injected ORDER BY
+# expression reference it via subquery and infer its contents one character
+# at a time, a blind extraction off an ordering oracle, the same
+# bisection idea as p4_4's timing oracle, read off row order instead of a
+# clock.
+
+
+class GuardRoster(Base):
+    __tablename__ = "guard_roster"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(64))
+    division = Column(String(64))
+
+
+_RosterSessionLocal = None
+
+
+def _get_roster_session():
+    global _RosterSessionLocal
+    if _RosterSessionLocal is None:
+        host = os.environ.get("MARIADB_HOST", "mariadb")
+        port = os.environ.get("MARIADB_PORT", "3306")
+        # This floor's own isolated database + restricted user (see
+        # seed/mariadb/20_roster.sql). The ORDER BY subquery can reach
+        # royal_seal only because it lives in this same database; the
+        # restricted user is denied every other challenge's tables.
+        user = "svc_p5_roster"
+        password = "p5_roster_pw"
+        database = "seiyaku_p5_roster"
+        engine = create_engine(
+            f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
+        )
+        _RosterSessionLocal = sessionmaker(bind=engine)
+    return _RosterSessionLocal()
+
+
+@bp.route("/p5/roster", methods=["GET"])
+def p5_roster():
+    sort = request.args.get("sort", "id")
+    error = None
+    members = []
+
+    db = _get_roster_session()
+    try:
+        # VULN: `sort` is spliced directly into the ORDER BY clause via
+        # text(). This is an identifier/expression position, not a value
+        # position: .order_by(GuardRoster.id) or a bound parameter cannot
+        # express "order by a column the caller named," so the developer
+        # reached for text() and handed it raw caller input. Unlike a
+        # value injection, there is no "use a bound parameter instead"
+        # fix here, the only correct fix is to reject any `sort` not on an
+        # explicit allow-list of real column names before it ever reaches
+        # the query (see the DEBRIEF's remediation). A plain column name
+        # ("name", "division") sorts the roster as intended; an entire
+        # ORDER BY expression (a CASE boolean oracle referencing
+        # royal_seal) turns the visible row order into a one-bit readout
+        # of a value this route never displays.
+        rows = db.query(GuardRoster).order_by(text(sort)).all()
+        members = [{"name": r.name, "division": r.division} for r in rows]
+    except SQLAlchemyError:
+        error = "the roster desk rejected that sort column"
+    finally:
+        db.close()
+
+    wants_json = request.headers.get("Accept") == "application/json"
+
+    if wants_json:
+        return jsonify(sort=sort, members=members, error=error)
+
+    return render_template(
+        "p5_roster.html",
+        sort=sort,
+        members=members,
+        error=error,
+    )

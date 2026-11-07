@@ -49,6 +49,7 @@ FLAGS: dict[str, str] = {
     "p5_1": "SEIYAKU{orm_is_not_armor}",
     "p5_2": "SEIYAKU{inject_a_new_tag}",
     "p5_3": "SEIYAKU{external_entity_unsealed}",
+    "p5_4": "SEIYAKU{order_by_cant_be_bound}",
     "f1": "SEIYAKU{all_four_styles_descend}",
     "f2": "SEIYAKU{chairman_of_the_loopholes}",
 }
@@ -108,6 +109,7 @@ BLURBS: dict[str, str] = {
     "p5_1": "A firewall built on a real ORM, and one raw seam its own safety was never applied to.",
     "p5_2": "The badge press prints exactly what its blueprint says. Add a line to the blueprint.",
     "p5_3": "The archive desk reads your request back to you, including wherever you point it to look.",
+    "p5_4": "The roster desk lets you choose the order. Order is an expression, and an expression can ask a question the roster was never built to answer.",
     "f1": "The tower's final locked floor demands every SQLi style at once, in order, to descend.",
     "f2": "Four factions, four systems, four fragments. Seize the Chairman's seat by breaching them all.",
 }
@@ -168,6 +170,8 @@ NODES: list[dict[str, Any]] = [
      "path": "/p5/blueprint", "flag": FLAGS["p5_2"], "built": True},
     {"id": "p5_3", "phase": "5", "name": "The King's Sealed Archives",
      "path": "/p5/archives", "flag": FLAGS["p5_3"], "built": True},
+    {"id": "p5_4", "phase": "5", "name": "The Royal Guard Rankings",
+     "path": "/p5/roster", "flag": FLAGS["p5_4"], "built": True},
 
     {"id": "f1", "phase": "finals", "name": "Trick Tower Final Exam",
      "path": "/f/bookhaven", "flag": FLAGS["f1"], "built": True},
