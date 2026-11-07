@@ -1,6 +1,6 @@
 # The Royal Guard Rankings, Debrief
 
-**Node:** `p5_4` &middot; **Flag:** `SEIYAKU{order_by_cant_be_bound}` &middot; **Route:** `GET /p5/roster` &middot; **Sink:** `challenges/phase5.py`, real MariaDB via a real SQLAlchemy `Session`, `ORDER BY` built with `text()` &middot; **Signal:** which roster row sorts first, a one-bit readout of a value in `royal_seal` the route never displays
+**Node:** `p5_2` &middot; **Flag:** `SEIYAKU{order_by_cant_be_bound}` &middot; **Route:** `GET /p5/roster` &middot; **Sink:** `challenges/phase5.py`, real MariaDB via a real SQLAlchemy `Session`, `ORDER BY` built with `text()` &middot; **Signal:** which roster row sorts first, a one-bit readout of a value in `royal_seal` the route never displays
 
 ## Why this is a genuinely different bug from p5_1
 
@@ -24,7 +24,7 @@ a developer who needs it reaches for a raw string, exactly what this
 route did (learn-orm-injection.md §4).
 
 ```python
-# challenges/phase5.py, p5_4
+# challenges/phase5.py, p5_2
 rows = db.query(GuardRoster).order_by(text(sort)).all()
 ```
 
@@ -124,25 +124,25 @@ is naturally case-correct. The walk also self-terminates cleanly:
 `ASCII()` of an empty string (a position past the end of the flag) is
 `0`, so the first position that reads back `0` marks the end.
 
-`solvers/p5_4.py` automates all of it, detection, the oracle check,
+`solvers/p5_2.py` automates all of it, detection, the oracle check,
 then the full binary-search extraction. Actual, unedited output of a
 real run against this exact seed:
 
 ```
-[p5_4] target: http://localhost:8000/p5/roster
-[p5_4] step 1: invalid sort column is rejected (sort reaches SQL)
+[p5_2] target: http://localhost:8000/p5/roster
+[p5_2] step 1: invalid sort column is rejected (sort reaches SQL)
   ok: invalid column rejected -> 'the roster desk rejected that sort column'
-[p5_4] step 2: confirm the CASE ordering oracle
+[p5_2] step 2: confirm the CASE ordering oracle
   TRUE  (1=1) -> first row 'Menthuthuyoupi'
   FALSE (1=2) -> first row 'Neferpitou'
   ok: oracle produces a crisp, observable true/false signal
-[p5_4] step 3: blind-extract the sealed flag off the ordering oracle
+[p5_2] step 3: blind-extract the sealed flag off the ordering oracle
 SEIYAKU{order_by_cant_be_bound}
-[p5_4] recovered flag: SEIYAKU{order_by_cant_be_bound}
+[p5_2] recovered flag: SEIYAKU{order_by_cant_be_bound}
   ok: recovered flag matches: SEIYAKU{order_by_cant_be_bound}
-[p5_4] ok: invalid column rejected, ordering oracle confirmed,
-[p5_4]     flag blind-extracted through an ORDER BY identifier injection
-[p5_4] PASS
+[p5_2] ok: invalid column rejected, ordering oracle confirmed,
+[p5_2]     flag blind-extracted through an ORDER BY identifier injection
+[p5_2] PASS
 ```
 
 ## HxH analogy

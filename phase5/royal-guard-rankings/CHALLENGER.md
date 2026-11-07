@@ -1,6 +1,6 @@
 # The Royal Guard Rankings
 
-**Phase 5, Chimera Ant Palace** &middot; Floor 4 &middot; Conjuration
+**Phase 5, Chimera Ant Palace** &middot; Floor 2 &middot; Conjuration
 
 ## Briefing
 

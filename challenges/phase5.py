@@ -16,7 +16,7 @@ as `cursor.execute("... " + user_input)` would have been with no ORM at
 all. The ORM adds a layer of abstraction; it does not add a validation
 layer of its own.
 
-Later Phase-5 tasks (p5_2 XML injection, p5_3 XXE) append their routes to
+Later Phase-5 tasks (p5_3 XML injection, p5_4 XXE) append their routes to
 this same blueprint, keep each challenge's route + helpers scoped to its
 own block, same append-only-friendly convention as phase1.py..phase4.py.
 """
@@ -183,7 +183,7 @@ def p5_firewall():
 
 
 # ---------------------------------------------------------------------------
-# p5_2, Palace Blueprint Tampering
+# p5_3, Palace Blueprint Tampering
 # ---------------------------------------------------------------------------
 #
 # p5_1's bug was in what got interpolated into a SQL string. This floor's
@@ -304,10 +304,10 @@ def p5_blueprint():
 
 
 # ---------------------------------------------------------------------------
-# p5_3, The King's Sealed Archives
+# p5_4, The King's Sealed Archives
 # ---------------------------------------------------------------------------
 #
-# p5_2's bug lived entirely upstream of the parser, in how a document was
+# p5_3's bug lived entirely upstream of the parser, in how a document was
 # ever *built*. This floor's bug (notes §11, "XXE") lives in the parser's
 # own configuration: core/xml_parser.parse() sets `resolve_entities=True`
 # and `load_dtd=True`, which together mean a caller-supplied document is
@@ -338,12 +338,12 @@ def p5_archives():
         raw_xml = request.form.get("xml", "")
         try:
             # VULN: this is the exact same core.xml_parser.parse() call
-            # p5_2 used, with the exact same resolve_entities=True,
+            # p5_3 used, with the exact same resolve_entities=True,
             # load_dtd=True configuration, but this floor's route
             # reflects an element's resolved .text back in its response,
             # which is what turns "the parser will resolve a SYSTEM
             # entity" into "the app will hand you the resolved file
-            # content." p5_2 never had a route that echoed parsed
+            # content." p5_3 never had a route that echoed parsed
             # content back at all, so the same parser posture was inert
             # there, the sink, not just the parser config, is what
             # makes a bug reachable.
@@ -374,7 +374,7 @@ def p5_archives():
 
 
 # ---------------------------------------------------------------------------
-# p5_4, The Royal Guard Rankings
+# p5_2, The Royal Guard Rankings
 # ---------------------------------------------------------------------------
 #
 # p5_1 showed ORM injection in a *value* position: a quote closing a string
@@ -475,7 +475,7 @@ def p5_roster():
 # p5_5, The Silent Courier
 # ---------------------------------------------------------------------------
 #
-# p5_3 (The King's Sealed Archives) was *reflected* XXE: the route echoed
+# p5_4 (The King's Sealed Archives) was *reflected* XXE: the route echoed
 # an element's resolved text back in its own HTTP response, so the attacker
 # could read the file contents directly from the response body. This floor
 # closes that in-band channel entirely: the route parses the caller's XML

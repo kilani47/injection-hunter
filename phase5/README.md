@@ -35,9 +35,9 @@ raw queries were.
 | # | Node | Directory | Status |
 |---|------|-----------|--------|
 | 1 | Manipulator's Firewall | [`manipulators-firewall/`](manipulators-firewall/) | built |
-| 2 | Palace Blueprint Tampering | [`blueprint-tampering/`](blueprint-tampering/) | built |
-| 3 | The King's Sealed Archives | [`sealed-archives/`](sealed-archives/) | built |
-| 4 | The Royal Guard Rankings | [`royal-guard-rankings/`](royal-guard-rankings/) | built |
+| 2 | The Royal Guard Rankings | [`royal-guard-rankings/`](royal-guard-rankings/) | built |
+| 3 | Palace Blueprint Tampering | [`blueprint-tampering/`](blueprint-tampering/) | built |
+| 4 | The King's Sealed Archives | [`sealed-archives/`](sealed-archives/) | built |
 | 5 | The Silent Courier | [`silent-courier/`](silent-courier/) | built |
 
 "Manipulator's Firewall" shows that an ORM is not automatically a fix
@@ -48,27 +48,7 @@ into that escape hatch is exactly as injectable as no ORM at all. The
 classic `' OR '1'='1' -- ` payload from Phase 1 works here completely
 unchanged; only the layer that builds the final SQL string is new.
 
-"Palace Blueprint Tampering" moves from a SQL string to an XML document
-built the same unsafe way: a visitor name spliced into an XML template
-with none of XML's five reserved characters (`< > & ' "`) escaped
-first. The parser (`core/xml_parser.py`, shared with the next floor)
-genuinely enforces well-formedness, a stray `<` is rejected outright,
-but a *well-formed* document with extra, attacker-added structure is,
-correctly, accepted, letting a crafted name add a second `<clearance>`
-element that a naive first-match lookup reads instead of the
-template's own.
-
-"The King's Sealed Archives" closes the phase with genuine XXE: the
-same shared parser's `resolve_entities=True`/`load_dtd=True`
-configuration was dormant in the previous floor (nothing there ever
-echoed parsed content back), but this floor's request desk reflects an
-element's resolved text in its response, turning "the parser will
-follow a caller-declared `SYSTEM` entity" into a real local
-filesystem-read primitive, recovering a flag file that exists only
-inside the container image, outside the app's own source tree, and is
-never served by any other route.
-
-"The Royal Guard Rankings" reopens the ORM track with a genuinely
+"The Royal Guard Rankings" extends the ORM track with a genuinely
 distinct bug from "Manipulator's Firewall": the injection is in an
 *identifier* position (`ORDER BY`) rather than a value position. Because
 SQL has no bound-parameter slot for identifiers, the p5_1 fix (use
@@ -78,6 +58,25 @@ oracle is a `CASE` expression that makes which Royal Guard sorts first
 depend on a yes/no question about a flag the route never selects,
 turning the harmless sort feature into a one-bit channel for
 blind-extracting the contents of a sealed table.
+
+"Palace Blueprint Tampering" moves from SQL/ORM to an XML document
+built the same unsafe way: a visitor name spliced into an XML template
+with none of XML's five reserved characters (`< > & ' "`) escaped
+first. The parser (`core/xml_parser.py`, shared with the next floor)
+genuinely enforces well-formedness, a stray `<` is rejected outright,
+but a *well-formed* document with extra, attacker-added structure is,
+correctly, accepted, letting a crafted name add a second `<clearance>`
+element that a naive first-match lookup reads instead of the
+template's own.
+
+"The King's Sealed Archives" introduces genuine XXE: the same shared
+parser's `resolve_entities=True`/`load_dtd=True` configuration was
+dormant in the previous floor (nothing there ever echoed parsed content
+back), but this floor's request desk reflects an element's resolved text
+in its response, turning "the parser will follow a caller-declared
+`SYSTEM` entity" into a real local filesystem-read primitive, recovering
+a flag file that exists only inside the container image, outside the
+app's own source tree, and is never served by any other route.
 
 "The Silent Courier" closes the XXE arc by removing the in-band channel
 that "The King's Sealed Archives" depended on. The same parser, the same
@@ -95,5 +94,5 @@ against a live out-of-band capture service, not a simulation.
 
 All five floors are built. Every route in `challenges/phase5.py` runs
 against a real backend (MariaDB via a real SQLAlchemy ORM for floors 1 and
-4, a real `lxml` parser for floors 2, 3, and 5) with no simulated or
+2, a real `lxml` parser for floors 3, 4, and 5) with no simulated or
 hardcoded responses anywhere in the chain.

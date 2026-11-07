@@ -1,6 +1,6 @@
 # The King's Sealed Archives
 
-**Phase 5, Chimera Ant Palace** &middot; Floor 3 (final) &middot; Conjuration
+**Phase 5, Chimera Ant Palace** &middot; Floor 4 &middot; Conjuration
 
 ## Briefing
 

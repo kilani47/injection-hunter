@@ -1,10 +1,10 @@
 # The Silent Courier, Debrief
 
-**Node:** `p5_5` &middot; **Flag:** `SEIYAKU{entity_phoned_home}` &middot; **Route:** `POST /p5/courier` &middot; **Sink:** `core/xml_parser.parse()`, same `resolve_entities=True`/`load_dtd=True`/`no_network=False` configuration as p5_3, but no route-level reflection &middot; **Signal:** not in this route's HTTP response — in the collaborator's capture log, reached via `GET /p5/courier/captures`
+**Node:** `p5_5` &middot; **Flag:** `SEIYAKU{entity_phoned_home}` &middot; **Route:** `POST /p5/courier` &middot; **Sink:** `core/xml_parser.parse()`, same `resolve_entities=True`/`load_dtd=True`/`no_network=False` configuration as p5_4, but no route-level reflection &middot; **Signal:** not in this route's HTTP response — in the collaborator's capture log, reached via `GET /p5/courier/captures`
 
-## Why this is a genuinely different bug shape from p5_3
+## Why this is a genuinely different bug shape from p5_4
 
-p5_3 (The King's Sealed Archives) was **reflected XXE**: the route echoed
+p5_4 (The King's Sealed Archives) was **reflected XXE**: the route echoed
 `title_el.text` back in its own response:
 
 ```python
@@ -29,7 +29,7 @@ successful parse is always:
 Nothing from the parsed document appears. Nothing from any resolved
 entity appears. Whatever happened during the parse call, its data side
 effects are invisible to the caller through this channel. That is the
-blind case that p5_3 was not.
+blind case that p5_4 was not.
 
 The parser configuration has not changed:
 
