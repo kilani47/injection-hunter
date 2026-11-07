@@ -38,6 +38,7 @@ raw queries were.
 | 2 | Palace Blueprint Tampering | [`blueprint-tampering/`](blueprint-tampering/) | built |
 | 3 | The King's Sealed Archives | [`sealed-archives/`](sealed-archives/) | built |
 | 4 | The Royal Guard Rankings | [`royal-guard-rankings/`](royal-guard-rankings/) | built |
+| 5 | The Silent Courier | [`silent-courier/`](silent-courier/) | built |
 
 "Manipulator's Firewall" shows that an ORM is not automatically a fix
 for injection: SQLAlchemy parameterizes everything that goes through
@@ -78,7 +79,21 @@ depend on a yes/no question about a flag the route never selects,
 turning the harmless sort feature into a one-bit channel for
 blind-extracting the contents of a sealed table.
 
-Floors 1-4 are built. Every route in `challenges/phase5.py` runs against
-a real backend (MariaDB via a real SQLAlchemy ORM for floors 1 and 4, a
-real `lxml` parser for floors 2 and 3) with no simulated or hardcoded
-responses anywhere in the chain.
+"The Silent Courier" closes the XXE arc by removing the in-band channel
+that "The King's Sealed Archives" depended on. The same parser, the same
+unsafe configuration, the same external-entity resolution — but this route
+returns a fixed "dispatch confirmed" response with nothing from the parsed
+document reflected back. The only way to read `/opt/king/dispatch.txt` is
+to make the parser send it somewhere else: an external DTD served by the
+collaborator sets up a nested parameter-entity chain that reads the target
+file and ships its contents as a query parameter in a second HTTP request,
+which the collaborator captures and which `/p5/courier/captures` proxies
+back for polling. The technique — external DTD + `&#x25;`-encoded nested
+parameter entity — is the documented OOB XXE exfil method from OWASP's XXE
+Prevention Cheat Sheet (CWE-611), here demonstrated on a live parser
+against a live out-of-band capture service, not a simulation.
+
+All five floors are built. Every route in `challenges/phase5.py` runs
+against a real backend (MariaDB via a real SQLAlchemy ORM for floors 1 and
+4, a real `lxml` parser for floors 2, 3, and 5) with no simulated or
+hardcoded responses anywhere in the chain.

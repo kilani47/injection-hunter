@@ -31,6 +31,12 @@ RUN mkdir -p /opt/king && \
     printf 'SEIYAKU{external_entity_unsealed}\n' > /opt/king/flag.txt && \
     chmod 444 /opt/king/flag.txt
 
+# Task 5.5 "The Silent Courier": flag file for OOB XXE exfil. No trailing
+# newline: the exfil chain embeds file content directly into a URI query
+# parameter, and a trailing newline would appear as %0A in the capture.
+RUN printf 'SEIYAKU{entity_phoned_home}' > /opt/king/dispatch.txt && \
+    chmod 444 /opt/king/dispatch.txt
+
 # Task F.2 "Chairman Election Infiltration": the Document Import faction's
 # fragment of the Chairman seat's key, sealed outside the app's own source
 # tree exactly like /opt/king/flag.txt above, reachable only via a genuine
