@@ -1,65 +1,159 @@
 # Learning notes: ORM injection
 
-> A from-scratch primer on ORM injection: what an ORM actually protects
-> against, the one idea that explains why "using an ORM" is not the same
-> claim as "safe from injection," the raw-SQL escape hatch every major
-> ORM ships, identifier injection as a second, genuinely distinct bug
-> shape parameterization doesn't cover, and the defenses. Grounded in
-> OWASP's Top Ten injection guidance, MITRE's CWE, and the official
-> SQLAlchemy and Django documentation (see **References** at the end).
+> A from-scratch primer on ORM injection: what an ORM actually is and why
+> anyone uses one, what it protects against, the one idea that explains why
+> "using an ORM" is not the same claim as "safe from injection," the
+> raw-SQL escape hatch every major ORM ships, identifier injection as a
+> second, genuinely distinct bug shape parameterization doesn't cover,
+> the NoSQL question, and the defenses. Grounded in OWASP's Top Ten
+> injection guidance, MITRE's CWE, and the official SQLAlchemy and Django
+> documentation (see **References** at the end).
+
+---
+
+## 0. What is an ORM and why does anyone use one?
+
+**ORM** stands for **Object-Relational Mapper**. That's a mouthful. The plain
+version: an ORM is a library that acts as a translator between your
+programming language and your database, so you can talk to the database in
+your language's own terms instead of writing raw SQL strings.
+
+### Without an ORM
+
+Without an ORM, every database interaction involves writing SQL yourself
+and handing it to a low-level database driver:
+
+```python
+# Plain Python, no ORM
+cursor.execute(
+    "SELECT id, username, email FROM users WHERE username = %s",
+    (username,)
+)
+row = cursor.fetchone()
+if row:
+    user_id, user_name, user_email = row
+```
+
+This works, but notice what you're doing:
+
+- Typing raw SQL strings, which the database interprets at runtime
+- Getting back a raw tuple of values (`row[0]`, `row[1]`, ...) that
+  has no labels until you unpack them yourself
+- Doing all the query logic (joins, filters, pagination) by writing
+  SQL strings by hand, in every file that needs it
+
+### With an ORM
+
+With an ORM (SQLAlchemy, in this example), the same interaction becomes:
+
+```python
+# SQLAlchemy ORM
+user = db.query(User).filter(User.username == username).first()
+if user:
+    print(user.id, user.username, user.email)  # named attributes
+```
+
+The ORM translates `db.query(User).filter(User.username == username)` into
+the SQL string `SELECT ... FROM users WHERE username = ?` automatically, sends
+the value safely as a bound parameter, and hands you back a `User` *object*
+with `.id`, `.username`, `.email` attributes instead of a raw tuple.
+
+### The architecture — where the ORM sits
+
+```
+  YOUR CODE                 ORM LAYER                 DATABASE
+  ─────────────────         ─────────────────────     ──────────────────
+  User objects &            translates method          receives safe
+  method calls    ──────►   calls into SQL     ──────► parameterized SQL
+                            handles connections         runs the query
+                            maps rows ↔ objects         returns rows
+                 ◄──────    hands back objects  ◄──────
+  user.username             (User, Post, etc.)
+  user.email
+```
+
+The ORM is a layer of code that sits between your application and the
+database. You never talk to the database directly; you talk to the ORM, and
+the ORM talks to the database for you.
+
+### Why do developers use ORMs instead of raw SQL?
+
+There are four concrete reasons most codebases end up with an ORM:
+
+**1. You work in your own language, not SQL.**
+Most application code is Python, Java, Ruby, etc. With an ORM, you define a
+`User` class with `.username` and `.email` fields, and querying feels like
+calling a method on that class. You don't have to context-switch into SQL
+every time you need a record.
+
+**2. The ORM handles the tedious parts.**
+Database connections, connection pooling, keeping track of which objects
+have changed and need to be saved back ("dirty tracking"), generating the
+correct SQL dialect for different databases (MySQL vs PostgreSQL vs SQLite)
+— the ORM manages all of this. You'd have to write that infrastructure
+yourself otherwise.
+
+**3. The ORM's normal query API is automatically safe from SQL injection.**
+This is the security angle that matters for these notes. When you write
+`filter(User.username == username)`, the ORM sends the SQL structure and the
+value `username` to the database as *two separate things*. The value is never
+concatenated into the SQL text. An attacker can't "break out" of a quote
+that was never there. This is the same mechanism as a correctly-written raw
+parameterized query (`cursor.execute("... WHERE id = ?", (x,))`); the ORM's
+safe API is a friendlier way to reach that mechanism automatically.
+
+**4. Database portability.**
+An ORM query written against SQLite locally can run against PostgreSQL in
+production without rewriting the query layer, because the ORM translates
+to whatever SQL dialect the connected database speaks.
+
+### The honest downside
+
+ORMs don't cover everything. Complex queries — multi-table reports, custom
+aggregations, database-specific functions, sorting by a caller-chosen
+column — sometimes can't be expressed through the ORM's object-and-method
+API alone. So every serious ORM ships a **raw-SQL escape hatch**: a way to
+write plain SQL when you need to. That escape hatch is where ORM injection
+lives.
 
 ---
 
 ## 1. The one idea that makes ORM injection not a new injection type
 
-An ORM (Object-Relational Mapper) is a library that lets application
-code describe a query as objects and method calls instead of a SQL
-string:
-
-```python
-db.query(User).filter(User.username == username).first()
-```
-
-The ORM's job is to turn that call into real SQL and send it to the
-database. For its own, normal query-building API, every major ORM does
-this safely: the value (`username`) and the query's structure travel to
-the database as two separate things, a **bound parameter**, never as
-text spliced into a SQL string. There is no quote for an attacker to
-"break out of," because the value was never concatenated into the SQL
-text in the first place. This is the exact same mechanism as a
-parameterized raw query (`cursor.execute("... WHERE id = ?", (x,))`); an
-ORM's safe API is just a friendlier way to reach it.
-
 > **The whole bug class in one sentence:** ORM injection isn't a fourth
-> kind of injection alongside SQL/NoSQL/LDAP, it's classic SQL (or
-> NoSQL) injection, reached through a part of the ORM that was never
-> parameterized to begin with, usually a raw-query escape hatch the ORM
-> itself ships on purpose.
+> kind of injection alongside SQL/NoSQL/LDAP — it's classic SQL injection,
+> reached through a part of the ORM that was never parameterized to begin
+> with, usually a raw-query escape hatch the ORM itself ships on purpose.
 
-Every ORM worth using ships that escape hatch, because its safe,
-object-oriented API genuinely cannot express every query a real
-application eventually needs. SQLAlchemy's is `text()`. Django's are
-`.raw()`, `.extra()`, and `RawSQL`. Hibernate's (Java) is a native SQL
-query. Sequelize's (Node.js) is `sequelize.query()`. None of these
-escape hatches are themselves the bug, each one has its own correct,
-parameterized way to accept input. The bug is what happens when a
-developer reaches for one and builds its SQL string by hand, with
-f-strings, `+` concatenation, or `.format()`, instead of using that
-escape hatch's own bound-parameter syntax.
+For its own, normal query-building API, every major ORM keeps values and
+query structure separate. This is the exact same mechanism as a
+parameterized raw query. There is no quote for an attacker to "break out
+of," because the value was never concatenated into the SQL text in the
+first place.
+
+Every ORM worth using ships a raw-SQL escape hatch because its safe,
+object-oriented API genuinely cannot express every query a real application
+eventually needs. SQLAlchemy's is `text()`. Django's are `.raw()`,
+`.extra()`, and `RawSQL`. Hibernate's (Java) is a native SQL query.
+Sequelize's (Node.js) is `sequelize.query()`. None of these escape hatches
+are themselves the bug — each one has its own correct, parameterized way to
+accept input. The bug is what happens when a developer reaches for one and
+builds its SQL string by hand, with f-strings, `+` concatenation, or
+`.format()`, instead of using that escape hatch's own bound-parameter syntax.
 
 ```
    SAFE (ORM's own query-building API)
    ┌─────────────────────────────────────────────────┐
    │  .filter(User.username == username)              │
    │  value and query structure: two separate channels│
-   │  no string for a quote to break out of            │
+   │  no string for a quote to break out of           │
    └─────────────────────────────────────────────────┘
 
    UNSAFE (raw-SQL escape hatch, built by hand)
    ┌─────────────────────────────────────────────────┐
-   │  text(f"username = '{username}'")                 │
-   │  value is now INSIDE the SQL string               │
-   │  exactly as injectable as no ORM at all            │
+   │  text(f"username = '{username}'")                │
+   │  value is now INSIDE the SQL string              │
+   │  exactly as injectable as no ORM at all          │
    └─────────────────────────────────────────────────┘
 ```
 
@@ -218,7 +312,61 @@ looks properly bound.
 
 ---
 
-## 5. A related, genuinely different bug: mass assignment
+## 5. The NoSQL question
+
+**Is there a NoSQL version of ORM injection?**
+
+Short answer: ORM injection, as a named category, refers specifically to
+injection through a SQL ORM's escape hatches. The underlying bug is classic
+SQL injection. NoSQL injection is a separate category for a different
+class of databases entirely.
+
+The longer version:
+
+```
+  SQL databases          NoSQL databases
+  (MariaDB, PostgreSQL,  (MongoDB, Redis,
+  SQLite, Oracle…)       CouchDB, Cassandra…)
+        │                       │
+        │                       │
+   SQLAlchemy,             ODMs (Object-Document
+   Django ORM,             Mappers): Mongoengine,
+   Hibernate…              Motor, Beanie…
+        │                       │
+        └──────────┬────────────┘
+                   │
+         Two different attack classes:
+         SQLi / ORM injection    NoSQLi
+```
+
+**NoSQL databases** don't use SQL — they have their own query languages and
+formats (MongoDB uses JSON-like query documents, for example). **NoSQLi**
+(NoSQL injection) is the attack class for those databases. The techniques
+are genuinely different: instead of breaking out of a SQL quote character,
+you're often injecting operator keys into a JSON query object, or using
+MongoDB's `$where` with JavaScript, or exploiting how the application
+constructs a query document from user input.
+
+**ODMs** (Object-Document Mappers) are the NoSQL equivalent of ORMs —
+they let you work with MongoDB documents as Python objects, for example.
+An ODM has the same "safe API vs escape hatch" dynamic: the ODM's own
+query API will usually construct safe query documents, but if a developer
+builds a raw query document from user input by hand, the same injection
+pattern appears at the NoSQL level.
+
+**What's not related to ORM injection:** NoSQLi targets are databases
+that don't speak SQL. The techniques, payloads, and defenses are
+different enough that NoSQLi is covered as its own topic (see the Phase 4
+notes), not a variation of ORM injection.
+
+**What's true of both:** "this app uses an ORM/ODM" is never, by itself,
+a reason to rule out injection. Both attack classes exploit the moment when
+a developer bypasses the library's safe path and builds a query structure
+by hand from user input.
+
+---
+
+## 6. A related, genuinely different bug: mass assignment
 
 This is not injection, and it's worth being precise about the
 distinction, but it shows up constantly in the same "ORM security"
@@ -255,7 +403,7 @@ new_user = User(username=request.json["username"], email=request.json["email"])
 
 ---
 
-## 6. Defense (the actual fix)
+## 7. Defense (the actual fix)
 
 - **Never build a raw-SQL string by hand and hand it to an ORM's raw
   escape hatch.** Use that escape hatch's own bound-parameter syntax
@@ -283,7 +431,7 @@ new_user = User(username=request.json["username"], email=request.json["email"])
 
 ---
 
-## 7. References (official / primary)
+## 8. References (official / primary)
 
 - **OWASP Top Ten 2021, A03 Injection:** https://owasp.org/Top10/A03_2021-Injection/
   (names ORM injection directly as a form of injection where "hostile
