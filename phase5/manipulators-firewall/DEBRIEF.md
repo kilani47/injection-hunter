@@ -92,6 +92,59 @@ not "the login is too permissive", it's "the string this route builds
 to check a login is not the string it thinks it's building" the moment
 `username` or `password` contains a quote.
 
+## Confirming the injection point — the quote probe
+
+Before reaching for a payload, the standard first move is to send a bare
+single quote in the username field and watch what changes in the response.
+
+```bash
+# Step 0a: wrong credentials — baseline
+curl -s -X POST "$BASE/p5/firewall" -H "Accept: application/json" \
+    --data-urlencode "username=netero" --data-urlencode "password=wrong"
+```
+
+```json
+{"error":null,"success":false,"user":null,"username":"netero"}
+```
+
+```bash
+# Step 0b: same, but break the SQL string with a quote
+curl -s -X POST "$BASE/p5/firewall" -H "Accept: application/json" \
+    --data-urlencode "username='" --data-urlencode "password=x"
+```
+
+```json
+{"error":"the firewall rejected that request","success":false,"user":null,"username":"'"}
+```
+
+The difference is the signal. With a wrong-but-clean username, the route
+returns `"error":null` — the SQL query ran fine, it just found nothing.
+With a bare `'`, the route returns a non-null error. The route's error
+handler (`except SQLAlchemyError`) caught a database exception and swapped
+it for a generic message, so the actual MariaDB error (1064, "You have an
+error in your SQL syntax...") is not surfaced directly — but it doesn't
+need to be. The *switch from null to non-null*, caused only by adding a
+quote, tells you everything:
+
+1. The quote reached the SQL layer unchanged — it was not stripped,
+   escaped, or held back as a bound parameter.
+2. It broke the query's syntax — it closed the string the f-string opened
+   around `username` early, leaving unbalanced quotes in the SQL.
+3. There is an injectable string here.
+
+What MariaDB actually received for the quote-username case was:
+
+```sql
+username = ''' AND password = 'x'
+```
+
+Three consecutive single quotes in a SQL string literal is a syntax error.
+The error bubbled up through SQLAlchemy, was caught by the route's
+`except SQLAlchemyError` block, and was replaced with the generic message.
+The generic message is there to avoid leaking the ORM stack trace and the
+database server version, but the route cannot hide the fact that an error
+occurred at all without redesigning the response shape entirely.
+
 ## The payload, `' OR '1'='1' -- `
 
 This is the exact fundamentals payload from Phase 1's Gate of Trust,
@@ -108,6 +161,13 @@ The f-string builds:
 ```
 username = '' OR '1'='1' -- ' AND password = 'anything'
 ```
+
+Both `' OR '1'='1' -- ` and `' OR 1=1 -- -` work here — `'1'='1'` is a
+string literal comparison (always true), `1=1` is an integer comparison
+(also always true); the only difference is style. The trailing `-` in
+`-- -` is harmless noise some tools add; MariaDB reads anything after
+`-- ` as a comment regardless. Any `OR <always-true>` tacked on before
+the comment will collapse the WHERE clause the same way.
 
 MariaDB reads `-- ` (dash-dash-space) as the start of a line comment,
 so everything from there onward, including the real `AND password =
