@@ -349,20 +349,85 @@ constructs a query document from user input.
 
 **ODMs** (Object-Document Mappers) are the NoSQL equivalent of ORMs —
 they let you work with MongoDB documents as Python objects, for example.
-An ODM has the same "safe API vs escape hatch" dynamic: the ODM's own
-query API will usually construct safe query documents, but if a developer
-builds a raw query document from user input by hand, the same injection
-pattern appears at the NoSQL level.
+An ODM has the same "safe API vs escape hatch" dynamic, and **ODM
+injection is a real thing** — but its shape is fundamentally different
+from ORM injection, because the underlying attack is not SQL injection.
 
-**What's not related to ORM injection:** NoSQLi targets are databases
-that don't speak SQL. The techniques, payloads, and defenses are
-different enough that NoSQLi is covered as its own topic (see the Phase 4
-notes), not a variation of ORM injection.
+### How ODM injection actually works
 
-**What's true of both:** "this app uses an ORM/ODM" is never, by itself,
-a reason to rule out injection. Both attack classes exploit the moment when
-a developer bypasses the library's safe path and builds a query structure
-by hand from user input.
+MongoDB queries are JSON-like documents, not strings. So "injection"
+means inserting MongoDB **query operators** into the document, not
+breaking out of a quote character. An operator like `$gt` (greater
+than) or `$ne` (not equal) is a key inside the query object — if the
+application passes user-supplied input directly into that query document
+without validating that the value is the right type (a string, not an
+object), the user can supply an operator instead:
+
+```
+Attacker sends:   {"username": {"$ne": null}, "password": {"$ne": null}}
+
+MongoDB runs:     db.users.findOne({username: {$ne: null}, password: {$ne: null}})
+
+Result:           matches the first user in the collection regardless
+                  of what their actual username or password is
+```
+
+There is no string to break, no quote to escape — the injection is
+entirely about shape: the application expected a scalar (a string), the
+attacker supplied an object, and the database interpreted the object's
+keys as query operators.
+
+**The safe API vs escape hatch structure is the same:**
+
+```python
+# Mongoengine (Python ODM for MongoDB)
+
+# SAFE — Mongoengine builds the query document, enforces types
+user = User.objects(username=username, password=password).first()
+
+# UNSAFE — raw query document built from user input directly
+user = User.objects(__raw__={
+    "username": request.json["username"],  # could be {"$ne": null}
+    "password": request.json["password"],
+}).first()
+```
+
+```javascript
+// Mongoose (Node.js ODM for MongoDB)
+
+// SAFE — if the app validates that username is a string before this
+const user = await User.findOne({ username: username });
+
+// UNSAFE — body parsed as JSON, no type check; {"$ne": null} arrives
+// as an object and Mongoose passes it straight to MongoDB as an operator
+const user = await User.findOne({ username: req.body.username });
+```
+
+**The `$where` escalation.** MongoDB's `$where` operator accepts a
+JavaScript string and evaluates it inside the database engine. If an
+ODM escape hatch or raw driver call allows `$where` with a
+user-supplied value, the attacker can run arbitrary JavaScript in the
+query context — far beyond a simple authentication bypass.
+
+**The fix for ODM injection** is the same conceptual fix as for ORM
+injection, translated to the NoSQL world: use the ODM's own typed API
+(which enforces that field values are the right type), validate and
+cast user input to the expected scalar type before it touches any
+query, and never pass a raw user-supplied object directly into a query
+document.
+
+**What's not related to ORM injection:** the target database doesn't
+speak SQL, there is no string to splice, and the payloads are entirely
+different. The structural parallel (safe library API bypassed by an
+escape hatch or raw pass-through) is real, but the techniques,
+payloads, and defenses are different enough that NoSQLi — including
+ODM injection — is covered as its own topic (see the Phase 4 notes),
+not a variation of ORM injection.
+
+**What's true of both:** "this app uses an ORM/ODM" is never, by
+itself, a reason to rule out injection. Both attack classes exploit
+the moment when a developer bypasses the library's safe path and
+builds a query structure by hand from user input.
 
 ---
 
