@@ -3,53 +3,70 @@
 {% block body_class %}{{ phase_meta.css_class }}{% endblock %}
 
 {% block content %}
-<div class="relative -mt-6 flex min-h-[75vh] flex-col items-center justify-center overflow-hidden text-center">
+<div class="relative -mt-6 overflow-hidden text-center">
+
   {% if gif_exists %}
-  <img src="{{ url_for('static', filename='img/victory/' ~ node.id ~ '.gif') }}"
-       alt=""
-       class="pointer-events-none absolute inset-0 m-auto max-h-[70vh] max-w-full object-contain opacity-90">
+  {# In-flow block: GIF fills full viewport width at its natural aspect ratio,
+     so it actually takes up space above the card instead of hiding behind it. #}
+  <div class="relative w-full">
+    <img src="{{ url_for('static', filename='img/victory/' ~ node.id ~ '.gif') }}"
+         alt=""
+         class="pointer-events-none w-full block"
+         style="opacity: 0.92;">
+    {# Gradient fades the bottom half of the GIF into the page background,
+       creating a smooth blend into the card below. #}
+    <div class="absolute inset-x-0 bottom-0 pointer-events-none"
+         style="height: 65%; background: linear-gradient(to bottom, transparent 0%, rgba(10,11,16,0.6) 50%, #0a0b10 85%);"
+         aria-hidden="true"></div>
+  </div>
   {% endif %}
 
-  <div class="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
-    <div class="burst-ring"></div>
-    <div class="burst-ring" style="animation-delay: .5s;"></div>
-    <div class="burst-ring" style="animation-delay: 1s;"></div>
-  </div>
+  {# Card section: pulled up into the gradient zone so the GIF bleeds into it. #}
+  <div class="relative z-10 flex flex-col items-center pb-12
+              {{ '-mt-28' if gif_exists else 'min-h-[75vh] justify-center' }}">
 
-  <div class="relative z-10 glass license-card rounded-[1.75rem] px-8 py-10 max-w-lg mx-auto">
-    <p class="font-mono text-xs text-accent mb-2 tracking-wide">vow broken</p>
-    <h1 class="font-display text-4xl font-semibold text-bone mb-1">{{ node.name }}</h1>
-    <p class="font-mono text-[11px] text-muted mb-6">{{ phase_meta.label }} &middot; {{ phase_meta.nen }}</p>
-
-    <div class="exam-terminal rounded-xl p-4 mb-6 text-left">
-      <p class="font-mono text-sm text-bone/90 break-all">
-        <span class="text-muted">flag&gt;</span> {{ node.flag }}
-      </p>
+    <div class="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
+      <div class="burst-ring"></div>
+      <div class="burst-ring" style="animation-delay: .5s;"></div>
+      <div class="burst-ring" style="animation-delay: 1s;"></div>
     </div>
 
-    {% if next_node %}
-    <p class="text-bone/80 mb-4">Next floor unlocked: <span class="text-accent">{{ next_node.name }}</span></p>
-    <div class="flex flex-col items-center gap-3">
-      <a href="{{ url_for('phase', phase_id=next_node.phase) }}"
-         class="ren-pulse inline-flex items-center rounded-lg bg-accent-20 border border-accent px-5 py-3 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
-        {% if next_node.phase == node.phase %}Continue {{ next_node.phase_meta.label }}{% else %}Enter {{ next_node.phase_meta.label }}{% endif %}
-      </a>
-      <a href="{{ url_for('hub') }}" class="font-mono text-xs text-muted hover:text-accent transition-colors">
-        or back to the exam hall
-      </a>
+    <div class="relative glass license-card rounded-[1.75rem] px-8 py-10 max-w-lg mx-auto">
+      <p class="font-mono text-xs text-accent mb-2 tracking-wide">vow broken</p>
+      <h1 class="font-display text-4xl font-semibold text-bone mb-1">{{ node.name }}</h1>
+      <p class="font-mono text-[11px] text-muted mb-6">{{ phase_meta.label }} &middot; {{ phase_meta.nen }}</p>
+
+      <div class="exam-terminal rounded-xl p-4 mb-6 text-left">
+        <p class="font-mono text-sm text-bone/90 break-all">
+          <span class="text-muted">flag&gt;</span> {{ node.flag }}
+        </p>
+      </div>
+
+      {% if next_node %}
+      <p class="text-bone/80 mb-4">Next floor unlocked: <span class="text-accent">{{ next_node.name }}</span></p>
+      <div class="flex flex-col items-center gap-3">
+        <a href="{{ url_for('phase', phase_id=next_node.phase) }}"
+           class="ren-pulse inline-flex items-center rounded-lg bg-accent-20 border border-accent px-5 py-3 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
+          {% if next_node.phase == node.phase %}Continue {{ next_node.phase_meta.label }}{% else %}Enter {{ next_node.phase_meta.label }}{% endif %}
+        </a>
+        <a href="{{ url_for('hub') }}" class="font-mono text-xs text-muted hover:text-accent transition-colors">
+          or back to the exam hall
+        </a>
+      </div>
+      {% else %}
+      <p class="text-bone/80 mb-4">Every floor cleared. The exam is over.</p>
+      <div class="flex flex-col items-center gap-3">
+        <a href="{{ url_for('hub') }}"
+           class="inline-flex items-center rounded-lg bg-accent-20 border border-accent px-5 py-3 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
+          Back to the exam hall
+        </a>
+        <a href="{{ url_for('phase', phase_id=node.phase) }}" class="font-mono text-xs text-muted hover:text-accent transition-colors">
+          or revisit {{ phase_meta.label }}
+        </a>
+      </div>
+      {% endif %}
     </div>
-    {% else %}
-    <p class="text-bone/80 mb-4">Every floor cleared. The exam is over.</p>
-    <div class="flex flex-col items-center gap-3">
-      <a href="{{ url_for('hub') }}"
-         class="inline-flex items-center rounded-lg bg-accent-20 border border-accent px-5 py-3 font-mono text-sm text-bone hover:bg-accent-30 hover:shadow-accent transition-all">
-        Back to the exam hall
-      </a>
-      <a href="{{ url_for('phase', phase_id=node.phase) }}" class="font-mono text-xs text-muted hover:text-accent transition-colors">
-        or revisit {{ phase_meta.label }}
-      </a>
-    </div>
-    {% endif %}
+
   </div>
 </div>
 {% endblock %}
