@@ -2,11 +2,11 @@
 # solvers/p5_5.py, Task 5.5 "The Silent Courier" canonical exploit.
 #
 # challenges/phase5.py's p5_courier() route parses a caller-supplied XML
-# document with the same unsafe parser configuration as p5_3 (load_dtd=True,
+# document with the same unsafe parser configuration as p5_4 (load_dtd=True,
 # resolve_entities=True, no_network=False), but its HTTP response is always a
 # fixed "dispatch confirmed" message — no element text, no entity-resolution
 # result, nothing data-dependent is ever reflected back. The in-band channel
-# that made p5_3's file-read possible (the route echoing <document>.text
+# that made p5_4's file-read possible (the route echoing <document>.text
 # directly in its response) is closed. This is blind OOB XXE.
 #
 # The external DTD + nested parameter entity chain is the exfil mechanism:

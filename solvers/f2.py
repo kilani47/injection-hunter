@@ -79,7 +79,7 @@ def directory_fragment() -> str:
 
 
 def document_fragment() -> str:
-    """XXE external-entity file read, identical technique to p5_3."""
+    """XXE external-entity file read, identical technique to p5_4."""
     xml = (
         '<?xml version="1.0"?>'
         '<!DOCTYPE r [<!ENTITY xxe SYSTEM "file:///opt/omnigrid/fragment.txt">]>'

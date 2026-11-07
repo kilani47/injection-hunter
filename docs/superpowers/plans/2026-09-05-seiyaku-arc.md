@@ -319,23 +319,23 @@
 
 ## Task 5.2: Palace Blueprint Tampering, XML injection (notes §11)
 
-**Files:** `core/xml_parser.py`, route in `phase5.py`, `templates/p5_blueprint.html`, `phase5/blueprint-tampering/CHALLENGER.md`+`DEBRIEF.md`, `solvers/p5_2.sh`.
+**Files:** `core/xml_parser.py`, route in `phase5.py`, `templates/p5_blueprint.html`, `phase5/blueprint-tampering/CHALLENGER.md`+`DEBRIEF.md`, `solvers/p5_3.sh`.
 
-**Interfaces:** node `p5_2`, flag `SEIYAKU{inject_a_new_tag}`. Produces `core/xml_parser.parse(xml_bytes)` (DTD + entity resolution ON).
+**Interfaces:** node `p5_3`, flag `SEIYAKU{inject_a_new_tag}`. Produces `core/xml_parser.parse(xml_bytes)` (DTD + entity resolution ON).
 
 - [ ] **Step 1, Solver:** submit XML where injected tags elevate a `<role>` to admin (tag/structure injection), parser accepts it → flag. Assert. Run → FAIL.
 - [ ] **Step 2, `core/xml_parser.py`:** lxml parser with `resolve_entities=True, no_network=False, load_dtd=True` (`# VULN`).
 - [ ] **Step 3, Vulnerable route** consuming user XML into a privileged action.
 - [ ] **Step 4, Docs:** XML structure/metachars, tag injection to change parsed meaning, related (XPath/XInclude/Billion-Laughs mention); HxH analogy (tampering the Palace blueprint so the guards read a structure that isn't real); remediation.
-- [ ] **Step 5, Run solver → PASS; unlock `p5_3`.** Commit.
+- [ ] **Step 5, Run solver → PASS; unlock `p5_4`.** Commit.
 
 ---
 
 ## Task 5.3: The King's Sealed Archives, XXE file read (notes §11)
 
-**Files:** route in `phase5.py`, `templates/p5_archives.html`, a seeded secret file `/opt/king/flag.txt` (via Dockerfile), `phase5/sealed-archives/CHALLENGER.md`+`DEBRIEF.md`, `solvers/p5_3.sh`.
+**Files:** route in `phase5.py`, `templates/p5_archives.html`, a seeded secret file `/opt/king/flag.txt` (via Dockerfile), `phase5/sealed-archives/CHALLENGER.md`+`DEBRIEF.md`, `solvers/p5_4.sh`.
 
-**Interfaces:** node `p5_3`, flag = contents of the read file `SEIYAKU{external_entity_unsealed}`.
+**Interfaces:** node `p5_4`, flag = contents of the read file `SEIYAKU{external_entity_unsealed}`.
 
 - [ ] **Step 1, Solver:** POST XML with `<!DOCTYPE x [<!ENTITY xxe SYSTEM "file:///opt/king/flag.txt">]>` + `&xxe;` → response returns the file contents. Also demonstrate `file:///etc/passwd`. Assert flag. Run → FAIL.
 - [ ] **Step 2, Vulnerable route** parsing user XML via `core/xml_parser` and echoing an element back (reflected XXE).
