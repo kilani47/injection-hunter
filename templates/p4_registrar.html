@@ -3,18 +3,27 @@
 {% block body_class %}nen-p4{% endblock %}
 {% block phase_nav %}<a href="{{ url_for('phase', phase_id='4') }}" class="hover:text-accent transition-colors">phase 4</a>{% endblock %}
 
-{% block content %}
+{% block main %}
+<main class="relative flex-1 flex flex-col justify-center {% if has_hero('p4_registrar') %}cine{% endif %}">
+  {% if has_hero('p4_registrar') %}
+    <img class="cine-img" src="{{ url_for('static', filename='img/p4_registrar.png') }}"
+         alt="Hunter Association staff gathered around a glowing boolean verified/denied terminal"
+         loading="eager" decoding="async">
+    <div class="cine-scrim-content"></div>
+  {% endif %}
+  <div class="relative mx-auto w-full max-w-5xl px-6 py-10">
+    {% block content %}
 <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
   <div>
-    <p class="font-mono text-xs text-muted mb-2">hunter association hq &middot; the silent directory</p>
-    <h1 class="font-display text-3xl font-semibold text-bone mb-4">The Silent Directory</h1>
-    <p class="max-w-md text-bone/80 leading-relaxed mb-4">
+    <p class="font-mono text-xs text-muted mb-2 text-shadow-wallpaper">hunter association hq &middot; the silent directory</p>
+    <h1 class="font-display text-3xl font-semibold text-bone mb-4 text-shadow-wallpaper">The Silent Directory</h1>
+    <p class="max-w-md text-bone/85 leading-relaxed mb-4 text-shadow-wallpaper">
       The registrar's verification desk checks one uid against one
       note and tells you only whether they match, by design, so no
       record's real contents are ever exposed through this particular
       door. No name, no title, no note text, win or lose.
     </p>
-    <p class="max-w-md text-bone/60 leading-relaxed text-sm">
+    <p class="max-w-md text-bone/70 leading-relaxed text-sm text-shadow-wallpaper">
       Objective: yes or no is still an answer. Ask the registrar
       enough carefully-chosen yes/no questions about the same entry,
       and the silence starts to say more than it was ever supposed to.
@@ -77,4 +86,7 @@
     </div>
   </div>
 </div>
+    {% endblock %}
+  </div>
+</main>
 {% endblock %}
