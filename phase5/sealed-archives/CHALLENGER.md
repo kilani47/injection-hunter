@@ -16,10 +16,10 @@ request themselves, as far as the desk itself is concerned.
 
 ## Objective
 
-The sealed archive holds a document with something in it that was never
-meant to leave the King's own household. You can't ask the desk for it
-by name, it isn't a title in the archive's own catalogue at all. Get
-the desk to read it back to you anyway.
+The King has a flag of his own, filed away somewhere on this box that
+has nothing to do with the archive's own catalogue, you can't ask the
+desk for it by name. Find where it actually lives, and get the desk to
+read it back to you anyway.
 
 ## Target
 
@@ -64,6 +64,10 @@ hints, or tooling are off-limits.
 - This isn't specific to one file. If you can make the desk read back
   one file's contents this way, you can very likely make it read back
   others the app's own process has permission to open.
+- Prove the read works on a file that exists on any machine like this
+  one, before you worry about finding the King's own. That same file
+  also lists every account on the box and where each one's own files
+  live.
 
 No further hints here, see `DEBRIEF.md` only once you're done, or well
 and truly stuck.

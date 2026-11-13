@@ -22,19 +22,26 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Task 5.3 "The King's Sealed Archives": a real file, outside the app's own
+# Task 5.4 "The King's Sealed Archives": a real file, outside the app's own
 # source tree, readable only by an XXE external-entity file-read reaching
 # outside the document the app itself ever intended to parse, never by any
 # in-app route directly. Mirrors the notes' file:///etc/passwd example, but
 # with a path the app controls so the flag content is deterministic.
-RUN mkdir -p /opt/king && \
-    printf 'SEIYAKU{external_entity_unsealed}\n' > /opt/king/flag.txt && \
-    chmod 444 /opt/king/flag.txt
+#
+# Deliberately placed under a real OS account's home directory rather than
+# an app-specific path like /opt/<name>: /etc/passwd lists every account on
+# the box and the home directory each one resolves to, so a file read that
+# already proved itself against /etc/passwd tells a reader exactly where to
+# look next, with no app layout or container-tooling knowledge assumed.
+RUN useradd -r -m -d /home/king -s /usr/sbin/nologin king && \
+    printf 'SEIYAKU{external_entity_unsealed}\n' > /home/king/flag.txt && \
+    chmod 444 /home/king/flag.txt
 
 # Task 5.5 "The Silent Courier": flag file for OOB XXE exfil. No trailing
 # newline: the exfil chain embeds file content directly into a URI query
 # parameter, and a trailing newline would appear as %0A in the capture.
-RUN printf 'SEIYAKU{entity_phoned_home}' > /opt/king/dispatch.txt && \
+RUN mkdir -p /opt/king && \
+    printf 'SEIYAKU{entity_phoned_home}' > /opt/king/dispatch.txt && \
     chmod 444 /opt/king/dispatch.txt
 
 # Task F.2 "Chairman Election Infiltration": the Document Import faction's

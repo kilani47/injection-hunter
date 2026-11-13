@@ -14,7 +14,7 @@ document_title = title_el.text if title_el is not None else None
 return jsonify(document_title=document_title, ...)
 ```
 
-A `SYSTEM` entity whose value was the contents of `/opt/king/flag.txt`
+A `SYSTEM` entity whose value was the contents of `/home/king/flag.txt`
 was therefore readable directly from the HTTP response. The route did
 the work of carrying the exfiltrated data back to the attacker, with no
 special mechanism needed on the attacker's side.
