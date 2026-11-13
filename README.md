@@ -13,7 +13,7 @@ themed around the Hunter Exam. Each phase is an examiner enforcing one Vow
 MongoDB, OpenLDAP, and a real `lxml` XML parser. Every Vow has a loophole.
 Find it, and the flag it yields unlocks the next floor.
 
-**Complete**, all 18 nodes across 5 phases and 2 Finals are built and
+**Complete**, all 27 nodes across 5 phases and 2 Finals are built and
 solver-verified end to end against real, freshly-seeded backends. See
 [`docs/traceability.md`](docs/traceability.md) for the full notes-to-challenge
 coverage matrix.
@@ -43,7 +43,7 @@ You are an applicant. Six phases stand between you and a Hunter License:
 | 5 | Chimera Ant Palace | Conjuration (indigo) | ORM injection + XML/XXE | [`phase5/`](phase5/README.md) |
 | Finals | The Exam Finals | Emission (cyan) | Two chained, multi-engine CTFs | [`finals/`](finals/README.md) |
 
-18 challenges total, covering every injection class in the lab's source
+27 challenges total, covering every injection class in the lab's source
 notes end to end. Clearing a challenge reveals a flag in the format
 `SEIYAKU{lowercase_snake_words}`, submit it on the hub to unlock the next
 floor and trigger the victory screen.
