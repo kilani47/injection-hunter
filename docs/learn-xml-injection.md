@@ -127,11 +127,29 @@ from xml.sax.saxutils import escape
 raw_xml = TEMPLATE.format(name=escape(name))
 ```
 
+`escape()` replaces the five XML-reserved characters before the value
+is spliced into the template string:
+
+| input character | becomes |
+|-----------------|---------|
+| `&`             | `&amp;` |
+| `<`             | `&lt;`  |
+| `>`             | `&gt;`  |
+| `"`             | `&quot;`|
+| `'`             | `&apos;`|
+
+So an attacker-supplied name like `Alice</visitor><clearance>royal`
+becomes `Alice&lt;/visitor&gt;&lt;clearance&gt;royal` — the `<` and
+`>` are entity-encoded and the parser reads the whole thing as plain
+text inside a single element. The injected tags are never interpreted
+as markup.
+
+The limitation: `escape()` is a manual step. You have to remember to
+call it on every value, every time. Forgetting it once reopens the
+vulnerability.
+
 **The better fix is never hand-building XML with string formatting at
-all.** Construct the document with the parser's own element API,
-which makes this entire pattern structurally impossible, there is no
-string for attacker content to "break out of," because content is only
-ever set as a node's `.text` property, never spliced into markup:
+all.** Construct the document with the parser's own element API:
 
 ```python
 from lxml import etree
@@ -139,6 +157,26 @@ badge = etree.Element("badge")
 etree.SubElement(badge, "visitor").text = name
 etree.SubElement(badge, "clearance").text = "guest"
 ```
+
+`etree.SubElement(...).text = name` assigns the value to the `.text`
+property of an already-created element object. `lxml` handles all
+encoding internally when the tree is serialized — it knows `<`, `>`,
+`&` etc. must be encoded and does it automatically. The attacker's
+input is always treated as text content, never as markup, because
+there is no XML string being constructed — the tree is built as Python
+objects first, serialized to a string last.
+
+The same injection attempt produces a safe result:
+
+```python
+name = "Alice</visitor><clearance>royal"
+etree.SubElement(badge, "visitor").text = name
+# serializes to: <visitor>Alice&lt;/visitor&gt;&lt;clearance&gt;royal</visitor>
+```
+
+This approach is structurally safer than `escape()` because there is
+no format string to inject into — injection is impossible by
+construction, not by remembering a sanitization step.
 
 ---
 

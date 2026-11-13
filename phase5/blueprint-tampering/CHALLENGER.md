@@ -19,9 +19,9 @@ lines to the blueprint it's inserted into.
 
 ## Objective
 
-The King holds a clearance level of his own, and it comes with a
-record no guest badge is supposed to be able to carry. Get the press to
-print a badge with that clearance anyway, and read the record.
+The King holds a royal clearance, and it comes with a record no guest
+badge is supposed to be able to carry. Get the press to print a badge
+with that clearance anyway, and read the record.
 
 ## Target
 

@@ -56,6 +56,11 @@
               </p>
             {% endif %}
           </div>
+          {% if flag %}
+            <img src="{{ url_for('static', filename='img/victory/p5_3.gif') }}"
+                 alt="royal access granted"
+                 class="w-full rounded-xl mt-4 opacity-90">
+          {% endif %}
         {% endif %}
 
         {% if raw_xml %}

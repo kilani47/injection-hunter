@@ -3,6 +3,20 @@
 {% block body_class %}nen-p5{% endblock %}
 {% block phase_nav %}<a href="{{ url_for('phase', phase_id='5') }}" class="hover:text-accent transition-colors">phase 5</a>{% endblock %}
 
+{% block head %}
+<style>
+  body.nen-p5 {
+    background-image:
+      linear-gradient(rgba(10,11,16,0.52), rgba(10,11,16,0.52)),
+      url("{{ url_for('static', filename='img/invasion.png') }}");
+    background-size: cover;
+    background-position: center top;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="grid gap-8 lg:grid-cols-[1fr_1.05fr] items-start">
   <div>
