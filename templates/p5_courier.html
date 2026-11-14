@@ -5,7 +5,10 @@
 
 {% block head %}
 <style>
-  body.nen-p5 {
+  /* .aura-layer is a fixed, full-viewport, opaque div painted right after
+     <body> opens (nen.css), so styling body's own background is invisible,
+     it's always fully covered. Override the layer that actually paints. */
+  body.nen-p5 .aura-layer {
     background-image:
       linear-gradient(rgba(10,11,16,0.52), rgba(10,11,16,0.52)),
       url("{{ url_for('static', filename='img/invasion.png') }}");
