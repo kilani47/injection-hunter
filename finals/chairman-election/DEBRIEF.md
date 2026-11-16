@@ -217,4 +217,16 @@ defeat all four at once. A real security program needs:
   breach in one faction's stack doesn't automatically compromise the
   shared resource (here, the Chairman seat) that all four converge on,
   segmentation limits exactly this kind of "four independently-secured
-  systems, one combined point of failure" outcome.
+  systems, one combined point of failure" outcome. This floor had a
+  concrete instance of the failure it warns against: the Chairman flag
+  was originally a row in the same `omnigrid_fragments` table the
+  Onboarding faction's error-based injection reads, so a single payload,
+  `' UNION SELECT fragment FROM omnigrid_fragments WHERE faction='chairman'-- -`,
+  lifted the final flag straight out of faction 1, never touching the
+  other three or the seize gate. The fix is least privilege: the flag now
+  lives in its own `omnigrid_chairman` table, read only by a separate,
+  privileged DB user (`svc_f2_omnigrid_seat`) that `f2_seize()` uses after
+  all four fragments already matched. The faction's own injectable user is
+  not granted read on it, so the same payload now returns `command
+  denied`. The Onboarding injection can still reach its *own* fragment,
+  and nothing more.

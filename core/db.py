@@ -46,17 +46,33 @@ def mysql_conn(challenge: str):
     unknown challenge key should fail loudly, not silently connect
     somewhere with broad access.
     """
-    import pymysql
-
     if not challenge or not all(c.isalnum() or c == "_" for c in challenge):
         raise ValueError(f"invalid challenge key: {challenge!r}")
+
+    return mysql_conn_as(
+        user=f"svc_{challenge}",
+        password=f"{challenge}_pw",
+        database=f"seiyaku_{challenge}",
+    )
+
+
+def mysql_conn_as(user: str, password: str, database: str):
+    """Open a PyMySQL connection as an explicit user against an explicit
+    database. Used where one challenge needs several DB users of *different*
+    privilege against the same schema, rather than the one-user-per-schema
+    convention `mysql_conn()` assumes. Finals-1, for example, gives each of
+    its four stages its own user scoped (by table-level GRANT) to only the
+    key that stage legitimately needs, so no single door's injection can
+    read a later stage's key out of the shared database.
+    """
+    import pymysql
 
     return pymysql.connect(
         host=os.environ.get("MARIADB_HOST", "mariadb"),
         port=int(os.environ.get("MARIADB_PORT", "3306")),
-        user=f"svc_{challenge}",
-        password=f"{challenge}_pw",
-        database=f"seiyaku_{challenge}",
+        user=user,
+        password=password,
+        database=database,
         charset="utf8mb4",
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=True,

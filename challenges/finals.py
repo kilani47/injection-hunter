@@ -4,12 +4,14 @@ challenges/finals.py, The Exam Finals.
 Task F.1 lands "Trick Tower Final Exam" (BookHaven): a single locked floor
 that genuinely requires all four core SQLi techniques from Phase 1
 (error-based, union-based, boolean-blind, time-blind), run in that exact
-order, because each stage's vulnerable query never even executes until the
-caller supplies the *previous* stage's real, extracted key as that
-request's `token`. There is no shortcut that skips a stage, the token
-check (`_stage_key` below) is a genuinely safe, parameterized lookup, so
-the only way to ever learn a stage's key is to actually run that stage's
-injection technique against the real, seeded `bookhaven_stage_keys` table.
+order. Two mechanisms make it an unskippable chain: a token gate (each
+stage's vulnerable query never executes until the caller supplies the
+*previous* stage's real key as `token`), and per-stage least-privilege DB
+users (each stage connects as its own user, scoped by GRANT to only its
+own key table `bookhaven_key_N` plus the previous one for the gate, so no
+single door's injection can read a later stage's key). The only way to
+learn a stage's key is to run that stage's own technique against its own
+key table, after descending there in order.
 
 Task F.2 ("Chairman Election Infiltration") appends its own routes to this
 same blueprint once built, same append-only-friendly convention as every
@@ -25,7 +27,7 @@ from flask import Blueprint, jsonify, redirect, render_template, request, url_fo
 from lxml import etree
 
 from core import xml_parser
-from core.db import ldap_conn, mongo_db, mysql_conn
+from core.db import ldap_conn, mongo_db, mysql_conn, mysql_conn_as
 from challenges.phase4 import _resolve_login_credentials
 
 bp = Blueprint("finals", __name__)
@@ -37,22 +39,33 @@ finals_bp = bp
 # ---------------------------------------------------------------------------
 
 
-def _stage_key(stage: int) -> str:
-    """The real, current key_value for a given stage, fetched with a
-    genuinely safe, fully parameterized query, this lookup is never the
-    vulnerable half of any stage. Used only to gate whether a stage's own
-    vulnerable query runs at all, never exposed directly to a caller."""
-    conn = mysql_conn("f1_bookhaven")
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT key_value FROM bookhaven_stage_keys WHERE stage=%s",
-                (stage,),
-            )
-            row = cur.fetchone()
-            return row["key_value"] if row else ""
-    finally:
-        conn.close()
+def _bookhaven_conn(stage: int):
+    """Connect as stage N's own least-privileged DB user. By table-level
+    GRANT (see seed/mariadb/13_bookhaven.sql) that user can read only the
+    catalogue, its own key table, and the previous stage's key table (for
+    the token gate), never a later stage's key. So even though every stage
+    runs an injectable query, no single door can read the whole chain."""
+    if stage not in (1, 2, 3, 4):
+        raise ValueError(f"invalid stage: {stage!r}")
+    return mysql_conn_as(
+        user=f"svc_f1_bookhaven_s{stage}",
+        password=f"f1_bookhaven_s{stage}_pw",
+        database="seiyaku_f1_bookhaven",
+    )
+
+
+def _stage_key(stage: int, conn) -> str:
+    """The real key_value for a given stage, read from that stage's own
+    one-row key table with a fixed (non-interpolated-from-input) table
+    name. `stage` is always a server-controlled int, never caller input.
+    Used only to gate whether a later stage's vulnerable query runs; the
+    connection must be one whose user is granted read on that key table."""
+    if stage not in (1, 2, 3, 4):
+        raise ValueError(f"invalid stage: {stage!r}")
+    with conn.cursor() as cur:
+        cur.execute(f"SELECT key_value FROM bookhaven_key_{stage}")
+        row = cur.fetchone()
+        return row["key_value"] if row else ""
 
 
 # Hub entry point, the node's "path" in core/unlock.py points here.
@@ -65,8 +78,9 @@ def f1_bookhaven():
 # --- Stage 1, error-based -------------------------------------------------
 # Entry point: no token required. Same sink shape as Phase 1's Netero's
 # Recipe Vault (p1_2), raw f-string concatenation, raw DBMS error text
-# echoed back, but the extraction target here is bookhaven_stage_keys'
-# stage-1 key, not a flag directly.
+# echoed back, but the extraction target here is bookhaven_key_1 (stage 1's
+# own key table), not a flag directly, and stage 1's DB user cannot reach
+# any later stage's key table.
 
 @bp.route("/f/bookhaven/stage1", methods=["GET"])
 def f1_stage1():
@@ -75,11 +89,12 @@ def f1_stage1():
     error = None
 
     if lookup_id:
-        conn = mysql_conn("f1_bookhaven")
+        conn = _bookhaven_conn(1)
         try:
             with conn.cursor() as cur:
                 # VULN: string concat, raw error text echoed, identical
-                # sink shape to p1_2.
+                # sink shape to p1_2. Stage 1's user can reach bookhaven_key_1
+                # (the intended target) but not any later stage's key table.
                 q = f"SELECT title FROM bookhaven_catalog WHERE id='{lookup_id}'"
                 cur.execute(q)
                 row = cur.fetchone()
@@ -109,24 +124,26 @@ def f1_stage2():
     q = request.args.get("q", "")
     rows = None
     error = None
-    unlocked = bool(token) and token == _stage_key(1)
+    unlocked = False
 
-    if unlocked and q:
-        conn = mysql_conn("f1_bookhaven")
-        try:
+    conn = _bookhaven_conn(2)
+    try:
+        unlocked = bool(token) and token == _stage_key(1, conn)
+        if unlocked and q:
             with conn.cursor() as cur:
                 # VULN: string concat, 3-column result set rendered
-                # directly, identical sink shape to p1_3.
+                # directly, identical sink shape to p1_3. Stage 2's user can
+                # reach bookhaven_key_2 (intended), not key_3/key_4.
                 query = (
                     f"SELECT id,title,author FROM bookhaven_catalog "
                     f"WHERE title LIKE '%{q}%'"
                 )
                 cur.execute(query)
                 rows = cur.fetchall()
-        except Exception as exc:
-            error = str(exc)
-        finally:
-            conn.close()
+    except Exception as exc:
+        error = str(exc)
+    finally:
+        conn.close()
 
     return render_template(
         "f1_bookhaven.html",
@@ -148,22 +165,24 @@ def f1_stage2():
 def f1_stage3():
     token = request.args.get("token", "")
     code = request.args.get("code")
-    unlocked = bool(token) and token == _stage_key(2)
     result = None
+    unlocked = False
 
-    if unlocked and code is not None:
-        conn = mysql_conn("f1_bookhaven")
-        try:
+    conn = _bookhaven_conn(3)
+    try:
+        unlocked = bool(token) and token == _stage_key(2, conn)
+        if unlocked and code is not None:
             with conn.cursor() as cur:
                 # VULN: string concat, PASS/FAIL-only response, identical
-                # sink shape to p1_4.
+                # sink shape to p1_4. Stage 3's user can reach
+                # bookhaven_key_3 (intended), not key_4.
                 q = f"SELECT 1 FROM bookhaven_catalog WHERE id='{code}'"
                 cur.execute(q)
                 result = cur.fetchone() is not None
-        except Exception:
-            result = False
-        finally:
-            conn.close()
+    except Exception:
+        result = False
+    finally:
+        conn.close()
 
     return render_template(
         "f1_bookhaven.html",
@@ -184,23 +203,29 @@ def f1_stage3():
 def f1_stage4():
     token = request.args.get("token", "")
     lookup_id = request.args.get("id")
-    unlocked = bool(token) and token == _stage_key(3)
     checked = False
+    unlocked = False
 
-    if unlocked and lookup_id is not None:
-        conn = mysql_conn("f1_bookhaven")
-        try:
-            with conn.cursor() as cur:
-                # VULN: string concat, result discarded, identical response
-                # regardless of outcome, identical sink shape to p1_5.
-                q = f"SELECT title FROM bookhaven_catalog WHERE id='{lookup_id}'"
-                cur.execute(q)
-                cur.fetchone()
-        except Exception:
-            pass
-        finally:
-            conn.close()
-        checked = True
+    conn = _bookhaven_conn(4)
+    try:
+        unlocked = bool(token) and token == _stage_key(3, conn)
+        if unlocked and lookup_id is not None:
+            # The response is constant whether the query succeeds, fails, or
+            # matches nothing: only how long it took can differ, so `checked`
+            # is set up front, before the query can raise.
+            checked = True
+            try:
+                with conn.cursor() as cur:
+                    # VULN: string concat, result discarded, identical sink
+                    # shape to p1_5. Stage 4's user can reach bookhaven_key_4
+                    # (the flag), not beyond.
+                    q = f"SELECT title FROM bookhaven_catalog WHERE id='{lookup_id}'"
+                    cur.execute(q)
+                    cur.fetchone()
+            except Exception:
+                pass
+    finally:
+        conn.close()
 
     return render_template(
         "f1_bookhaven.html",
@@ -502,18 +527,23 @@ def f2_seize():
 
 
 def _chairman_flag() -> str:
-    """The Chairman seat's own key, a fifth, safe, parameterized lookup
-    against omnigrid_fragments, reachable only after `success` above has
-    already confirmed all four faction fragments genuinely matched. Never
-    hardcoded in this module: like every other node in this arc, the flag
-    lives entirely in seeded backend data, not in application code."""
-    conn = mysql_conn("f2_omnigrid")
+    """The Chairman seat's own key, a safe, parameter-free lookup against
+    omnigrid_chairman, reachable only after `success` above has already
+    confirmed all four faction fragments genuinely matched. This uses a
+    SEPARATE, privileged DB user (svc_f2_omnigrid_seat) scoped to only the
+    omnigrid_chairman table. The faction's own injectable user
+    (svc_f2_omnigrid) is deliberately NOT granted read on that table, so the
+    Onboarding faction's SQL injection cannot lift this flag directly, it
+    can only reach its own fragment. Like every node in this arc, the flag
+    lives in seeded backend data, not in application code."""
+    conn = mysql_conn_as(
+        user="svc_f2_omnigrid_seat",
+        password="f2_omnigrid_seat_pw",
+        database="seiyaku_f2_omnigrid",
+    )
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                "SELECT fragment FROM omnigrid_fragments WHERE faction=%s",
-                ("chairman",),
-            )
+            cur.execute("SELECT fragment FROM omnigrid_chairman")
             row = cur.fetchone()
             return row["fragment"] if row else ""
     finally:

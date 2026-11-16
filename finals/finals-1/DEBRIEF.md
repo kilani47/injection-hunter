@@ -5,28 +5,58 @@
 ## The shape of the chain
 
 Four stages, four independent bugs, deliberately identical in root cause
-and sink shape to four floors you already solved in Phase 1, the only
-thing different here is that each stage's vulnerable code path is
-gated behind a genuinely safe, parameterized check:
+and sink shape to four floors you already solved in Phase 1. Two separate
+mechanisms make this a genuine *chain* and not four bugs that happen to
+share a page:
+
+1. **A token gate** decides *whether* a stage's injectable query runs at
+   all. A stage 2 request with a wrong or missing `token` never even
+   builds the UNION query; `q` is inert until `token` equals stage 1's
+   real, extracted key.
+2. **Per-stage database privilege separation** decides *what* a stage's
+   injection can read even once it runs. Each stage connects as its own
+   DB user, scoped by table-level GRANT to only its own key table (plus
+   the previous stage's, for the gate). No door's injection can read a
+   later stage's key.
 
 ```python
 # challenges/finals.py
-def _stage_key(stage: int) -> str:
-    cur.execute(
-        "SELECT key_value FROM bookhaven_stage_keys WHERE stage=%s",
-        (stage,),
+def _bookhaven_conn(stage: int):
+    # stage N's own least-privileged user: catalogue + its own key +
+    # the previous stage's key (for the gate), and nothing further.
+    return mysql_conn_as(
+        f"svc_f1_bookhaven_s{stage}", f"f1_bookhaven_s{stage}_pw",
+        "seiyaku_f1_bookhaven",
     )
+
+def _stage_key(stage: int, conn) -> str:
+    cur.execute(f"SELECT key_value FROM bookhaven_key_{stage}")  # stage is a server int, never input
     ...
 ```
 
-This lookup is never the vulnerable half of anything, it exists purely
-to decide *whether* a stage's own injectable query ever runs at all. A
-stage 2 request with a wrong or missing `token` never even builds the
-UNION query; the `q` parameter is completely inert until `token` equals
-stage 1's real, extracted `key_value`. That's what makes this a genuine
-chain rather than four independent bugs that happen to share a page:
-there is no way to reach stage 4's injection surface without having
-actually run stages 1-3's real techniques first.
+The gate lookup is never the vulnerable half of anything; it exists
+purely to validate the presented `token` against the real prior key.
+
+### Why the gate alone was not enough
+
+The token gate controls *execution order*, but not *read scope*. In the
+first version of this floor every stage connected as one broad user with
+`SELECT` on the whole database, including a single `bookhaven_stage_keys`
+table holding all four keys. That let a solver skip the entire descent
+from door 1:
+
+```
+id = ' UNION SELECT key_value FROM bookhaven_stage_keys WHERE stage=4-- -
+```
+
+Stage 1's own (unlocked, no-token) injection could read stage 4's row,
+the flag, directly. The gate was satisfied (stage 1 needs no token) and
+the broad grant did the rest. The fix is least privilege: split the keys
+into one table per stage (`bookhaven_key_1..4`) and give each stage its
+own user granted only the key tables that stage legitimately needs. Now
+the same payload from door 1 returns `command denied` — stage 1's user
+has no grant on `bookhaven_key_4`, and `bookhaven_stage_keys` no longer
+exists. Each door can reach only its own key.
 
 ## Stage 1, error-based (identical bug to p1_2)
 
@@ -38,7 +68,7 @@ Same raw-concatenation-plus-echoed-error sink as Netero's Recipe Vault.
 Payload:
 
 ```
-id = 1' AND extractvalue(1,concat(0x3a,(SELECT key_value FROM bookhaven_stage_keys WHERE stage=1)))-- -
+id = 1' AND extractvalue(1,concat(0x3a,(SELECT key_value FROM bookhaven_key_1)))-- -
 ```
 
 MariaDB's `extractvalue()` throws an XPATH syntax error whose message
@@ -63,14 +93,15 @@ Same 3-column UNION sink as the Exam Results Board. With
 `token=restricted_wing_7` (stage 1's key) accepted, payload:
 
 ```
-q = nonexistent' UNION SELECT stage,key_value,'x' FROM bookhaven_stage_keys WHERE stage=2-- -
+q = nonexistent' UNION SELECT 2,key_value,'x' FROM bookhaven_key_2-- -
 ```
 
 matches `bookhaven_catalog`'s exact column shape (id: INT, title: VARCHAR,
-author: VARCHAR) with type-compatible substitutes (`stage`: INT,
+author: VARCHAR) with type-compatible substitutes (the literal `2`: INT,
 `key_value`: VARCHAR, `'x'`: VARCHAR), so the injected row renders as an
-ordinary-looking table row: `id=2`, `title=archive_seal_42`. Stage 2's
-key: `archive_seal_42`.
+ordinary-looking table row: `id=2`, `title=archive_seal_42`. (Stage 2's
+user can read `bookhaven_key_2`, but not `bookhaven_key_3`/`_4`.) Stage
+2's key: `archive_seal_42`.
 
 ## Stage 3, boolean-blind (identical bug to p1_4)
 
@@ -82,9 +113,9 @@ result = cur.fetchone() is not None   # -> PASS/FAIL, errors fold into FAIL
 Same PASS/FAIL-only oracle as the Trick Tower Silent Room. With
 `token=archive_seal_42` (stage 2's key) accepted, the same
 `LENGTH()`/`ASCII(SUBSTRING(...))` bisection technique from
-`solvers/p1_4.py` walks `(SELECT key_value FROM bookhaven_stage_keys
-WHERE stage=3)` out one character at a time using only the PASS/FAIL
-bit. Stage 3's key: `midnight_9`.
+`solvers/p1_4.py` walks `(SELECT key_value FROM bookhaven_key_3)` out one
+character at a time using only the PASS/FAIL bit. Stage 3's key:
+`midnight_9`.
 
 ## Stage 4, time-blind (identical bug to p1_5)
 
@@ -96,9 +127,9 @@ cur.fetchone()   # result discarded, response identical either way
 Same identical-response, timing-only oracle as the Zevil Island Medical
 Bay. With `token=midnight_9` (stage 3's key) accepted, the same
 `IF(condition, SLEEP(N), 0)` timing-bisection technique from
-`solvers/p1_5.py` walks `(SELECT key_value FROM bookhaven_stage_keys
-WHERE stage=4)` out one character at a time, and that row's
-`key_value` **is** this final's flag.
+`solvers/p1_5.py` walks `(SELECT key_value FROM bookhaven_key_4)` out one
+character at a time, and that table's `key_value` **is** this final's
+flag.
 
 ## The full solver, live
 
@@ -139,7 +170,7 @@ stage's vulnerable query from ever executing, `q`/`code`/`id` included:
 ```bash
 curl -s -G "$BASE/f/bookhaven/stage2" \
     --data-urlencode "token=wrong" \
-    --data-urlencode "q=nonexistent' UNION SELECT stage,key_value,'x' FROM bookhaven_stage_keys WHERE stage=2-- -"
+    --data-urlencode "q=nonexistent' UNION SELECT 2,key_value,'x' FROM bookhaven_key_2-- -"
 ```
 
 renders `token missing or incorrect, this door is sealed.` with no
@@ -198,3 +229,14 @@ cur.execute(
     (lookup_id,),
 )
 ```
+
+And the second lesson, learned the hard way from this floor's own
+unintended-solution bug above: **defense in depth, least-privilege
+database accounts.** Parameterizing the queries removes the injection
+entirely, but even while the injection exists, a DB account scoped to
+only the data that code path legitimately needs sharply limits the blast
+radius of any one injectable query. Per-stage users here mean the worst a
+compromised stage 1 can do is leak stage 1's own key, not the whole
+chain. The same principle generalizes: an application's DB user should
+never hold `SELECT *.*` on a schema whose individual tables have
+different sensitivity.

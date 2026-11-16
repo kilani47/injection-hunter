@@ -11,24 +11,25 @@
 -- the Onboarding faction's route runs against, an id-by-lookup, same
 -- sink shape as every earlier error-based floor in this arc.
 --
--- `omnigrid_fragments` holds the one value this faction guards: a single
+-- `omnigrid_fragments` holds the one value THIS faction guards: a single
 -- quarter of the Chairman seat's final key, under `faction='onboarding'`.
 -- The other three factions' fragments live in their own native systems
 -- (MongoDB, OpenLDAP, the sealed filesystem), never all in one place,
 -- mirroring the real "four departments, four separate systems" premise.
--- A fifth row, `faction='chairman'`, holds the arc's final flag itself,
--- reachable only via challenges/finals.py's f2_seize(), and only once all
--- four faction fragments have already been proven to genuinely match.
+--
+-- The arc's final flag is deliberately NOT a row in omnigrid_fragments.
+-- It lives in its own table, `omnigrid_chairman`, that the faction's own
+-- (injectable) DB user is NOT granted read on. Otherwise the Onboarding
+-- faction's error-based injection could run `SELECT fragment FROM
+-- omnigrid_fragments WHERE faction='chairman'` and lift the final flag
+-- straight out of the first faction, never touching the other three or
+-- the seize gate. Only f2_seize()'s own privileged, parameterized lookup
+-- (a separate scoped user) ever reads omnigrid_chairman, and only after
+-- all four faction fragments have already been proven to match.
 
--- Per-challenge isolation: this challenge lives in its own database
--- with its own restricted user, granted access to nothing else. From
--- this challenge's injection point, other challenges' tables are not
--- just unreferenced but invisible (information_schema is filtered by
--- the connecting user's privileges) and cross-database reads are
--- denied. core/db.py's mysql_conn('f2_omnigrid') connects as this user.
+-- Cross-challenge isolation is unchanged: both users below are confined to
+-- seiyaku_f2_omnigrid, so other challenges' tables stay invisible.
 CREATE DATABASE IF NOT EXISTS seiyaku_f2_omnigrid;
-CREATE USER IF NOT EXISTS 'svc_f2_omnigrid'@'%' IDENTIFIED BY 'f2_omnigrid_pw';
-GRANT SELECT ON seiyaku_f2_omnigrid.* TO 'svc_f2_omnigrid'@'%';
 USE seiyaku_f2_omnigrid;
 
 CREATE TABLE IF NOT EXISTS omnigrid_onboarding (
@@ -48,5 +49,23 @@ CREATE TABLE IF NOT EXISTS omnigrid_fragments (
 );
 
 INSERT INTO omnigrid_fragments (faction, fragment) VALUES
-    ('onboarding', 'CHAIR-0NB0ARD-7f2a'),
-    ('chairman',   'SEIYAKU{chairman_of_the_loopholes}');
+    ('onboarding', 'CHAIR-0NB0ARD-7f2a');
+
+-- the final flag, in its own table the injectable faction user cannot read
+CREATE TABLE IF NOT EXISTS omnigrid_chairman (
+    fragment VARCHAR(64) NOT NULL
+);
+
+INSERT INTO omnigrid_chairman (fragment) VALUES
+    ('SEIYAKU{chairman_of_the_loopholes}');
+
+-- the faction's injectable user: reads its onboarding system and its own
+-- fragment, but NOT the chairman flag table.
+CREATE USER IF NOT EXISTS 'svc_f2_omnigrid'@'%' IDENTIFIED BY 'f2_omnigrid_pw';
+GRANT SELECT ON seiyaku_f2_omnigrid.omnigrid_onboarding TO 'svc_f2_omnigrid'@'%';
+GRANT SELECT ON seiyaku_f2_omnigrid.omnigrid_fragments  TO 'svc_f2_omnigrid'@'%';
+
+-- the seize gate's privileged user: reads only the chairman flag table,
+-- used solely by f2_seize()'s safe lookup after all four fragments match.
+CREATE USER IF NOT EXISTS 'svc_f2_omnigrid_seat'@'%' IDENTIFIED BY 'f2_omnigrid_seat_pw';
+GRANT SELECT ON seiyaku_f2_omnigrid.omnigrid_chairman TO 'svc_f2_omnigrid_seat'@'%';
