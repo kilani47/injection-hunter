@@ -33,10 +33,10 @@ demands more than one skill at once.
 
 | # | Node | Directory | Status |
 |---|------|-----------|--------|
-| 1 | Finals-1 — Trick Tower Final Exam (BookHaven) | [`trick-tower-final/`](trick-tower-final/) | built |
+| 1 | Finals-1 (BookHaven) | [`finals-1/`](finals-1/) | built |
 | 2 | Chairman Election Infiltration (OmniGrid) | [`chairman-election/`](chairman-election/) | built |
 
-"Finals-1" (the Trick Tower Final Exam) chains all four of Phase 1's core SQLi
+"Finals-1" (BookHaven) chains all four of Phase 1's core SQLi
 techniques (error-based, union-based, boolean-blind, time-blind) into
 one four-stage descent: each stage's vulnerable query is inert until the
 *previous* stage's real, extracted key is supplied as that stage's

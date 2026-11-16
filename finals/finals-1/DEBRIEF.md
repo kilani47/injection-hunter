@@ -1,4 +1,4 @@
-# Trick Tower Final Exam, Debrief
+# Finals-1, Debrief
 
 **Node:** `f1` &middot; **Flag:** `SEIYAKU{all_four_styles_descend}` &middot; **Routes:** `GET /f/bookhaven/stage1..4` &middot; **Sink:** `challenges/finals.py`, real MariaDB via `core/db.mysql_conn()` &middot; **Signal:** each stage's real, extracted key unlocks the next stage's vulnerable query
 

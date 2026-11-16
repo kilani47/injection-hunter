@@ -1,4 +1,4 @@
-# Trick Tower Final Exam
+# Finals-1
 
 **The Exam Finals** &middot; BookHaven &middot; the final locked floor
 

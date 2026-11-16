@@ -14,7 +14,7 @@ against a real backend engine, nothing in this matrix is aspirational.
 | Union-based SQLi (column count, `UNION SELECT`) | 1.3 Exam Results Board; F.1 stage 2 | MariaDB | [`phase1/results-board/DEBRIEF.md`](../phase1/results-board/DEBRIEF.md) |
 | Boolean-blind SQLi (`AND 1=1`/`1=2`, bisection) | 1.4 Trick Tower Silent Room; F.1 stage 3 | MariaDB | [`phase1/silent-room/DEBRIEF.md`](../phase1/silent-room/DEBRIEF.md) |
 | Time-blind SQLi (`IF(cond,SLEEP(n),0)`) | 1.5 Zevil Island Medical Bay; F.1 stage 4 | MariaDB | [`phase1/medical-bay/DEBRIEF.md`](../phase1/medical-bay/DEBRIEF.md) |
-| The 9-step SQLi methodology, applied end-to-end | F.1 Trick Tower Final Exam | MariaDB | [`finals/trick-tower-final/DEBRIEF.md`](../finals/trick-tower-final/DEBRIEF.md) |
+| The 9-step SQLi methodology, applied end-to-end | F.1 Finals-1 | MariaDB | [`finals/finals-1/DEBRIEF.md`](../finals/finals-1/DEBRIEF.md) |
 | SQLMap essentials (`-r`, `-p`, `--dbs`→`--dump`) and a known-CVE-style target | 2.2 A Sealed Floor | MariaDB | [`phase2/sealed-floor/DEBRIEF.md`](../phase2/sealed-floor/DEBRIEF.md) |
 | SQLi via non-form inputs (`User-Agent` header, `--level 3`) | 2.3 The Disguised Examiner | MariaDB | [`phase2/disguised-examiner/DEBRIEF.md`](../phase2/disguised-examiner/DEBRIEF.md) |
 | Out-of-band SQLi (DNS/HTTP exfil channel) | 3.1 The Spell Card | MariaDB + collaborator | [`phase3/spell-card/DEBRIEF.md`](../phase3/spell-card/DEBRIEF.md) |
@@ -25,7 +25,7 @@ against a real backend engine, nothing in this matrix is aspirational.
 | ORM injection, raw escape hatches reintroducing SQLi | 5.1 Manipulator's Firewall | MariaDB (SQLAlchemy) | [`phase5/manipulators-firewall/DEBRIEF.md`](../phase5/manipulators-firewall/DEBRIEF.md) |
 | XML (tag) injection, structure tampering | 5.2 Palace Blueprint Tampering | lxml | [`phase5/blueprint-tampering/DEBRIEF.md`](../phase5/blueprint-tampering/DEBRIEF.md) |
 | XXE, external entities, file read, SSRF/OOB variants | 5.3 The King's Sealed Archives; F.2 Document Import faction | lxml | [`phase5/sealed-archives/DEBRIEF.md`](../phase5/sealed-archives/DEBRIEF.md) |
-| Chained, multi-technique exploitation across one target | F.1 Trick Tower Final Exam | MariaDB | [`finals/trick-tower-final/DEBRIEF.md`](../finals/trick-tower-final/DEBRIEF.md) |
+| Chained, multi-technique exploitation across one target | F.1 Finals-1 | MariaDB | [`finals/finals-1/DEBRIEF.md`](../finals/finals-1/DEBRIEF.md) |
 | Chained exploitation across independent systems | F.2 Chairman Election Infiltration | MariaDB, MongoDB, OpenLDAP, lxml | [`finals/chairman-election/DEBRIEF.md`](../finals/chairman-election/DEBRIEF.md) |
 
 ## Coverage check
