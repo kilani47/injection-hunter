@@ -1,12 +1,111 @@
 # Learning notes: NoSQL injection (MongoDB)
 
-> A from-scratch primer on NoSQL injection against MongoDB: the mental
+> A from-scratch primer on NoSQL injection against MongoDB: what NoSQL
+> even means and the database families it spans, the MongoDB mental
 > model, how to first tell you're even looking at NoSQL rather than SQL,
 > the operators, all four core attack patterns PortSwigger's own NoSQLi
 > methodology names (operator injection, error-based, boolean-blind, and
 > time-based), and the defenses. Grounded in MongoDB's own
 > operator/aggregation docs and the OWASP Testing Guide (see
 > **References** at the end).
+
+---
+
+## 0. NoSQL basics: the families, and where MongoDB sits
+
+Before any injection, it helps to know what "NoSQL" actually is, because
+it is not one thing. The name is a misnomer: it does **not** mean "no
+SQL." It is usually read as **"not only SQL"**, an umbrella term for
+databases that deliberately *don't* use the relational model (fixed
+tables of rows and columns, joins, a rigid schema, ACID transactions as
+the default). They emerged to trade some of those relational guarantees
+for things large web systems often want more: horizontal scaling across
+many cheap machines, flexible or schema-less data, and very high
+read/write throughput.
+
+There is no single NoSQL data model, there are four broad **families**,
+and they store and query data in genuinely different ways:
+
+| Family | Stores data as | Query by | Examples |
+|---|---|---|---|
+| **Document** | self-contained JSON-like documents, nested fields and arrays allowed | matching fields/structure inside the document | **MongoDB**, CouchDB, Amazon DocumentDB |
+| **Key–value** | a giant dictionary: one opaque value per unique key | the key only (the value is just a blob to the DB) | Redis, Amazon DynamoDB, Riak, Memcached |
+| **Wide-column** | rows that can each have different, sparse columns, grouped into column families | partition / clustering keys, often via a SQL-like language (CQL) | Apache Cassandra, HBase, ScyllaDB |
+| **Graph** | nodes and the edges (relationships) between them, each with properties | traversing relationships, via a graph query language | Neo4j (Cypher), Amazon Neptune, JanusGraph |
+
+> **Why this matters for injection:** "NoSQL injection" is not a single
+> technique, it varies by family. Cassandra's CQL is SQL-like enough that
+> injecting it looks much like classic SQLi. Graph databases have their
+> own injectable query languages (Cypher injection). Redis can be abused
+> by smuggling protocol commands. This doc is specifically about the
+> **document** family, and MongoDB in particular, whose injection has a
+> distinct flavor the next section explains.
+
+### The relational ↔ MongoDB mental map
+
+MongoDB is a **document database**. Its hierarchy lines up loosely with
+the relational one, but the bottom layer is the important difference:
+
+```
+   Relational (SQL)          MongoDB (document)
+   ----------------          ------------------
+   database            ->    database
+   table               ->    collection
+   row                 ->    document      <- a JSON/BSON object, not a flat record
+   column              ->    field
+   fixed schema        ->    (no enforced schema; documents in one
+                              collection can have different fields)
+```
+
+A **document** is a JSON-like object (stored internally as BSON, Binary
+JSON, which adds types like dates, 24-hex `ObjectId`s, and integers).
+Fields can nest and hold arrays:
+
+```json
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "username": "gon",
+  "roles": ["applicant", "rookie"],
+  "profile": { "nen": "enhancement", "licensed": false }
+}
+```
+
+A **collection** is just a bag of such documents. Unlike a SQL table,
+nothing forces every document to share the same fields, so there is no
+rigid schema to validate input against by default, a property that
+matters directly when we get to injection.
+
+### Queries are data structures, not strings
+
+This is the single most important basics fact for everything that
+follows. In SQL you hand the database a *string* of query text. In
+MongoDB you hand it a **document** (a dict/object) describing what to
+match:
+
+```python
+# SQL: the query is text
+#   SELECT * FROM users WHERE username = 'gon'
+
+# MongoDB: the query is a data structure
+db.users.find_one({"username": "gon"})
+#                  ^^^^^^^^^^^^^^^^^^^^  a dict: field -> value to match
+```
+
+By default, a plain value means **equality** (`username` must equal
+`"gon"`). The same shape covers the basic operations (CRUD):
+
+```python
+db.users.insert_one({"username": "gon", "roles": ["applicant"]})   # create
+db.users.find_one({"username": "gon"})                              # read
+db.users.update_one({"username": "gon"}, {"$set": {"licensed": True}})  # update
+db.users.delete_one({"username": "gon"})                            # delete
+```
+
+Notice `$set` in the update, a key beginning with `$` is a **MongoDB
+operator**, an instruction to the database rather than literal data. That
+one detail, operators are just specially-named keys inside the very same
+object that also carries your data, is exactly the seam the next section
+pulls on.
 
 ---
 
@@ -538,3 +637,10 @@ The root cause is **unvalidated type**, so the fix is at the boundary:
 - **PyMongo type behavior:** https://pymongo.readthedocs.io/
 - **MongoDB ObjectId format:** https://www.mongodb.com/docs/manual/reference/method/ObjectId/
   (the 24-hex-character `_id` shape §2's detection section fingerprints)
+- **NoSQL explained / database families (document, key–value, wide-column, graph):**
+  https://www.mongodb.com/resources/basics/databases/nosql-explained
+  (the §0 family taxonomy and the "not only SQL" framing)
+- **MongoDB document / BSON data model:** https://www.mongodb.com/docs/manual/core/document/
+  and https://bsonspec.org/ (the §0 document/collection model and BSON types)
+- **MongoDB CRUD operations:** https://www.mongodb.com/docs/manual/crud/
+  (the §0 query-as-a-document insert/find/update/delete examples)
