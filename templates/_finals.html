@@ -1,0 +1,29 @@
+{# Shared vault-door markup for the Exam Finals. Styled by
+   static/css/finals.css. `open` swings the door; `numeral` is etched on a
+   sealed door; `glyph` shows deep in the vault once it opens. Reveals
+   nothing about the vulnerability behind it, by design. #}
+
+{% macro vault(open, numeral="", glyph="") -%}
+<div class="vault {{ 'is-open' if open else 'is-sealed' }}" data-door="{{ 'open' if open else 'sealed' }}" aria-hidden="true">
+  <div class="vault-interior">
+    <div class="vault-glyph">{{ glyph }}</div>
+  </div>
+  <div class="vault-leaf left"></div>
+  <div class="vault-leaf right"></div>
+  <div class="vault-lock">
+    <div class="vault-spokes"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="vault-hub"></div>
+  </div>
+  {% if numeral %}<div class="vault-numeral">{{ numeral }}</div>{% endif %}
+  <div class="vault-ring"></div>
+  <div class="vault-burst"></div>
+  <div class="vault-sparks"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+</div>
+{%- endmacro %}
+
+{% macro door_banner(lead, sub) -%}
+<div class="door-banner is-open">
+  <p class="lead">{{ lead }}</p>
+  <p class="sub">{{ sub }}</p>
+</div>
+{%- endmacro %}

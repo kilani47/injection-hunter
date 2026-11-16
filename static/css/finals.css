@@ -1,0 +1,499 @@
+/* finals.css — the Trial Vault design system for the Exam Finals.
+ *
+ * A self-contained, hand-built vault door: ornate ring with bolts, a
+ * spinning lock mechanism, two leaves that swing open on unlock, cyan
+ * light pouring through, a burst ring, radiating rays and sparks. Used by
+ * both finals (f1 chained descent, f2 faction vaults). Colors ride the
+ * page's own --nen-accent / --nen-glow tokens (cyan for nen-finals), so
+ * the whole thing restyles for free if the accent ever changes.
+ *
+ * Nothing here reveals which vulnerability a trial wants: that is the
+ * point of the finals. The door is a door; what is behind it is for the
+ * challenger to enumerate. */
+
+:root {
+  --vault-size: 232px;
+  --vault-metal-1: #11141c;
+  --vault-metal-2: #1b2130;
+  --vault-metal-3: #0a0c12;
+  --vault-edge: color-mix(in srgb, var(--nen-accent, #22d3ee) 42%, transparent);
+}
+
+/* ----- layout scaffolding -------------------------------------------- */
+
+.trial-head { margin-bottom: 2rem; }
+
+.trial-eyebrow {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--nen-accent, #22d3ee) 70%, #9a9aa6);
+}
+
+.trial-stage {
+  display: grid;
+  grid-template-columns: var(--vault-size) 1fr;
+  gap: 2.25rem;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .trial-stage { grid-template-columns: 1fr; justify-items: center; }
+  .trial-behind { width: 100%; }
+}
+
+/* ----- the vault door ------------------------------------------------- */
+
+.vault {
+  position: relative;
+  width: var(--vault-size);
+  height: var(--vault-size);
+  flex: 0 0 auto;
+  perspective: 1100px;
+  filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.6));
+}
+
+/* the dark recess the leaves open to reveal */
+.vault-interior {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 45%,
+      color-mix(in srgb, var(--nen-accent, #22d3ee) 75%, #ffffff) 0%,
+      color-mix(in srgb, var(--nen-accent, #22d3ee) 60%, transparent) 22%,
+      rgba(8, 12, 20, 0.9) 60%,
+      #05070c 100%);
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.4s ease 0.5s;
+}
+.vault.is-open .vault-interior { opacity: 1; }
+
+/* rotating light rays behind the leaves, only visible once open */
+.vault-interior::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--nen-accent, #22d3ee) 55%, transparent) 14deg,
+    transparent 28deg,
+    transparent 45deg,
+    color-mix(in srgb, var(--nen-accent, #22d3ee) 40%, transparent) 59deg,
+    transparent 73deg);
+  opacity: 0;
+}
+.vault.is-open .vault-interior::before {
+  opacity: 0.9;
+  animation: vault-rays 9s linear infinite;
+}
+
+/* the emblem that sits deep in the open vault */
+.vault-glyph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: Rajdhani, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 2.4rem;
+  color: #05070c;
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.5);
+  z-index: 2;
+  opacity: 0;
+  transform: scale(0.6);
+}
+.vault.is-open .vault-glyph {
+  animation: vault-glyph-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) 0.6s forwards;
+}
+
+/* the two swinging leaves */
+.vault-leaf {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  background:
+    radial-gradient(120% 90% at 50% 20%, var(--vault-metal-2), var(--vault-metal-1) 55%, var(--vault-metal-3));
+  border: 1px solid color-mix(in srgb, var(--nen-accent, #22d3ee) 20%, transparent);
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.7);
+  backface-visibility: hidden;
+  z-index: 3;
+}
+.vault-leaf.left {
+  left: 0;
+  border-radius: 50% 0 0 50% / 50% 0 0 50%;
+  transform-origin: left center;
+  border-right: none;
+}
+.vault-leaf.right {
+  right: 0;
+  border-radius: 0 50% 50% 0 / 0 50% 50% 0;
+  transform-origin: right center;
+  border-left: none;
+}
+.vault.is-open .vault-leaf.left {
+  animation: vault-swing-left 1.1s cubic-bezier(0.5, 0, 0.2, 1) 0.45s forwards;
+}
+.vault.is-open .vault-leaf.right {
+  animation: vault-swing-right 1.1s cubic-bezier(0.5, 0, 0.2, 1) 0.45s forwards;
+}
+
+/* ornamental seam of bolts down the facing edge of each leaf */
+.vault-leaf::after {
+  content: "";
+  position: absolute;
+  top: 12%;
+  bottom: 12%;
+  width: 6px;
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--nen-accent, #22d3ee) 60%, #c9d6e4) 0 34%, transparent 42%);
+  background-size: 6px 22px;
+  background-repeat: repeat-y;
+  opacity: 0.8;
+}
+.vault-leaf.left::after { right: 6px; }
+.vault-leaf.right::after { left: 6px; }
+
+/* the outer ring: bolts all around, sits above the leaves' outer rim */
+.vault-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  padding: 7px;
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      color-mix(in srgb, var(--nen-accent, #22d3ee) 55%, #8aa0b4) 0deg 3deg,
+      transparent 3deg 15deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px));
+  opacity: 0.85;
+  z-index: 5;
+  pointer-events: none;
+}
+.vault-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--vault-edge);
+  box-shadow:
+    0 0 24px -2px var(--nen-glow, rgba(34, 211, 238, 0.35)),
+    inset 0 0 18px -4px var(--nen-glow, rgba(34, 211, 238, 0.35));
+}
+
+/* the central lock mechanism — spokes + hub + keyhole */
+.vault-lock {
+  position: absolute;
+  inset: 28%;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  transition: opacity 0.3s ease;
+}
+.vault.is-open .vault-lock {
+  animation: vault-lock-spin 0.5s ease-in 0s forwards, vault-lock-fade 0.3s ease 0.45s forwards;
+}
+.vault-spokes {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+.vault-spokes span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50%;
+  height: 3px;
+  margin-top: -1.5px;
+  transform-origin: left center;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--nen-accent, #22d3ee) 75%, #c9d6e4),
+    transparent);
+  border-radius: 3px;
+}
+.vault-spokes span:nth-child(1) { transform: rotate(0deg); }
+.vault-spokes span:nth-child(2) { transform: rotate(60deg); }
+.vault-spokes span:nth-child(3) { transform: rotate(120deg); }
+.vault-spokes span:nth-child(4) { transform: rotate(180deg); }
+.vault-spokes span:nth-child(5) { transform: rotate(240deg); }
+.vault-spokes span:nth-child(6) { transform: rotate(300deg); }
+
+.vault-hub {
+  position: relative;
+  width: 44%;
+  height: 44%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, var(--vault-metal-2), var(--vault-metal-3));
+  border: 2px solid var(--vault-edge);
+  display: grid;
+  place-items: center;
+  z-index: 1;
+}
+/* keyhole / sealed glyph on the hub */
+.vault-hub::before {
+  content: "";
+  width: 26%;
+  height: 46%;
+  background: color-mix(in srgb, var(--nen-accent, #22d3ee) 85%, #ffffff);
+  border-radius: 40% 40% 50% 50%;
+  box-shadow: 0 0 12px var(--nen-glow, rgba(34, 211, 238, 0.35));
+  clip-path: polygon(50% 0, 72% 42%, 62% 100%, 38% 100%, 28% 42%);
+}
+.vault.is-sealed .vault-hub { animation: vault-pulse 3.2s ease-in-out infinite; }
+
+/* the numeral etched over a sealed door */
+.vault-numeral {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 6;
+  font-family: Rajdhani, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 3.4rem;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--nen-accent, #22d3ee) 30%, #6b7484);
+  text-shadow: 0 1px 0 #000, 0 0 20px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  opacity: 0.9;
+  transition: opacity 0.3s ease;
+}
+.vault.is-open .vault-numeral { animation: vault-lock-fade 0.3s ease 0.4s forwards; }
+
+/* burst ring that fires once on open */
+.vault-burst {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  z-index: 7;
+  pointer-events: none;
+  opacity: 0;
+}
+.vault.is-open .vault-burst {
+  border: 2px solid color-mix(in srgb, var(--nen-accent, #22d3ee) 80%, #ffffff);
+  animation: vault-burst 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) 0.5s forwards;
+}
+
+/* sparks that scatter outward on open */
+.vault-sparks { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
+.vault-sparks i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--nen-accent, #22d3ee) 70%, #ffffff);
+  box-shadow: 0 0 8px var(--nen-glow, rgba(34, 211, 238, 0.35));
+  opacity: 0;
+  --a: 0deg;
+}
+.vault-sparks i:nth-child(1) { --a: 20deg; }
+.vault-sparks i:nth-child(2) { --a: 70deg; }
+.vault-sparks i:nth-child(3) { --a: 115deg; }
+.vault-sparks i:nth-child(4) { --a: 160deg; }
+.vault-sparks i:nth-child(5) { --a: 205deg; }
+.vault-sparks i:nth-child(6) { --a: 250deg; }
+.vault-sparks i:nth-child(7) { --a: 300deg; }
+.vault-sparks i:nth-child(8) { --a: 340deg; }
+.vault.is-open .vault-sparks i {
+  animation: vault-spark 0.9s ease-out 0.55s forwards;
+}
+
+/* ----- celebration banner (the "door opened" message) ---------------- */
+
+.door-banner {
+  margin-top: 1.1rem;
+  text-align: center;
+  opacity: 0;
+}
+.vault.is-open + .door-banner,
+.door-banner.is-open {
+  animation: banner-in 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.1) 0.9s forwards;
+}
+.door-banner .lead {
+  font-family: Rajdhani, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nen-accent, #22d3ee);
+  text-shadow: 0 0 18px var(--nen-glow, rgba(34, 211, 238, 0.35));
+}
+.door-banner .sub {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  color: #9a9aa6;
+  margin-top: 0.2rem;
+}
+
+/* ----- the descent rail (f1): four stacked trial doors --------------- */
+
+.trial-rail { display: flex; flex-direction: column; gap: 0; }
+.trial-rail-node {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  color: #6b7484;
+  padding: 0.35rem 0;
+}
+.trial-rail-dot {
+  width: 30px; height: 30px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  border: 1.5px solid color-mix(in srgb, var(--nen-accent, #22d3ee) 25%, transparent);
+  background: rgba(8, 12, 20, 0.6);
+  font-family: Rajdhani, system-ui, sans-serif;
+  font-weight: 700;
+  color: #8a94a4;
+  position: relative;
+}
+.trial-rail-link { display: flex; align-items: center; gap: 0.75rem; color: inherit; text-decoration: none; }
+.trial-rail-link:hover .trial-rail-dot {
+  border-color: var(--nen-accent, #22d3ee);
+  box-shadow: 0 0 16px -2px var(--nen-glow, rgba(34, 211, 238, 0.35));
+}
+.trial-rail-node[data-state="current"] .trial-rail-dot {
+  border-color: var(--nen-accent, #22d3ee);
+  color: var(--nen-accent, #22d3ee);
+  box-shadow: 0 0 18px -2px var(--nen-glow, rgba(34, 211, 238, 0.35));
+  animation: vault-pulse 3s ease-in-out infinite;
+}
+.trial-rail-node[data-state="current"] { color: #cfd6e0; }
+/* connector line between nodes */
+.trial-rail-node:not(:last-child) .trial-rail-dot::after {
+  content: "";
+  position: absolute;
+  top: 100%; left: 50%;
+  width: 1.5px; height: 0.9rem;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--nen-accent, #22d3ee) 22%, transparent);
+}
+
+/* ----- faction vault grid (f2) --------------------------------------- */
+
+.vault-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+@media (max-width: 640px) { .vault-grid { grid-template-columns: 1fr; } }
+
+.vault-card {
+  position: relative;
+  display: block;
+  text-decoration: none;
+  border-radius: 1.1rem;
+  padding: 1.5rem 1.25rem 1.35rem;
+  background: linear-gradient(180deg, rgba(34, 211, 238, 0.05), rgba(34, 211, 238, 0.02));
+  border: 1px solid color-mix(in srgb, var(--nen-accent, #22d3ee) 16%, transparent);
+  overflow: hidden;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+.vault-card:hover {
+  border-color: color-mix(in srgb, var(--nen-accent, #22d3ee) 60%, transparent);
+  transform: translateY(-2px);
+  box-shadow: 0 0 34px -8px var(--nen-glow, rgba(34, 211, 238, 0.35));
+}
+/* a small sealed emblem in the corner of each faction vault */
+.vault-card .seal {
+  position: absolute;
+  top: 0.9rem; right: 0.9rem;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--nen-accent, #22d3ee) 35%, transparent);
+  display: grid; place-items: center;
+}
+.vault-card .seal::before {
+  content: "";
+  width: 9px; height: 15px;
+  background: color-mix(in srgb, var(--nen-accent, #22d3ee) 70%, #ffffff);
+  clip-path: polygon(50% 0, 72% 42%, 62% 100%, 38% 100%, 28% 42%);
+  box-shadow: 0 0 8px var(--nen-glow, rgba(34, 211, 238, 0.35));
+}
+.vault-card .faction-k {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: color-mix(in srgb, var(--nen-accent, #22d3ee) 65%, #9a9aa6);
+  text-transform: uppercase;
+}
+.vault-card .faction-name {
+  font-family: Rajdhani, system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1.3rem;
+  color: #e8e4da;
+  margin: 0.25rem 0 0.4rem;
+}
+.vault-card .faction-note {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  color: #8a94a4;
+  line-height: 1.5;
+}
+
+/* the four-seal status strip on the seize panel */
+.seal-strip { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.seal-pip {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--nen-accent, #22d3ee) 18%, transparent);
+  color: #8a94a4;
+}
+.seal-pip .dot { width: 8px; height: 8px; border-radius: 50%; background: #3a4150; }
+.seal-pip[data-ok="true"] { color: var(--nen-accent, #22d3ee); border-color: color-mix(in srgb, var(--nen-accent, #22d3ee) 55%, transparent); }
+.seal-pip[data-ok="true"] .dot { background: var(--nen-accent, #22d3ee); box-shadow: 0 0 8px var(--nen-glow, rgba(34, 211, 238, 0.35)); }
+.seal-pip[data-ok="false"] { color: #e5484d; border-color: rgba(229, 72, 77, 0.4); }
+.seal-pip[data-ok="false"] .dot { background: #e5484d; }
+
+/* ----- keyframes ------------------------------------------------------ */
+
+@keyframes vault-swing-left  { to { transform: rotateY(-115deg); } }
+@keyframes vault-swing-right { to { transform: rotateY(115deg); } }
+@keyframes vault-lock-spin   { to { transform: rotate(130deg); } }
+@keyframes vault-lock-fade   { to { opacity: 0; } }
+@keyframes vault-glyph-in    { to { opacity: 1; transform: scale(1); } }
+@keyframes vault-rays        { to { transform: rotate(360deg); } }
+@keyframes vault-pulse {
+  0%, 100% { box-shadow: 0 0 10px -2px var(--nen-glow, rgba(34, 211, 238, 0.35)); }
+  50%      { box-shadow: 0 0 22px 1px var(--nen-glow, rgba(34, 211, 238, 0.35)); }
+}
+@keyframes vault-burst {
+  0%   { opacity: 0.9; transform: scale(0.72); }
+  100% { opacity: 0;   transform: scale(1.45); }
+}
+@keyframes vault-spark {
+  0%   { opacity: 1; transform: rotate(var(--a)) translateX(0) scale(1); }
+  100% { opacity: 0; transform: rotate(var(--a)) translateX(150px) scale(0.3); }
+}
+@keyframes banner-in {
+  0%   { opacity: 0; transform: translateY(10px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vault.is-open .vault-leaf.left  { animation: none; transform: rotateY(-115deg); }
+  .vault.is-open .vault-leaf.right { animation: none; transform: rotateY(115deg); }
+  .vault.is-open .vault-lock,
+  .vault.is-open .vault-numeral    { animation: none; opacity: 0; }
+  .vault.is-open .vault-interior   { transition: none; opacity: 1; }
+  .vault.is-open .vault-interior::before { animation: none; }
+  .vault.is-open .vault-glyph      { animation: none; opacity: 1; transform: scale(1); }
+  .vault.is-open .vault-burst,
+  .vault.is-open .vault-sparks i   { animation: none; opacity: 0; }
+  .vault.is-sealed .vault-hub,
+  .trial-rail-node[data-state="current"] .trial-rail-dot { animation: none; }
+  .door-banner.is-open,
+  .vault.is-open + .door-banner    { animation: none; opacity: 1; }
+}

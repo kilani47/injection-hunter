@@ -91,7 +91,7 @@ def stage2_union_based(stage1_key: str) -> str:
     )
     resp.raise_for_status()
     body = resp.text
-    if "token accepted" not in body:
+    if 'data-door="open"' not in body:
         raise RuntimeError("stage 2: token was not accepted, stage 1 key wrong?")
     # The union'd row renders stage_keys.key_value into the <td> that
     # normally holds a book title.
@@ -112,7 +112,7 @@ def stage3_oracle(token: str, code: str) -> bool:
     )
     resp.raise_for_status()
     body = resp.text
-    if "token accepted" not in body:
+    if 'data-door="open"' not in body:
         raise RuntimeError("stage 3: token was not accepted, stage 2 key wrong?")
     has_pass = "PASS" in body
     has_fail = "FAIL" in body
@@ -168,7 +168,7 @@ def stage4_timed(token: str, lookup_id: str) -> float:
     )
     elapsed = time.monotonic() - start
     resp.raise_for_status()
-    if "token accepted" not in resp.text:
+    if 'data-door="open"' not in resp.text:
         raise RuntimeError("stage 4: token was not accepted, stage 3 key wrong?")
     return elapsed
 

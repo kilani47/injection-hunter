@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ faction_label }}: OmniGrid · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-finals{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/finals.css') }}">{% endblock %}
 {% block phase_nav %}<a href="{{ url_for('phase', phase_id='finals') }}" class="hover:text-accent transition-colors">finals</a>{% endblock %}
 
 {% block content %}
 <div class="mb-6">
-  <p class="font-mono text-xs text-muted mb-2">the exam finals &middot; omnigrid &middot; {{ faction_label|lower }} faction</p>
+  <p class="trial-eyebrow mb-2">the exam finals &middot; omnigrid &middot; one of four seals</p>
   <h1 class="font-display text-3xl font-semibold text-bone mb-2">{{ faction_label }}</h1>
   <a href="{{ url_for('finals.f2_omnigrid') }}" class="font-mono text-[11px] text-muted hover:text-accent hover:underline">&larr; back to election HQ</a>
 </div>
