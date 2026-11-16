@@ -177,7 +177,7 @@ NODES: list[dict[str, Any]] = [
     {"id": "p5_5", "phase": "5", "name": "The Silent Courier",
      "path": "/p5/courier", "flag": FLAGS["p5_5"], "built": True},
 
-    {"id": "f1", "phase": "finals", "name": "Trick Tower Final Exam",
+    {"id": "f1", "phase": "finals", "name": "Finals-1",
      "path": "/f/bookhaven", "flag": FLAGS["f1"], "built": True},
     {"id": "f2", "phase": "finals", "name": "Chairman Election Infiltration",
      "path": "/f/omnigrid", "flag": FLAGS["f2"], "built": True},
