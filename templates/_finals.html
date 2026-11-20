@@ -27,3 +27,27 @@
   <p class="sub">{{ sub }}</p>
 </div>
 {%- endmacro %}
+
+{# The Chairman's Seal: four quarter-arcs (the four faction fragments) that
+   lock into a whole ring around an igniting crown when the seat is seized.
+   Styled by static/css/finals.css. #}
+{% macro chairman_seal(seized) -%}
+<div class="seal {{ 'is-seized' if seized else 'is-broken' }}" aria-hidden="true">
+  <div class="seal-quarter"></div>
+  <div class="seal-quarter"></div>
+  <div class="seal-quarter"></div>
+  <div class="seal-quarter"></div>
+  <div class="seal-rim"></div>
+  <div class="seal-core">
+    <svg viewBox="0 0 100 74" class="seal-crown" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 58 L8 24 L30 42 L50 8 L70 42 L92 24 L92 58 Z"/>
+      <rect x="8" y="58" width="84" height="9" rx="2"/>
+      <circle cx="50" cy="7" r="6"/>
+      <circle cx="8" cy="23" r="5"/>
+      <circle cx="92" cy="23" r="5"/>
+    </svg>
+  </div>
+  <div class="seal-burst"></div>
+  <div class="seal-sparks"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+</div>
+{%- endmacro %}

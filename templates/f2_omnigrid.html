@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_finals.html" import vault, door_banner %}
+{% from "_finals.html" import chairman_seal, door_banner %}
 {% block title %}Chairman Election Infiltration · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-finals{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/finals.css') }}">{% endblock %}
@@ -38,11 +38,11 @@
 </div>
 
 <div class="trial-stage">
-  <!-- the Chairman's seat: the grand door that opens only on a full seize -->
+  <!-- the Chairman's Seal: four quarters lock whole only on a full seize -->
   <div>
-    {{ vault(seize_success, numeral='', glyph='★') }}
+    {{ chairman_seal(seize_success) }}
     {% if seize_success %}
-      {{ door_banner('THE SEAT IS YOURS', 'four seals broken — the chairman stands unseated') }}
+      {{ door_banner('THE SEAL IS WHOLE', 'four quarters joined — the chairman seat is yours') }}
     {% endif %}
   </div>
 

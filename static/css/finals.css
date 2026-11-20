@@ -457,7 +457,164 @@
 .seal-pip[data-ok="false"] { color: #e5484d; border-color: rgba(229, 72, 77, 0.4); }
 .seal-pip[data-ok="false"] .dot { background: #e5484d; }
 
+/* ----- the Chairman's Seal (f2 seize finale) -------------------------- *
+ * A distinct, on-theme celebration for Chairman Election: the four faction
+ * fragments ARE the four quarters of the Chairman seat's seal. On a full
+ * seize they converge, four arc-segments spinning into alignment to close
+ * a broken ring, and the Chairman's crown at its center ignites. Entirely
+ * hand-built; shares the page's --nen-accent token like everything else. */
+
+.seal {
+  position: relative;
+  width: var(--vault-size);
+  height: var(--vault-size);
+  margin: 0 auto;
+  filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.6));
+}
+
+/* the four quarter-arcs of the seal ring */
+.seal-quarter {
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  border: 6px solid color-mix(in srgb, var(--nen-accent, #22d3ee) 85%, #ffffff);
+  box-shadow:
+    0 0 20px -2px var(--nen-glow, rgba(34, 211, 238, 0.35)),
+    inset 0 0 14px -4px var(--nen-glow, rgba(34, 211, 238, 0.35));
+  -webkit-mask: conic-gradient(from var(--seg), #000 0 84deg, transparent 84deg 360deg);
+          mask: conic-gradient(from var(--seg), #000 0 84deg, transparent 84deg 360deg);
+  /* default (seal broken): each arc spun off its seat and dimmed */
+  transform: rotate(var(--scatter)) scale(1.14);
+  opacity: 0.28;
+}
+.seal-quarter:nth-child(1) { --seg: 3deg;   --scatter:  46deg; }
+.seal-quarter:nth-child(2) { --seg: 93deg;  --scatter: -58deg; }
+.seal-quarter:nth-child(3) { --seg: 183deg; --scatter:  58deg; }
+.seal-quarter:nth-child(4) { --seg: 273deg; --scatter: -46deg; }
+.seal.is-seized .seal-quarter {
+  animation: seal-assemble 0.75s cubic-bezier(0.2, 0.8, 0.3, 1.1) forwards;
+}
+.seal.is-seized .seal-quarter:nth-child(1) { animation-delay: 0s; }
+.seal.is-seized .seal-quarter:nth-child(2) { animation-delay: 0.12s; }
+.seal.is-seized .seal-quarter:nth-child(3) { animation-delay: 0.24s; }
+.seal.is-seized .seal-quarter:nth-child(4) { animation-delay: 0.36s; }
+
+/* studs around the ring's rim, lit only once the seal is whole */
+.seal-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  padding: 5px;
+  background: repeating-conic-gradient(
+    from 0deg,
+    color-mix(in srgb, var(--nen-accent, #22d3ee) 60%, #ffffff) 0deg 2.4deg,
+    transparent 2.4deg 18deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  opacity: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.seal.is-seized .seal-rim { animation: vault-lock-fade 0.5s ease 0.6s reverse forwards; }
+
+/* the Chairman's crown at the center */
+.seal-core {
+  position: absolute;
+  inset: 27%;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 38%, #141926, #06080e 72%);
+  border: 2px solid color-mix(in srgb, var(--nen-accent, #22d3ee) 24%, transparent);
+  opacity: 0.5;
+  transform: scale(0.86);
+  z-index: 3;
+}
+.seal.is-seized .seal-core {
+  animation: seal-core-ignite 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) 0.5s forwards;
+}
+.seal-core::before {  /* radiating authority light behind the crown */
+  content: "";
+  position: absolute;
+  inset: -60%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 18deg,
+    color-mix(in srgb, var(--nen-accent, #22d3ee) 45%, transparent) 30deg,
+    transparent 42deg 90deg,
+    color-mix(in srgb, var(--nen-accent, #22d3ee) 45%, transparent) 102deg,
+    transparent 114deg);
+  opacity: 0;
+  z-index: -1;
+}
+.seal.is-seized .seal-core::before {
+  animation: vault-rays 10s linear infinite, vault-lock-fade 0.6s ease 0.6s reverse forwards;
+}
+.seal-crown {
+  width: 58%;
+  color: color-mix(in srgb, var(--nen-accent, #22d3ee) 34%, #6b7484);
+}
+.seal.is-seized .seal-crown {
+  animation: seal-crown-glow 0.7s ease 0.6s forwards;
+}
+
+/* burst + sparks reuse the vault finale's language, retuned */
+.seal-burst {
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+}
+.seal.is-seized .seal-burst {
+  border: 2px solid color-mix(in srgb, var(--nen-accent, #22d3ee) 80%, #ffffff);
+  animation: vault-burst 1s cubic-bezier(0.2, 0.7, 0.3, 1) 0.7s forwards;
+}
+.seal-sparks { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.seal-sparks i {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 4px; height: 4px;
+  margin: -2px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--nen-accent, #22d3ee) 70%, #ffffff);
+  box-shadow: 0 0 8px var(--nen-glow, rgba(34, 211, 238, 0.35));
+  opacity: 0;
+  --a: 0deg;
+}
+.seal-sparks i:nth-child(1) { --a: 30deg; }
+.seal-sparks i:nth-child(2) { --a: 75deg; }
+.seal-sparks i:nth-child(3) { --a: 120deg; }
+.seal-sparks i:nth-child(4) { --a: 165deg; }
+.seal-sparks i:nth-child(5) { --a: 210deg; }
+.seal-sparks i:nth-child(6) { --a: 255deg; }
+.seal-sparks i:nth-child(7) { --a: 300deg; }
+.seal-sparks i:nth-child(8) { --a: 345deg; }
+.seal.is-seized .seal-sparks i { animation: vault-spark 1s ease-out 0.72s forwards; }
+
 /* ----- keyframes ------------------------------------------------------ */
+
+@keyframes seal-assemble {
+  to { transform: rotate(0deg) scale(1); opacity: 1; }
+}
+@keyframes seal-core-ignite {
+  to {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow:
+      0 0 44px -4px var(--nen-glow, rgba(34, 211, 238, 0.35)),
+      inset 0 0 26px -6px var(--nen-glow, rgba(34, 211, 238, 0.35));
+    border-color: color-mix(in srgb, var(--nen-accent, #22d3ee) 60%, transparent);
+  }
+}
+@keyframes seal-crown-glow {
+  to {
+    color: color-mix(in srgb, var(--nen-accent, #22d3ee) 92%, #ffffff);
+    filter: drop-shadow(0 0 12px var(--nen-glow, rgba(34, 211, 238, 0.35)));
+  }
+}
 
 @keyframes vault-swing-left  { to { transform: rotateY(-115deg); } }
 @keyframes vault-swing-right { to { transform: rotateY(115deg); } }
@@ -496,4 +653,12 @@
   .trial-rail-node[data-state="current"] .trial-rail-dot { animation: none; }
   .door-banner.is-open,
   .vault.is-open + .door-banner    { animation: none; opacity: 1; }
+
+  .seal.is-seized .seal-quarter    { animation: none; transform: rotate(0deg) scale(1); opacity: 1; }
+  .seal.is-seized .seal-rim        { animation: none; opacity: 1; }
+  .seal.is-seized .seal-core       { animation: none; opacity: 1; transform: scale(1); }
+  .seal.is-seized .seal-core::before { animation: none; opacity: 0; }
+  .seal.is-seized .seal-crown      { animation: none; color: var(--nen-accent, #22d3ee); }
+  .seal.is-seized .seal-burst,
+  .seal.is-seized .seal-sparks i   { animation: none; opacity: 0; }
 }
