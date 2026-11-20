@@ -28,15 +28,18 @@
 </div>
 {%- endmacro %}
 
-{# The Chairman's Seal: four quarter-arcs (the four faction fragments) that
-   lock into a whole ring around an igniting crown when the seat is seized.
-   Styled by static/css/finals.css. #}
-{% macro chairman_seal(seized) -%}
-<div class="seal {{ 'is-seized' if seized else 'is-broken' }}" aria-hidden="true">
-  <div class="seal-quarter"></div>
-  <div class="seal-quarter"></div>
-  <div class="seal-quarter"></div>
-  <div class="seal-quarter"></div>
+{# The Chairman's Seal: four quarter-arcs, one per faction fragment. `quarters`
+   (0-4) is how many have been earned so far, each locks into the ring; the
+   rest stay scattered. `seized` lights the whole seal and ignites the crown.
+   Shown across every f2 door so the seal visibly builds one quarter per
+   faction breached. Styled by static/css/finals.css. #}
+{% macro chairman_seal(quarters=0, seized=False) -%}
+{% set q = 4 if seized else quarters %}
+<div class="seal {{ 'is-seized' if seized else '' }}" data-quarters="{{ q }}" aria-hidden="true">
+  <div class="seal-quarter {{ 'is-set' if q >= 1 else '' }}"></div>
+  <div class="seal-quarter {{ 'is-set' if q >= 2 else '' }}"></div>
+  <div class="seal-quarter {{ 'is-set' if q >= 3 else '' }}"></div>
+  <div class="seal-quarter {{ 'is-set' if q >= 4 else '' }}"></div>
   <div class="seal-rim"></div>
   <div class="seal-core">
     <svg viewBox="0 0 100 74" class="seal-crown" fill="currentColor" xmlns="http://www.w3.org/2000/svg">

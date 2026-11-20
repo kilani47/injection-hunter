@@ -491,13 +491,15 @@
 .seal-quarter:nth-child(2) { --seg: 93deg;  --scatter: -58deg; }
 .seal-quarter:nth-child(3) { --seg: 183deg; --scatter:  58deg; }
 .seal-quarter:nth-child(4) { --seg: 273deg; --scatter: -46deg; }
-.seal.is-seized .seal-quarter {
+/* a quarter that has been earned locks into the ring (animates in on load);
+   the rest stay scattered. The seal thus shows how far the chain has gone. */
+.seal-quarter.is-set {
   animation: seal-assemble 0.75s cubic-bezier(0.2, 0.8, 0.3, 1.1) forwards;
 }
-.seal.is-seized .seal-quarter:nth-child(1) { animation-delay: 0s; }
-.seal.is-seized .seal-quarter:nth-child(2) { animation-delay: 0.12s; }
-.seal.is-seized .seal-quarter:nth-child(3) { animation-delay: 0.24s; }
-.seal.is-seized .seal-quarter:nth-child(4) { animation-delay: 0.36s; }
+.seal-quarter:nth-child(1).is-set { animation-delay: 0s; }
+.seal-quarter:nth-child(2).is-set { animation-delay: 0.1s; }
+.seal-quarter:nth-child(3).is-set { animation-delay: 0.2s; }
+.seal-quarter:nth-child(4).is-set { animation-delay: 0.3s; }
 
 /* studs around the ring's rim, lit only once the seal is whole */
 .seal-rim {
@@ -654,7 +656,7 @@
   .door-banner.is-open,
   .vault.is-open + .door-banner    { animation: none; opacity: 1; }
 
-  .seal.is-seized .seal-quarter    { animation: none; transform: rotate(0deg) scale(1); opacity: 1; }
+  .seal-quarter.is-set             { animation: none; transform: rotate(0deg) scale(1); opacity: 1; }
   .seal.is-seized .seal-rim        { animation: none; opacity: 1; }
   .seal.is-seized .seal-core       { animation: none; opacity: 1; transform: scale(1); }
   .seal.is-seized .seal-core::before { animation: none; opacity: 0; }

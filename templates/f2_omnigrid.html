@@ -1,49 +1,56 @@
 {% extends "base.html" %}
 {% from "_finals.html" import chairman_seal, door_banner %}
-{% block title %}Chairman Election Infiltration · The Seiyaku Arc{% endblock %}
+{% block title %}Seize the Chairman's Seat · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-finals{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/finals.css') }}">{% endblock %}
 {% block phase_nav %}<a href="{{ url_for('phase', phase_id='finals') }}" class="hover:text-accent transition-colors">finals</a>{% endblock %}
 
+{% set numerals = {1: 'I', 2: 'II', 3: 'III', 4: 'IV'} %}
+{% set chain = [
+    (1, 'Onboarding',      url_for('finals.f2_onboarding')),
+    (2, 'Mobile API',      url_for('finals.f2_mobile')),
+    (3, 'Directory',       url_for('finals.f2_directory')),
+    (4, 'Document Import', url_for('finals.f2_import')),
+] %}
+
 {% block content %}
 <div class="trial-head">
-  <p class="trial-eyebrow mb-2">the exam finals &middot; omnigrid &middot; chairman election</p>
-  <h1 class="font-display text-3xl font-semibold text-bone mb-4">Chairman Election Infiltration</h1>
+  <p class="trial-eyebrow mb-2">the exam finals &middot; omnigrid &middot; the chairman's seat</p>
+  <h1 class="font-display text-3xl font-semibold text-bone mb-4">Seize the Chairman's Seat</h1>
   <p class="max-w-2xl text-bone/80 leading-relaxed">
-    Four factions, four separate systems, chained one behind the next. Only
-    the first stands open; each one you breach hands you the fragment that
-    unlocks the one after it, so OmniGrid falls in order, never out of turn.
-    None will tell you how it breaks, every one is a kind of lock you have
-    already picked somewhere in this exam, wearing a different face. Draw a
-    fragment from each in sequence, then bring all four here. The seat opens
-    for nothing less.
+    The four faction fragments are the four quarters of the seal on the
+    Chairman's seat. You drew each one in turn, breaching OmniGrid in order,
+    each faction opening the next. Bring all four here together: a false or
+    missing quarter leaves the seal broken and the seat sealed.
   </p>
 </div>
 
-{% set numerals = {1: 'I', 2: 'II', 3: 'III', 4: 'IV'} %}
-<div class="vault-grid mb-10">
-  {% for pos, key, name, note in [
-      (1, 'finals.f2_onboarding', 'Onboarding',      'candidate status desk'),
-      (2, 'finals.f2_mobile',     'Mobile API',      'service sign-in gateway'),
-      (3, 'finals.f2_directory',  'Directory',       'service directory lookup'),
-      (4, 'finals.f2_import',     'Document Import',  'document intake pipeline'),
-  ] %}
-  <a href="{{ url_for(key) }}" class="vault-card">
-    <span class="seal"></span>
-    <p class="faction-k">seal {{ numerals[pos] }} of iv{% if pos == 1 %} &middot; open{% else %} &middot; opened by seal {{ numerals[pos - 1] }}{% endif %}</p>
-    <p class="faction-name">{{ name }}</p>
-    <p class="faction-note">{{ note }} &middot; find what it guards, and how</p>
-  </a>
-  {% endfor %}
-</div>
-
 <div class="trial-stage">
-  <!-- the Chairman's Seal: four quarters lock whole only on a full seize -->
+  <!-- the Chairman's Seal: whole only when all four quarters are presented -->
   <div>
-    {{ chairman_seal(seize_success) }}
+    {{ chairman_seal(quarters=seize_quarters, seized=seize_success) }}
     {% if seize_success %}
       {{ door_banner('THE SEAL IS WHOLE', 'four quarters joined — the chairman seat is yours') }}
+    {% else %}
+      {{ door_banner('THREE QUARTERS DRAWN', 'present all four fragments to make the seal whole') }}
     {% endif %}
+
+    <div class="trial-rail mt-8">
+      {% for pos, label, href in chain %}
+        <div class="trial-rail-node">
+          <a class="trial-rail-link" href="{{ href }}">
+            <span class="trial-rail-dot">{{ numerals[pos] }}</span>
+            <span>{{ label }}</span>
+          </a>
+        </div>
+      {% endfor %}
+      <div class="trial-rail-node" data-state="current">
+        <a class="trial-rail-link" href="{{ url_for('finals.f2_seize') }}">
+          <span class="trial-rail-dot">&#9733;</span>
+          <span>Seize the seat</span>
+        </a>
+      </div>
+    </div>
   </div>
 
   <!-- the seize panel -->
@@ -51,7 +58,7 @@
     <div class="license-card glass rounded-[1.75rem] p-6">
       <div class="exam-terminal rounded-xl p-5">
         <p class="font-mono text-[13px] leading-relaxed text-bone/90 mb-4">
-          <span class="text-accent text-glow">&gt;</span> seize the chairman's seat &middot; present all four fragments
+          <span class="text-accent text-glow">&gt;</span> present all four fragments
         </p>
 
         {% if seize_result %}
@@ -68,7 +75,7 @@
               <p class="font-mono text-sm text-bone break-all">{{ seize_flag }}</p>
             </div>
           {% elif not seize_success %}
-            <p class="font-mono text-[11px] text-nen-p1 mb-4">not every seal held. a false or missing fragment leaves the seat sealed.</p>
+            <p class="font-mono text-[11px] text-nen-p1 mb-4">not every quarter held. a false or missing fragment leaves the seat sealed.</p>
           {% endif %}
         {% endif %}
 

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_finals.html" import vault, door_banner %}
+{% from "_finals.html" import chairman_seal, door_banner %}
 {% block title %}{{ faction_label }}: OmniGrid · The Seiyaku Arc{% endblock %}
 {% block body_class %}nen-finals{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/finals.css') }}">{% endblock %}
@@ -22,17 +22,18 @@
 </div>
 
 <div class="trial-stage">
-  <!-- left: the vault + the chain rail -->
+  <!-- left: the Chairman's seal (builds a quarter per faction) + chain rail -->
   <div>
-    {{ vault(is_open, numeral=numerals[chain_pos], glyph=numerals[chain_pos]) }}
+    {{ chairman_seal(quarters=quarters) }}
 
-    {% if is_open %}
-      {% if faction == 'onboarding' %}
-        {{ door_banner('THE FIRST SEAL IS OPEN', 'draw its fragment, it opens the next faction') }}
-      {% else %}
-        {{ door_banner('THE SEAL BREAKS', 'the fragment turned, this faction is yours') }}
-      {% endif %}
+    {% if faction == 'onboarding' %}
+      {% set seal_sub = 'breach this faction, its fragment opens the next' %}
+    {% elif is_open %}
+      {% set seal_sub = 'the fragment turned, this faction is yours' %}
+    {% else %}
+      {% set seal_sub = "present " ~ prev_label ~ "'s fragment to set the next quarter" %}
     {% endif %}
+    {{ door_banner(quarters ~ ' / 4 quarters of the seal', seal_sub) }}
 
     <div class="trial-rail mt-8">
       {% for pos, label, href in chain %}

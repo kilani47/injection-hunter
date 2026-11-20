@@ -277,9 +277,19 @@ _OMNIGRID_LDAP_BASE = "ou=omnigrid," + os.environ.get(
 _OMNIGRID_FRAGMENT_FILE = "/opt/omnigrid/fragment.txt"
 
 
+def _omnigrid_quarters(chain_pos: int, unlocked: bool) -> int:
+    """How many quarters of the Chairman's seal the challenger has earned by
+    the time they reach a given faction: one per fragment already presented
+    (i.e. per faction already opened). The seal on each door shows this, so
+    it visibly builds one quarter per faction breached."""
+    return (chain_pos - 1) if unlocked else max(0, chain_pos - 2)
+
+
+# Entry point: like Finals-1's /f/bookhaven, land the challenger straight on
+# the first faction rather than an overview, each faction opens the next.
 @bp.route("/f/omnigrid", methods=["GET"])
 def f2_omnigrid():
-    return render_template("f2_omnigrid.html", seize_result=None, seize_error=None)
+    return redirect(url_for("finals.f2_onboarding"))
 
 
 # --- Onboarding faction, MariaDB error-based SQLi --------------------------
@@ -312,6 +322,7 @@ def f2_onboarding():
         chain_pos=1,
         prev_label=None,
         unlocked=True,          # faction 1 is the chain's entry point
+        quarters=_omnigrid_quarters(1, True),
         token="",
         lookup_id=lookup_id,
         result_label="status",
@@ -379,6 +390,7 @@ def f2_mobile():
         chain_pos=2,
         prev_label="Onboarding",
         unlocked=unlocked,
+        quarters=_omnigrid_quarters(2, unlocked),
         token=token,
         attempted=attempted,
         result_label="fragment",
@@ -450,6 +462,7 @@ def f2_directory():
         chain_pos=3,
         prev_label="Mobile API",
         unlocked=unlocked,
+        quarters=_omnigrid_quarters(3, unlocked),
         token=token,
         lookup_id=uid,
         members=members,
@@ -504,6 +517,7 @@ def f2_import():
         chain_pos=4,
         prev_label="Directory",
         unlocked=unlocked,
+        quarters=_omnigrid_quarters(4, unlocked),
         token=token,
         raw_xml=raw_xml,
         result_label="document",
@@ -522,8 +536,19 @@ def _true_document_fragment() -> str:
 
 # --- Seize the Chairman seat, combine all four fragments -------------------
 
-@bp.route("/f/omnigrid/seize", methods=["POST"])
+@bp.route("/f/omnigrid/seize", methods=["GET", "POST"])
 def f2_seize():
+    # GET: the final step of the chain, the seize page. Three quarters are
+    # already set (the three fragments presented to open factions 2-4); a
+    # successful seize locks the fourth and the seal is whole.
+    if request.method == "GET":
+        return render_template(
+            "f2_omnigrid.html",
+            seize_result=None,
+            seize_success=False,
+            seize_quarters=3,
+        )
+
     if request.is_json:
         payload = request.get_json(silent=True) or {}
     else:
@@ -561,6 +586,7 @@ def f2_seize():
         seize_success=success,
         seize_flag=flag,
         seize_error=None,
+        seize_quarters=4 if success else 3,
     )
 
 
