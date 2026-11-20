@@ -274,7 +274,7 @@ def f1_stage4():
 _OMNIGRID_LDAP_BASE = "ou=omnigrid," + os.environ.get(
     "LDAP_BASE_DN", "dc=hunterassoc,dc=org"
 )
-_OMNIGRID_FRAGMENT_FILE = "/opt/omnigrid/fragment.txt"
+_OMNIGRID_FRAGMENT_FILE = "/home/omnigrid/fragment.txt"
 
 
 def _omnigrid_quarters(chain_pos: int, unlocked: bool) -> int:
