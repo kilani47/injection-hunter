@@ -309,6 +309,10 @@ def f2_onboarding():
         "f2_faction.html",
         faction="onboarding",
         faction_label="Onboarding",
+        chain_pos=1,
+        prev_label=None,
+        unlocked=True,          # faction 1 is the chain's entry point
+        token="",
         lookup_id=lookup_id,
         result_label="status",
         result=status,
@@ -336,11 +340,16 @@ def _true_onboarding_fragment() -> str:
 
 @bp.route("/f/omnigrid/mobile", methods=["GET", "POST"])
 def f2_mobile():
+    # Chained: this faction stays sealed until the caller presents the
+    # Onboarding faction's fragment as `token`, so OmniGrid must be breached
+    # in order, each faction opens the next (same gate idea as Finals-1).
+    token = request.values.get("token", "")
+    unlocked = bool(token) and token == _true_onboarding_fragment()
     agent = None
     error = None
     attempted = False
 
-    if request.method == "POST":
+    if request.method == "POST" and unlocked:
         attempted = True
         # Reuses Phase 4's exact dual-channel credential resolver
         # (_resolve_login_credentials), same JSON-body-or-bracket-
@@ -367,6 +376,10 @@ def f2_mobile():
         "f2_faction.html",
         faction="mobile",
         faction_label="Mobile API",
+        chain_pos=2,
+        prev_label="Onboarding",
+        unlocked=unlocked,
+        token=token,
         attempted=attempted,
         result_label="fragment",
         result=(agent.get("fragment") if agent else None),
@@ -403,12 +416,15 @@ def _ldap_attr(attrs: dict, name: str) -> str | None:
 
 @bp.route("/f/omnigrid/directory", methods=["GET"])
 def f2_directory():
+    # Chained: sealed until the Mobile API faction's fragment is presented.
+    token = request.values.get("token", "")
+    unlocked = bool(token) and token == _true_mobile_fragment()
     uid = request.args.get("uid", "")
     members = []
     error = None
     dump_mode = False
 
-    if uid:
+    if uid and unlocked:
         # VULN: string concat into an LDAP filter, identical bug shape to
         # p4_3's Zodiac Breach, no escape_filter_chars() call anywhere
         # before this f-string is built.
@@ -431,6 +447,10 @@ def f2_directory():
         "f2_faction.html",
         faction="directory",
         faction_label="Directory",
+        chain_pos=3,
+        prev_label="Mobile API",
+        unlocked=unlocked,
+        token=token,
         lookup_id=uid,
         members=members,
         dump_mode=dump_mode,
@@ -457,11 +477,14 @@ def _true_directory_fragment() -> str:
 
 @bp.route("/f/omnigrid/import", methods=["GET", "POST"])
 def f2_import():
+    # Chained: sealed until the Directory faction's fragment is presented.
+    token = request.values.get("token", "")
+    unlocked = bool(token) and token == _true_directory_fragment()
     document_text = None
     error = None
     raw_xml = None
 
-    if request.method == "POST":
+    if request.method == "POST" and unlocked:
         raw_xml = request.form.get("xml", "")
         try:
             # VULN: identical parser + reflecting-sink shape to p5_3's
@@ -478,6 +501,10 @@ def f2_import():
         "f2_faction.html",
         faction="document",
         faction_label="Document Import",
+        chain_pos=4,
+        prev_label="Directory",
+        unlocked=unlocked,
+        token=token,
         raw_xml=raw_xml,
         result_label="document",
         result=document_text,

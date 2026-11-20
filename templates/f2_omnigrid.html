@@ -10,25 +10,27 @@
   <p class="trial-eyebrow mb-2">the exam finals &middot; omnigrid &middot; chairman election</p>
   <h1 class="font-display text-3xl font-semibold text-bone mb-4">Chairman Election Infiltration</h1>
   <p class="max-w-2xl text-bone/80 leading-relaxed">
-    Four factions, four separate systems, each certain its own corner of
-    OmniGrid is safe because it was never the one anyone came for. Each
-    guards one quarter of the seal on the Chairman's seat. None will tell
-    you how it breaks, every one of them is a kind of lock you have already
-    picked somewhere in this exam, wearing a different face. Draw a fragment
-    out of each, then bring all four here. The seat opens for nothing less.
+    Four factions, four separate systems, chained one behind the next. Only
+    the first stands open; each one you breach hands you the fragment that
+    unlocks the one after it, so OmniGrid falls in order, never out of turn.
+    None will tell you how it breaks, every one is a kind of lock you have
+    already picked somewhere in this exam, wearing a different face. Draw a
+    fragment from each in sequence, then bring all four here. The seat opens
+    for nothing less.
   </p>
 </div>
 
+{% set numerals = {1: 'I', 2: 'II', 3: 'III', 4: 'IV'} %}
 <div class="vault-grid mb-10">
-  {% for key, name, note in [
-      ('finals.f2_onboarding', 'Onboarding',      'candidate status desk'),
-      ('finals.f2_mobile',     'Mobile API',      'service sign-in gateway'),
-      ('finals.f2_directory',  'Directory',       'service directory lookup'),
-      ('finals.f2_import',     'Document Import',  'document intake pipeline'),
+  {% for pos, key, name, note in [
+      (1, 'finals.f2_onboarding', 'Onboarding',      'candidate status desk'),
+      (2, 'finals.f2_mobile',     'Mobile API',      'service sign-in gateway'),
+      (3, 'finals.f2_directory',  'Directory',       'service directory lookup'),
+      (4, 'finals.f2_import',     'Document Import',  'document intake pipeline'),
   ] %}
   <a href="{{ url_for(key) }}" class="vault-card">
     <span class="seal"></span>
-    <p class="faction-k">one of four seals</p>
+    <p class="faction-k">seal {{ numerals[pos] }} of iv{% if pos == 1 %} &middot; open{% else %} &middot; opened by seal {{ numerals[pos - 1] }}{% endif %}</p>
     <p class="faction-name">{{ name }}</p>
     <p class="faction-note">{{ note }} &middot; find what it guards, and how</p>
   </a>

